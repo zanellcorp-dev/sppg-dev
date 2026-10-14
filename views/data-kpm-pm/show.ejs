@@ -1,0 +1,150 @@
+<%- include('../partials/header') %>
+    <div class="kpm-head">
+        <div>
+            <div class="eyebrow">DATA KPM PM</div>
+            <h2 style="margin:0">
+                <%= submission.kpm_name %>
+            </h2>
+            <p class="sub">
+                <%= submission.kpm_code %> · Berlaku <%= submission.effective_from %>
+            </p>
+        </div><span
+            class="status <%= ['DISETUJUI','DITERAPKAN'].includes(submission.status)?'success':submission.status==='DITOLAK'?'error':'warning' %>">
+            <%= submission.status %>
+        </span>
+    </div>
+    <div class="card">
+        <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:12px">
+            <div><small>Pengajuan</small><strong>
+                    <%= submission.submission_type %>
+                </strong></div>
+            <div><small>Pengaju</small><strong>
+                    <%= submission.submitter_name||'-' %>
+                </strong></div>
+            <div><small>Reviewer</small><strong>
+                    <%= submission.reviewer_name||'-' %>
+                </strong></div>
+            <div><small>Diterapkan oleh</small><strong>
+                    <%= submission.applier_name||'-' %>
+                </strong></div>
+        </div>
+        <% if(submission.review_note){ %>
+            <div class="notice" style="margin-top:14px"><strong>Catatan review:</strong>
+                <%= submission.review_note %>
+            </div>
+            <% } %>
+    </div>
+    <div class="card" style="overflow:auto">
+        <h3>Data PM (<%= rows.length %>)</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nama</th>
+                    <th>NIK/NISN</th>
+                    <th>Gender</th>
+                    <th>Kelas</th>
+                    <th>Kategori</th>
+                    <th>Validasi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% rows.forEach(r=>{ %><tr>
+                        <td>
+                            <%= r.row_no %>
+                        </td>
+                        <td><strong>
+                                <%= r.full_name %>
+                            </strong></td>
+                        <td>
+                            <%= r.nik||'-' %><br><small>
+                                    <%= r.nisn||'-' %>
+                                </small>
+                        </td>
+                        <td>
+                            <%= r.gender||'-' %>
+                        </td>
+                        <td>
+                            <%= r.class_group||'-' %>
+                        </td>
+                        <td>
+                            <%= r.category %>
+                        </td>
+                        <td><span class="status <%= r.status==='VALID'?'success':'error' %>">
+                                <%= r.status %>
+                            </span>
+                            <% if(r.validation_note){ %><br><small>
+                                    <%= r.validation_note %>
+                                </small>
+                                <% } %>
+                        </td>
+                    </tr>
+                    <% }) %>
+            </tbody>
+        </table>
+    </div>
+    <% if(submission.status==='DRAFT' ){ %>
+        <div class="card"><strong>Preview selesai.</strong>
+            <p class="sub">Periksa seluruh baris. Hanya data dengan status VALID 100% yang boleh diajukan untuk review.
+            </p>
+            <form method="post" action="/data-kpm-pm/<%= submission.id %>/submit"><input type="hidden" name="_csrf"
+                    value="<%= csrfToken %>"><button class="btn" type="submit">Ajukan untuk Review</button></form>
+        </div>
+        <% } %>
+            <% if(['DIAJUKAN','DITINJAU'].includes(submission.status)){ %>
+                <div class="card">
+                    <h3>Review Aslap / Pengawas berwenang</h3>
+                    <form method="post" action="/data-kpm-pm/<%= submission.id %>/review"><input type="hidden"
+                            name="_csrf" value="<%= csrfToken %>">
+                        <div class="field"><label>Catatan</label><textarea class="input" name="note" rows="3"
+                                placeholder="Wajib diisi jika ditolak"></textarea></div>
+                        <div class="actions"><button class="btn gray" name="decision" value="DITINJAU">Tandai
+                                Ditinjau</button><button class="btn" name="decision"
+                                value="DISETUJUI">Setujui</button><button class="btn danger" name="decision"
+                                value="DITOLAK">Tolak</button></div>
+                    </form>
+                </div>
+                <% } %>
+                    <% if(submission.status==='DISETUJUI' ){ %>
+                        <div class="card"><strong>Siap diterapkan.</strong>
+                            <p class="sub">Master PM belum berubah sampai tombol berikut dijalankan.</p>
+                            <form method="post" action="/data-kpm-pm/<%= submission.id %>/apply"><input type="hidden"
+                                    name="_csrf" value="<%= csrfToken %>"><button class="btn" type="submit">Terapkan ke
+                                    Master PM</button></form>
+                        </div>
+                        <% } %>
+                            <div class="card">
+                                <h3>Riwayat</h3>
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Waktu</th>
+                                            <th>Aksi</th>
+                                            <th>Status</th>
+                                            <th>Oleh</th>
+                                            <th>Catatan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% history.forEach(h=>{ %><tr>
+                                                <td>
+                                                    <%= h.created_at %>
+                                                </td>
+                                                <td>
+                                                    <%= h.action %>
+                                                </td>
+                                                <td>
+                                                    <%= h.from_status||'-' %> → <%= h.to_status||'-' %>
+                                                </td>
+                                                <td>
+                                                    <%= h.actor_name||'-' %>
+                                                </td>
+                                                <td>
+                                                    <%= h.note||'-' %>
+                                                </td>
+                                            </tr>
+                                            <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <%- include('../partials/footer') %>

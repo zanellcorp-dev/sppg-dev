@@ -1,0 +1,19 @@
+<%- include('../partials/header') %>
+<section class="panel menu-detail-panel">
+  <div class="panel-head"><div><span class="panel-kicker">OPERASIONAL SPPG</span><h2>Detail Menu</h2><p class="muted">Data menu yang ditetapkan untuk tanggal <strong><%= new Date(row.menu_date+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'}) %></strong>.</p></div><div class="menu-actions"><a class="outline-btn" href="/menus?date=<%= row.menu_date.toISOString ? row.menu_date.toISOString().slice(0,10) : row.menu_date %>">Kembali</a><a class="primary-btn" href="/menus/<%= row.id %>/edit"><i data-lucide="pencil"></i>Edit</a></div></div>
+  <div class="menu-detail-grid">
+    <div class="detail-block"><span class="detail-label">Kode Menu</span><strong><%= row.menu_code %></strong></div>
+    <div class="detail-block"><span class="detail-label">Jenis KPM</span><strong><%= row.kpm_type==='SATUAN_PENDIDIKAN'?'Satuan Pendidikan':'Posyandu' %></strong></div>
+    <div class="detail-block full"><span class="detail-label">Nama Menu</span><strong class="detail-value-lg"><%= row.menu_name %></strong></div>
+    <div class="detail-block full"><span class="detail-label">Nama Komponen</span><strong><%= row.component_name||'—' %></strong></div>
+  </div>
+  <div class="detail-section"><h3>Nilai Gizi</h3><div class="nutrition-detail-grid">
+    <div><h4>Porsi Kecil</h4><dl><dt>Energi</dt><dd><%= row.energy_small??'—' %> kkal</dd><dt>Protein</dt><dd><%= row.protein_small??'—' %> g</dd><dt>Lemak</dt><dd><%= row.fat_small??'—' %> g</dd><dt>Karbohidrat</dt><dd><%= row.carb_small??'—' %> g</dd><dt>Serat</dt><dd><%= row.fiber_small??'—' %> g</dd></dl></div>
+    <div><h4>Porsi Besar</h4><dl><dt>Energi</dt><dd><%= row.energy_large??'—' %> kkal</dd><dt>Protein</dt><dd><%= row.protein_large??'—' %> g</dd><dt>Lemak</dt><dd><%= row.fat_large??'—' %> g</dd><dt>Karbohidrat</dt><dd><%= row.carb_large??'—' %> g</dd><dt>Serat</dt><dd><%= row.fiber_large??'—' %> g</dd></dl></div>
+  </div></div>
+  <div class="detail-section"><div class="section-title-row"><div><h3>Foto Menu</h3><p class="muted">Foto bersifat opsional dan dapat ditambahkan setelah makanan matang.</p></div></div><div class="photo-detail-grid">
+    <div class="photo-detail-card"><strong>Porsi Kecil</strong><% if(row.photo_small_path){ %><a href="/uploads/<%= String(row.photo_small_path).split(/[\\/]/).pop() %>" target="_blank"><img src="/uploads/<%= String(row.photo_small_path).split(/[\\/]/).pop() %>" alt="Foto menu porsi kecil"></a><span class="photo-status ready"><i data-lucide="image-check"></i> Tersedia</span><% }else{ %><div class="photo-empty"><i data-lucide="image-off"></i><span>Belum tersedia</span></div><span class="photo-status pending"><i data-lucide="clock-3"></i> Dapat diunggah setelah matang</span><% } %></div>
+    <div class="photo-detail-card"><strong>Porsi Besar</strong><% if(row.photo_large_path){ %><a href="/uploads/<%= String(row.photo_large_path).split(/[\\/]/).pop() %>" target="_blank"><img src="/uploads/<%= String(row.photo_large_path).split(/[\\/]/).pop() %>" alt="Foto menu porsi besar"></a><span class="photo-status ready"><i data-lucide="image-check"></i> Tersedia</span><% }else{ %><div class="photo-empty"><i data-lucide="image-off"></i><span>Belum tersedia</span></div><span class="photo-status pending"><i data-lucide="clock-3"></i> Dapat diunggah setelah matang</span><% } %></div>
+  </div></div>
+</section>
+<%- include('../partials/footer') %>

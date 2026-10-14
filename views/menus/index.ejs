@@ -1,0 +1,68 @@
+<%- include('../partials/header') %>
+<section class="panel">
+  <div class="panel-head menu-page-head">
+    <div><span class="panel-kicker">OPERASIONAL SPPG</span><h2>Master Menu</h2><p class="muted">Menu ditampilkan berdasarkan tanggal operasional. Menu yang sudah pernah dibuat dapat digunakan kembali melalui fitur Salin Menu.</p></div>
+    <div class="menu-actions"><a class="outline-btn" href="/menus/copy?source=<%= selected %>"><i data-lucide="copy"></i>Salin Menu</a><a class="primary-btn" href="/menus/new?date=<%= selected %>"><i data-lucide="plus"></i>Tambah Menu</a></div>
+  </div>
+  <div class="date-toolbar">
+    <div class="field date-field"><label for="menu-date">Pilih Tanggal Menu</label><input id="menu-date" class="input" type="date" value="<%= selected %>" onchange="if(this.value) location.href='/menus?date='+this.value" aria-label="Pilih tanggal menu"></div>
+    <div class="field date-quick-field"><label for="menu-date-quick">Tanggal Tersimpan</label><select id="menu-date-quick" class="select" onchange="if(this.value) location.href='/menus?date='+this.value"><option value="">Pilih tanggal tersimpan...</option><% dateOptions.forEach(d=>{ %><option value="<%= d %>" <%= d===selected?'selected':'' %>><%= new Date(d+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'}) %></option><% }) %></select></div>
+    <div class="date-summary"><strong><%= count %></strong><span>menu pada tanggal ini</span></div>
+  </div>
+  <div class="menu-day-title"><div><span class="panel-kicker">MENU HARIAN</span><h3><%= new Date(selected+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) %></h3></div></div>
+  <% if(rows.length){ %>
+    <div class="menu-list-final">
+      <% rows.forEach(r=>{ const nf=v=>v===null||v===undefined||v===''?'—':Number(v).toLocaleString('id-ID',{minimumFractionDigits:2,maximumFractionDigits:2}); %>
+      <article class="menu-card-final">
+        <div class="menu-card-final-head">
+          <span class="menu-type-badge <%= r.kpm_type==='SATUAN_PENDIDIKAN'?'school':'posyandu' %>"><i data-lucide="<%= r.kpm_type==='SATUAN_PENDIDIKAN'?'school':'heart-pulse' %>"></i><%= r.kpm_type==='SATUAN_PENDIDIKAN'?'Satuan Pendidikan':'Posyandu' %></span>
+          <strong class="menu-code-final"><%= r.menu_code %></strong>
+        </div>
+        <div class="menu-card-final-main">
+          <div class="menu-photo-final-grid">
+            <% if(r.photo_small_path){ %><a class="menu-photo-final" href="/uploads/<%= String(r.photo_small_path).split(/[\\/]/).pop() %>" target="_blank" rel="noopener" title="Lihat foto porsi kecil"><img src="/uploads/<%= String(r.photo_small_path).split(/[\\/]/).pop() %>" alt="Foto <%= r.menu_name %> porsi kecil" onerror="this.closest('a').classList.add('image-error');this.remove();"><span>Porsi Kecil</span></a><% }else{ %><div class="menu-photo-final missing"><i data-lucide="image-off"></i><strong>Porsi Kecil</strong><small>Belum ada foto</small></div><% } %>
+            <% if(r.photo_large_path){ %><a class="menu-photo-final" href="/uploads/<%= String(r.photo_large_path).split(/[\\/]/).pop() %>" target="_blank" rel="noopener" title="Lihat foto porsi besar"><img src="/uploads/<%= String(r.photo_large_path).split(/[\\/]/).pop() %>" alt="Foto <%= r.menu_name %> porsi besar" onerror="this.closest('a').classList.add('image-error');this.remove();"><span>Porsi Besar</span></a><% }else{ %><div class="menu-photo-final missing"><i data-lucide="image-off"></i><strong>Porsi Besar</strong><small>Belum ada foto</small></div><% } %>
+          </div>
+          <div class="menu-final-info" style="container-type:inline-size;">
+            <div class="menu-final-date"><i data-lucide="calendar-days"></i><span><%= new Date(selected+'T00:00:00').toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) %></span></div>
+            <h3><%= r.menu_name %></h3>
+            <p><%= r.component_name||'Komponen menu belum diisi' %></p>
+          </div>
+        </div>
+        <div class="nutrition-final-wrap">
+          <section class="nutrition-final nutrition-final-small">
+            <div class="nutrition-final-head"><strong><i data-lucide="utensils"></i>Porsi Kecil</strong><span>Per Porsi</span></div>
+            <div class="nutrition-final-metrics">
+              <div><i data-lucide="zap"></i><small>Energi</small><b><%= nf(r.energy_small) %></b><em>kkal</em></div>
+              <div><i data-lucide="beef"></i><small>Protein</small><b><%= nf(r.protein_small) %></b><em>g</em></div>
+              <div><i data-lucide="droplets"></i><small>Lemak</small><b><%= nf(r.fat_small) %></b><em>g</em></div>
+              <div><i data-lucide="wheat"></i><small>Karbohidrat</small><b><%= nf(r.carb_small) %></b><em>g</em></div>
+              <div><i data-lucide="leaf"></i><small>Serat</small><b><%= nf(r.fiber_small) %></b><em>g</em></div>
+            </div>
+          </section>
+          <section class="nutrition-final nutrition-final-large">
+            <div class="nutrition-final-head"><strong><i data-lucide="utensils"></i>Porsi Besar</strong><span>Per Porsi</span></div>
+            <div class="nutrition-final-metrics">
+              <div><i data-lucide="zap"></i><small>Energi</small><b><%= nf(r.energy_large) %></b><em>kkal</em></div>
+              <div><i data-lucide="beef"></i><small>Protein</small><b><%= nf(r.protein_large) %></b><em>g</em></div>
+              <div><i data-lucide="droplets"></i><small>Lemak</small><b><%= nf(r.fat_large) %></b><em>g</em></div>
+              <div><i data-lucide="wheat"></i><small>Karbohidrat</small><b><%= nf(r.carb_large) %></b><em>g</em></div>
+              <div><i data-lucide="leaf"></i><small>Serat</small><b><%= nf(r.fiber_large) %></b><em>g</em></div>
+            </div>
+          </section>
+        </div>
+        <div class="menu-card-final-footer">
+          <div class="menu-card-final-actions">
+            <a class="outline-btn menu-edit-final" href="/menus/<%= r.id %>/edit"><i data-lucide="pencil"></i>Edit Menu</a>
+            <form method="post" action="/menus/<%= r.id %>/remove" onsubmit="return confirm('Hapus menu ini hanya dari tanggal <%= selected %>? Master menu tetap tersimpan.')"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="danger-btn menu-delete-final" type="submit"><i data-lucide="trash-2"></i>Hapus dari Tanggal</button></form>
+          </div>
+          <div class="menu-card-meta-final"><span><i data-lucide="clock-3"></i>Dibuat: <%= new Date(r.created_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) %></span><span>Terakhir diubah: <%= new Date(r.updated_at).toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}) %></span></div>
+        </div>
+      </article>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <div class="empty-state"><i data-lucide="utensils"></i><strong>Belum ada menu pada tanggal ini</strong><span>Tambahkan menu baru atau salin menu dari tanggal lain.</span><div class="empty-actions"><a class="primary-btn" href="/menus/new?date=<%= selected %>">Tambah Menu</a><a class="outline-btn" href="/menus/copy?target=<%= selected %>">Salin Menu</a></div></div>
+  <% } %>
+</section>
+<%- include('../partials/footer') %>

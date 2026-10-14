@@ -1,0 +1,100 @@
+<%- include('../partials/header') %>
+    <div class="kpm-head">
+        <div>
+            <div class="eyebrow">SUMBER DATA KPM</div>
+            <h2 style="margin:0">DATA KPM PM</h2>
+            <p class="sub">Wadah data usulan dari KPM. Data tidak mengubah Master KPM sampai ditinjau, disetujui, lalu
+                diterapkan oleh pengguna berwenang.</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="/data-kpm-pm/import">↑ Import BNBA
+                Excel</a><a class="btn gray" href="/data-kpm-pm/new">＋ Entry Manual</a></div>
+    </div>
+    <div class="grid kpm-summary">
+        <div class="card">
+            <div class="label">Total Pengajuan</div>
+            <div class="metric">
+                <%= summary.total||0 %>
+            </div>
+        </div>
+        <div class="card">
+            <div class="label">Menunggu Review</div>
+            <div class="metric">
+                <%= Number(summary.diajukan||0)+Number(summary.ditinjau||0) %>
+            </div>
+        </div>
+        <div class="card">
+            <div class="label">Disetujui</div>
+            <div class="metric">
+                <%= summary.disetujui||0 %>
+            </div>
+        </div>
+        <div class="card">
+            <div class="label">Ditolak</div>
+            <div class="metric">
+                <%= summary.ditolak||0 %>
+            </div>
+        </div>
+    </div>
+    <form class="card kpm-filter" method="get">
+        <div class="field"><label>Status</label><select class="select" name="status">
+                <option value="">Semua</option>
+                <% ['DIAJUKAN','DITINJAU','DISETUJUI','DITOLAK','DITERAPKAN'].forEach(x=>{ %><option value="<%= x %>"
+                        <%=status===x?'selected':'' %>><%= x %>
+                    </option>
+                    <% }) %>
+            </select></div>
+        <div class="field"><label>Jenis KPM</label><select class="select" name="type">
+                <option value="">Semua</option>
+                <option value="SATUAN_PENDIDIKAN" <%=type==='SATUAN_PENDIDIKAN' ?'selected':'' %>>Satuan Pendidikan
+                </option>
+                <option value="POSYANDU" <%=type==='POSYANDU' ?'selected':'' %>>Posyandu</option>
+            </select></div>
+        <div class="field field-grow"><label>Pencarian</label><input class="input" name="q" value="<%= q %>"
+                placeholder="Nama atau kode KPM"></div><button class="btn" type="submit">Filter</button>
+    </form>
+    <div class="card" style="overflow:auto">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>KPM</th>
+                    <th>Berlaku</th>
+                    <th>Status</th>
+                    <th>Baris</th>
+                    <th>Pengaju</th>
+                    <th>Review</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <% rows.forEach(r=>{ %><tr>
+                        <td><strong>
+                                <%= r.kpm_name %>
+                            </strong><br><small>
+                                <%= r.kpm_code %> · <%= r.kpm_type==='POSYANDU' ?'Posyandu':'Satuan Pendidikan' %>
+                            </small></td>
+                        <td>
+                            <%= r.effective_from %>
+                        </td>
+                        <td><span
+                                class="status <%= ['DISETUJUI','DITERAPKAN'].includes(r.status)?'success':r.status==='DITOLAK'?'error':'warning' %>">
+                                <%= r.status %>
+                            </span></td>
+                        <td>
+                            <%= r.valid_count %>/<%= r.row_count %> valid
+                        </td>
+                        <td>
+                            <%= r.submitter_name||'-' %>
+                        </td>
+                        <td>
+                            <%= r.reviewer_name||'-' %>
+                        </td>
+                        <td><a class="btn gray" href="/data-kpm-pm/<%= r.id %>">Detail</a></td>
+                    </tr>
+                    <% }) %>
+            </tbody>
+        </table>
+        <% if(!rows.length){ %>
+            <div class="empty">Belum ada pengajuan DATA KPM PM.</div>
+            <% } %>
+    </div>
+    <%- include('../partials/footer') %>

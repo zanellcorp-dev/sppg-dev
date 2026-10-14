@@ -1,0 +1,35 @@
+<%- include('partials/header') %>
+<section class="backup-hero">
+  <div><span class="panel-kicker">SYSTEM · DATA PROTECTION</span><h2>Backup & Data</h2><p>Pusat kontrol backup, penyimpanan persisten, dan perlindungan data SPPG Monitoring.</p></div>
+  <form method="post" action="/backup/full" onsubmit="return confirm('Buat Full Backup sekarang? Proses ini tidak menghapus atau mengubah data operasional.');">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <button class="primary-btn" type="submit"><i data-lucide="database-backup"></i> Backup Sekarang</button>
+  </form>
+</section>
+
+<div class="backup-grid">
+  <section class="panel backup-card backup-hostinger">
+    <div class="backup-card-head"><div><span class="panel-kicker">INFRASTRUKTUR</span><h3>Backup Harian Hostinger</h3><p>Backup otomatis dikelola oleh Hostinger, terpisah dari mekanisme backup aplikasi.</p></div><span class="status-pill info">HOSTINGER</span></div>
+    <div class="backup-status-row"><span class="backup-icon"><i data-lucide="cloud"></i></span><div><strong>Backup otomatis aktif</strong><small>Jadikan ini lapisan pemulihan harian dari sisi hosting.</small></div></div>
+    <div class="backup-note"><i data-lucide="info"></i><span>Aplikasi tidak mengubah atau menghapus backup Hostinger. Untuk restore backup hosting, gunakan kontrol Backup di hPanel Hostinger.</span></div>
+  </section>
+
+  <section class="panel backup-card">
+    <div class="backup-card-head"><div><span class="panel-kicker">APLIKASI</span><h3>Full Backup SPPG</h3><p>Snapshot database operasional + persistent files + template aplikasi.</p></div><span class="status-pill success">AMAN</span></div>
+    <div class="backup-metrics"><div><strong><%= storage.files.toLocaleString('id-ID') %></strong><small>File tersimpan</small></div><div><strong><%= (storage.bytes/1024/1024).toFixed(2) %> MB</strong><small>Persistent storage</small></div><div><strong><%= dbTables %></strong><small>Tabel data</small></div></div>
+    <div class="backup-warning"><i data-lucide="shield-check"></i><div><strong>Backup tidak menghapus data sumber</strong><small>File backup disimpan di persistent storage di luar release aplikasi.</small></div></div>
+  </section>
+</div>
+
+<section class="panel backup-history">
+  <div class="backup-card-head"><div><span class="panel-kicker">RIWAYAT</span><h3>Backup Manual</h3><p>Setiap backup baru menjadi tambahan. Backup sebelumnya tidak ditimpa.</p></div></div>
+  <% if(last){ %>
+    <div class="backup-history-row"><div class="backup-file-icon"><i data-lucide="file-archive"></i></div><div class="backup-file-main"><strong><%= last.filename %></strong><small><%= new Date(last.created_at).toLocaleString('id-ID') %> · <%= (Number(last.size_bytes||0)/1024/1024).toFixed(2) %> MB</small></div><span class="status-pill <%= last.status==='SUCCESS'?'success':'danger' %>"><%= last.status==='SUCCESS'?'BERHASIL':last.status %></span><% if(last.status==='SUCCESS'){ %><a class="outline-btn small" href="/backup/download/<%= last.id %>"><i data-lucide="download"></i> Download</a><% } %></div>
+  <% }else{ %><div class="empty-state"><i data-lucide="database"></i><strong>Belum ada backup manual</strong><span>Klik “Backup Sekarang” untuk membuat snapshot pertama.</span></div><% } %>
+</section>
+
+<section class="backup-safety-grid">
+  <section class="panel"><div class="backup-card-head"><div><span class="panel-kicker">ATURAN</span><h3>Perlindungan Data</h3></div></div><ul class="backup-checklist"><li><i data-lucide="check-circle-2"></i>Deployment aplikasi tidak menghapus database.</li><li><i data-lucide="check-circle-2"></i>File upload berada di persistent storage di luar release.</li><li><i data-lucide="check-circle-2"></i>Backup baru tidak menimpa backup sebelumnya.</li><li><i data-lucide="check-circle-2"></i>Backup dan aktivitas penting dicatat ke audit trail.</li><li><i data-lucide="check-circle-2"></i>Session login tidak ikut dibackup karena bersifat sementara.</li></ul></section>
+  <section class="panel"><div class="backup-card-head"><div><span class="panel-kicker">PROSEDUR AMAN</span><h3>Sebelum Perubahan Besar</h3></div></div><div class="safe-change"><div class="safe-step"><b>01</b><span>Backup sekarang</span></div><div class="safe-step"><b>02</b><span>Pastikan download berhasil</span></div><div class="safe-step"><b>03</b><span>Baru lakukan deploy/perbaikan</span></div><div class="safe-step"><b>04</b><span>Health check & verifikasi data</span></div></div></section>
+</section>
+<%- include('partials/footer') %>

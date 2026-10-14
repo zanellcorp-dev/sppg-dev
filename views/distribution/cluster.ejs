@@ -1,0 +1,157 @@
+<%- include('../partials/header') %>
+    <section class="module-hero panel dist-hero">
+        <div><span class="panel-kicker">KLOTER DISTRIBUSI</span>
+            <h2>Kloter <%= cluster.cluster_no %>
+            </h2>
+            <p>
+                <%= cluster.distribution_date %> · <%= cluster.kpm_type==='POSYANDU' ?'Posyandu':'Satuan Pendidikan' %>
+                        · <%= cluster.route_name||'Jalur belum ditentukan' %>
+            </p>
+        </div>
+        <div class="action-stack"><a class="outline-btn" href="/distribution?date=<%= cluster.distribution_date %>"><i
+                    data-lucide="arrow-left"></i>Kembali</a><a class="primary-btn"
+                href="/distribution/cluster/<%= cluster.id %>/edit"><i data-lucide="pencil"></i>Edit Kloter</a></div>
+    </section>
+    <section class="dashboard-grid four-col dist-stats">
+        <div class="stat-card green">
+            <div class="stat-icon"><i data-lucide="users"></i></div>
+            <div><small>KPM</small><strong>
+                    <%= totals.kpm_count %>
+                </strong></div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-icon"><i data-lucide="package"></i></div>
+            <div><small>Porsi Kecil</small><strong>
+                    <%= totals.small_total %>
+                </strong></div>
+        </div>
+        <div class="stat-card purple">
+            <div class="stat-icon"><i data-lucide="package-check"></i></div>
+            <div><small>Porsi Besar</small><strong>
+                    <%= totals.large_total %>
+                </strong></div>
+        </div>
+        <div class="stat-card yellow">
+            <div class="stat-icon"><i data-lucide="truck"></i></div>
+            <div><small>Kendaraan</small><strong class="stat-text">
+                    <%= cluster.vehicle %>
+                </strong></div>
+        </div>
+    </section>
+    <section class="panel dist-section">
+        <div class="panel-head">
+            <div><span class="panel-kicker">MENU</span>
+                <h3>Menu untuk kloter</h3>
+            </div>
+        </div>
+        <div class="dist-menu-grid">
+            <div class="dist-menu"><span>
+                    <%= cluster.kpm_type==='POSYANDU' ?'Posyandu':'Satuan Pendidikan' %>
+                </span><strong>
+                    <%= cluster.kpm_type==='POSYANDU' ?(schedule.menu_pos_name||'Belum
+                        ditentukan'):(schedule.menu_sp_name||'Belum ditentukan') %>
+                </strong></div>
+            <div class="dist-menu"><span>Kurir Distribusi</span><strong>
+                    <%= cluster.driver_name||'Belum dipilih' %>
+                </strong></div>
+        </div>
+    </section>
+    <section class="panel dist-section">
+        <div class="panel-head">
+            <div><span class="panel-kicker">WAKTU ACUAN</span>
+                <h3>Alur lengkap kloter</h3>
+            </div>
+        </div>
+        <div class="dist-timeline">
+            <div class="dist-step"><span class="dist-step-icon"><i data-lucide="chef-hat"></i></span>
+                <div><small>Persiapan</small><strong>
+                        <%= schedule.prep_start||'—' %> — <%= schedule.prep_end||'—' %>
+                    </strong></div>
+            </div>
+            <div class="dist-step"><span class="dist-step-icon"><i data-lucide="cooking-pot"></i></span>
+                <div><small>Pengolahan</small><strong>
+                        <%= schedule.processing_start||'—' %> — <%= schedule.processing_end||'—' %>
+                    </strong></div>
+            </div>
+            <div class="dist-step"><span class="dist-step-icon"><i data-lucide="utensils"></i></span>
+                <div><small>Pemorsian</small><strong>
+                        <%= schedule.portioning_start||'—' %> — <%= schedule.portioning_end||'—' %>
+                    </strong></div>
+            </div>
+            <div class="dist-step"><span class="dist-step-icon"><i data-lucide="truck"></i></span>
+                <div><small>Keberangkatan</small><strong>
+                        <%= cluster.departure_time||'—' %>
+                    </strong></div>
+            </div>
+            <div class="dist-step"><span class="dist-step-icon"><i data-lucide="school"></i></span>
+                <div><small>Serah Terima & Pengambilan</small><strong>Per KPM di bawah</strong></div>
+            </div>
+            <div class="dist-step"><span class="dist-step-icon"><i data-lucide="warehouse"></i></span>
+                <div><small>Kembali ke SPPG</small><strong>
+                        <%= cluster.return_time||'—' %>
+                    </strong></div>
+            </div>
+            <div class="dist-step"><span class="dist-step-icon"><i data-lucide="sparkles"></i></span>
+                <div><small>Pencucian</small><strong>
+                        <%= schedule.washing_start||'—' %> — <%= schedule.washing_end||'—' %>
+                    </strong></div>
+            </div>
+        </div>
+    </section>
+    <section class="panel dist-section">
+        <div class="panel-head">
+            <div><span class="panel-kicker">DAFTAR KPM</span>
+                <h3>Tujuan dalam Kloter <%= cluster.cluster_no %>
+                </h3>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <table class="dist-detail-table">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>KPM</th>
+                        <th>Porsi Kecil</th>
+                        <th>Porsi Besar</th>
+                        <th>Serah Terima</th>
+                        <th>Pengambilan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% items.forEach((r,i)=>{ %><tr>
+                            <td>
+                                <%= i+1 %>
+                            </td>
+                            <td><strong>
+                                    <%= r.code %>
+                                </strong><br>
+                                <%= r.name %>
+                            </td>
+                            <td>
+                                <%= r.small_portions %>
+                            </td>
+                            <td>
+                                <%= r.large_portions %>
+                            </td>
+                            <td>
+                                <%= r.handover_time||'—' %>
+                            </td>
+                            <td>
+                                <%= r.pickup_time||'—' %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <section class="panel dist-section">
+        <div class="dist-delete-row">
+            <div><strong>Hapus kloter?</strong><span>Data kloter dan daftar KPM-nya akan dihapus dari jadwal tanggal
+                    ini.</span></div>
+            <form method="post" action="/distribution/cluster/<%= cluster.id %>/remove"
+                onsubmit="return confirm('Hapus Kloter <%= cluster.cluster_no %>?')"><input type="hidden" name="_csrf"
+                    value="<%= csrfToken %>"><button class="outline-btn danger-btn">Hapus Kloter</button></form>
+        </div>
+    </section>
+    <%- include('../partials/footer') %>

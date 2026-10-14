@@ -1,0 +1,4 @@
+<%- include('partials/header') %>
+<section class="module-hero panel"><div><span class="panel-kicker"><%= kicker || 'SPPG' %></span><h2><%= heading %></h2><p><%= description %></p></div><% if(actionHref){ %><a class="primary-btn" href="<%= actionHref %>"><i data-lucide="plus"></i><%= actionLabel || 'Tambah' %></a><% } %></section>
+<section class="panel"><div class="panel-head"><div><span class="panel-kicker">RINGKASAN</span><h3><%= emptyTitle || 'Modul siap digunakan' %></h3></div></div><div class="empty-state"><i data-lucide="inbox"></i><strong><%= emptyText || 'Belum ada data.' %></strong><span>Data pada modul ini akan tampil di sini setelah diinput.</span></div></section>
+<%- include('partials/footer') %>

@@ -1,0 +1,149 @@
+<%- include('../partials/header') %>
+
+<style>
+/* v1.8.30 — integrated schedule builder / KPM picker layout hardening */
+.dist-schedule-builder{width:100%;max-width:1180px;margin:0 auto;box-sizing:border-box}
+.dist-schedule-builder *{box-sizing:border-box}
+.dist-builder-section{width:100%;margin:18px 0 0;padding:20px;border:1px solid #e3eae7;border-radius:16px;background:#fff}
+.dist-builder-title{display:flex;align-items:center;gap:12px;margin:0 0 18px}
+.dist-builder-title>span{width:32px;height:32px;min-width:32px;border-radius:10px;display:grid;place-items:center;background:#e8f5ee;color:#147a4b;font-weight:800}
+.dist-builder-title>div{min-width:0;flex:1}.dist-builder-title h3{margin:0;font-size:18px;line-height:1.3}.dist-builder-title p{margin:4px 0 0;color:#6b7280;font-size:13px;line-height:1.45}
+.dist-builder-title .secondary-btn{margin-left:auto;flex:0 0 auto}
+.dist-cluster-list{display:grid;grid-template-columns:1fr;gap:14px}
+.dist-builder-cluster{width:100%;border:1px solid #dfe8e4;border-radius:14px;padding:16px;background:#fbfdfc}
+.dist-builder-cluster.active{border-color:#55a77f;box-shadow:0 0 0 2px rgba(85,167,127,.10)}
+.dist-builder-cluster-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:15px}
+.dist-builder-cluster-head>div:first-child{min-width:0}.dist-builder-cluster-head strong{display:block;font-size:17px;line-height:1.3}.dist-builder-cluster-head small{display:block;color:#667085;font-size:12px;margin-top:4px}
+.cluster-head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;flex:0 0 auto}
+.dist-builder-cluster .form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dist-builder-cluster .field{min-width:0}.dist-builder-cluster .field label{display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:#44576a}
+.dist-builder-cluster .input,.dist-builder-cluster .select,.dist-builder-cluster .textarea{width:100%;max-width:100%;min-width:0}
+.cluster-time-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+.cluster-time-grid>div{min-width:0;padding:12px;border-radius:12px;background:#f5f8f6;border:1px solid #e5ece8}
+.cluster-time-grid b{display:block;margin-bottom:8px;font-size:13px;color:#294158}.cluster-time-grid label{display:block;font-size:11px;color:#667085;margin-top:7px}.cluster-time-grid .input{width:100%;margin-top:4px}
+.cluster-kpm-summary{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.cluster-kpm-summary span{padding:7px 10px;border-radius:999px;background:#edf5f1;color:#355c49;font-size:12px}
+/* KPM section: deliberately separated and grid-based so every KPM is a real card */
+#kpmPickerSection{width:100%;margin-top:18px;padding:20px;border:1px solid #d9e7e1;border-radius:16px;background:#fbfdfc}
+#kpmPickerSection[hidden]{display:none!important}
+.dist-kpm-picker-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:14px}
+.dist-kpm-tools{display:flex;align-items:center;gap:12px;min-width:0;flex:1}.dist-kpm-search{position:relative;display:block;width:min(100%,560px)}
+.dist-kpm-search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:#718397;z-index:2}
+.dist-kpm-search input{display:block;width:100%;height:42px;padding:0 12px 0 38px;border:1px solid #d3dfdb;border-radius:10px;background:#fff;font-size:13px;outline:none}
+.dist-kpm-tools>span{font-size:12px;font-weight:700;color:#718397;white-space:nowrap}
+.dist-kpm-summary{min-width:180px;padding:11px 14px;border:1px solid #d9e9e1;border-radius:11px;background:#edf8f3;text-align:right;color:#176448}
+.dist-kpm-summary b{display:inline;font-size:20px;line-height:1}.dist-kpm-summary>span{font-size:11px;margin-left:5px}.dist-kpm-summary em{display:block;margin-top:5px;font-size:11px;font-style:normal;color:#4e7465}
+.builder-kpm-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;max-height:650px;overflow-y:auto;padding:2px 5px 4px 1px}
+.builder-kpm-grid .dist-kpm-card{display:block!important;width:100%;min-width:0;margin:0!important;padding:13px!important;border:1px solid #dce6e2!important;border-radius:12px!important;background:#fff!important;box-shadow:none!important}
+.builder-kpm-grid .dist-kpm-card.selected{border-color:#55a77f!important;background:#f4fbf7!important;box-shadow:0 0 0 1px rgba(85,167,127,.12)!important}
+.dist-kpm-check{display:flex!important;align-items:flex-start!important;gap:10px!important;width:100%!important;min-width:0;cursor:pointer}
+.dist-kpm-check input{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
+.dist-checkmark{display:block!important;width:20px!important;height:20px!important;min-width:20px!important;border:2px solid #bdcbc7!important;border-radius:6px!important;background:#fff!important;position:relative!important;margin-top:1px!important}
+.dist-kpm-check input:checked+.dist-checkmark{background:#087455!important;border-color:#087455!important}.dist-kpm-check input:checked+.dist-checkmark:after{content:'✓';position:absolute;left:3px;top:-3px;color:#fff;font-size:15px;font-weight:800}
+.dist-kpm-main{display:block!important;min-width:0;flex:1}.dist-kpm-main strong{display:block!important;font-size:13px!important;line-height:1.35!important;color:#20374f!important;overflow-wrap:anywhere}.dist-kpm-main small{display:block!important;margin-top:3px;font-size:10px;color:#7a8a9b;line-height:1.35}
+.dist-kpm-portions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:11px}
+.dist-kpm-portions span{display:block!important;min-width:0;text-align:center;border-radius:8px;background:#f6f8f8;padding:8px 4px}.dist-kpm-portions b{display:block!important;font-size:15px!important;line-height:1.2;color:#20374f}.dist-kpm-portions small{display:block;font-size:9px;color:#7a8a9b;line-height:1.25;margin-top:2px}
+.dist-kpm-times{display:grid!important;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px;padding-top:10px;border-top:1px solid #edf1f4}
+.dist-kpm-times label{display:block!important;min-width:0;font-size:10px;font-weight:700;color:#718397;line-height:1.3}.dist-kpm-times .dist-time-input{display:block!important;width:100%!important;min-width:0!important;height:36px!important;margin-top:4px!important;padding:6px 8px!important}
+.dist-builder-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media(max-width:900px){.dist-builder-cluster .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cluster-time-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dist-kpm-picker-head{align-items:stretch;flex-direction:column}.dist-kpm-summary{text-align:left}.builder-kpm-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.dist-builder-section,#kpmPickerSection{padding:14px}.dist-builder-cluster-head{align-items:flex-start;flex-direction:column}.cluster-head-actions{width:100%}.dist-builder-cluster .form-grid,.cluster-time-grid{grid-template-columns:1fr}.dist-kpm-tools{align-items:stretch;flex-direction:column}.dist-kpm-search{width:100%}}
+</style>
+
+<section class="panel form-panel dist-schedule-builder">
+  <div class="panel-head">
+    <div><span class="panel-kicker">JADWAL DISTRIBUSI</span><h2><%= schedule?'Edit':'Tambah' %> Jadwal <%= date %></h2><p class="muted">Dalam satu halaman: pilih menu, buat kloter, pilih KPM, porsi otomatis, dan atur waktu per kloter/KPM.</p></div>
+    <a class="outline-btn" href="/distribution?date=<%= date %>">Kembali</a>
+  </div>
+  <form method="post" action="/distribution/schedule" id="scheduleBuilderForm">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="distribution_date" value="<%= date %>">
+    <input type="hidden" name="clusters_json" id="clustersJson">
+
+    <div class="dist-builder-section">
+      <div class="dist-builder-title"><span>1</span><div><h3>Menu Hari Ini</h3><p>Pilih menu yang dipakai pada tanggal distribusi ini.</p></div></div>
+      <div class="form-grid">
+        <div class="field"><label>Menu Satuan Pendidikan</label><select class="select" name="menu_sp_id"><option value="">— Pilih Menu —</option><% menus.filter(m=>m.kpm_type==='SATUAN_PENDIDIKAN').forEach(m=>{ %><option value="<%= m.id %>" <%= Number(schedule?.menu_sp_id)===Number(m.id)?'selected':'' %>><%= m.menu_code %> · <%= m.menu_name %></option><% }) %></select></div>
+        <div class="field"><label>Menu Posyandu</label><select class="select" name="menu_pos_id"><option value="">— Pilih Menu —</option><% menus.filter(m=>m.kpm_type==='POSYANDU').forEach(m=>{ %><option value="<%= m.id %>" <%= Number(schedule?.menu_pos_id)===Number(m.id)?'selected':'' %>><%= m.menu_code %> · <%= m.menu_name %></option><% }) %></select></div>
+      </div>
+    </div>
+
+    <div class="dist-builder-section">
+      <div class="dist-builder-title"><span>2</span><div><h3>Kloter Distribusi</h3><p>Setiap kloter punya waktu proses sendiri. KPM dipilih di bagian ini.</p></div><button type="button" class="secondary-btn" id="addClusterBtn"><i data-lucide="plus"></i>Tambah Kloter</button></div>
+      <div id="clusterList" class="dist-cluster-list"></div>
+      <div id="clusterEmpty" class="empty-state compact"><i data-lucide="layers-3"></i><strong>Belum ada kloter.</strong><span>Klik “Tambah Kloter” lalu pilih KPM di panel sebelah/di bawah.</span></div>
+    </div>
+
+    <div class="dist-builder-section" id="kpmPickerSection" hidden>
+      <div class="dist-builder-title"><span>3</span><div><h3>Pilih KPM</h3><p id="pickerHint">Pilih KPM yang masuk ke kloter terpilih. Porsi mengikuti Master KPM sesuai tanggal distribusi.</p></div></div>
+      <div class="dist-kpm-picker-head">
+        <div class="dist-kpm-tools"><div class="dist-kpm-search"><i data-lucide="search"></i><input id="builderKpmSearch" type="search" placeholder="Cari kode atau nama KPM..."></div><span id="builderKpmVisible"></span></div>
+        <div class="dist-kpm-summary"><b id="builderSelectedCount">0</b><span>KPM terpilih</span><em><span id="builderSelectedSmall">0</span> kecil · <span id="builderSelectedLarge">0</span> besar</em></div>
+      </div>
+      <div class="dist-kpm-grid builder-kpm-grid" id="builderKpmGrid"></div>
+    </div>
+
+    <div class="dist-builder-section">
+      <div class="dist-builder-title"><span>4</span><div><h3>Catatan Jadwal</h3><p>Catatan umum untuk tanggal distribusi.</p></div></div>
+      <div class="field"><textarea class="textarea" name="notes" placeholder="Catatan operasional tanggal ini"><%= schedule?.notes||'' %></textarea></div>
+    </div>
+
+    <div class="actions dist-builder-actions"><button class="primary-btn" type="submit"><i data-lucide="save"></i><%= schedule?'Simpan Perubahan':'Simpan Jadwal & Kloter' %></button><a class="outline-btn" href="/distribution?date=<%= date %>">Batal</a></div>
+  </form>
+</section>
+
+<template id="clusterCardTemplate">
+  <div class="dist-builder-cluster" data-cluster-index="__INDEX__">
+    <div class="dist-builder-cluster-head"><div><span class="dist-kpm-kicker">KLOTER</span><strong class="cluster-label">Kloter __NO__</strong><small class="cluster-kpm-label">Belum ada KPM</small></div><div class="cluster-head-actions"><button type="button" class="outline-btn choose-kpm-btn"><i data-lucide="list-checks"></i>Pilih KPM</button><button type="button" class="danger-btn remove-cluster-btn"><i data-lucide="trash-2"></i>Hapus</button></div></div>
+    <div class="form-grid">
+      <div class="field"><label>Nomor Kloter</label><input class="input c-cluster-no" type="number" min="1" value="__NO__"></div>
+      <div class="field"><label>Jenis KPM</label><select class="select c-type"><option value="SATUAN_PENDIDIKAN">Satuan Pendidikan</option><option value="POSYANDU">Posyandu</option></select></div>
+      <div class="field"><label>Jalur</label><input class="input c-route" placeholder="Contoh: Jalur 1"></div>
+      <div class="field"><label>Kurir Distribusi</label><select class="select c-staff"><option value="">— Pilih Kurir —</option><% staff.forEach(s=>{ %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select></div>
+      <div class="field"><label>Kendaraan *</label><select class="select c-vehicle"><option value="E 8684 RD">E 8684 RD</option><option value="E 8871 RD">E 8871 RD</option></select></div>
+      <div class="field"><label>Keberangkatan</label><input class="input c-departure" type="time"></div>
+      <div class="field"><label>Kembali ke SPPG</label><input class="input c-return" type="time"></div>
+    </div>
+    <div class="cluster-time-grid">
+      <div><b>Persiapan</b><label>Mulai<input class="input c-prep-start" type="time"></label><label>Selesai<input class="input c-prep-end" type="time"></label></div>
+      <div><b>Pengolahan</b><label>Mulai<input class="input c-processing-start" type="time"></label><label>Selesai<input class="input c-processing-end" type="time"></label></div>
+      <div><b>Pemorsian</b><label>Mulai<input class="input c-portioning-start" type="time"></label><label>Selesai<input class="input c-portioning-end" type="time"></label></div>
+      <div><b>Pencucian</b><label>Mulai<input class="input c-washing-start" type="time"></label><label>Selesai<input class="input c-washing-end" type="time"></label></div>
+    </div>
+    <div class="cluster-kpm-summary"><span class="cluster-kpm-count">0 KPM</span><span><b class="cluster-small">0</b> porsi kecil</span><span><b class="cluster-large">0</b> porsi besar</span><span><b class="cluster-total">0</b> total PM</span></div>
+    <textarea class="textarea c-notes" placeholder="Catatan khusus kloter"></textarea>
+  </div>
+</template>
+
+<script>
+const initialClusters=<%- JSON.stringify((clusters||[]).map(c=>({id:c.id,cluster_no:c.cluster_no,kpm_type:c.kpm_type,route_name:c.route_name||'',staff_id:c.staff_id||'',vehicle:c.vehicle||'E 8684 RD',prep_start:c.prep_start||'',prep_end:c.prep_end||'',processing_start:c.processing_start||'',processing_end:c.processing_end||'',portioning_start:c.portioning_start||'',portioning_end:c.portioning_end||'',departure_time:c.departure_time||'',return_time:c.return_time||'',washing_start:c.washing_start||'',washing_end:c.washing_end||'',notes:c.notes||'',kpm_ids:(c.kpm_items||[]).map(i=>i.kpm_id),handover:Object.fromEntries((c.kpm_items||[]).map(i=>[String(i.kpm_id),i.handover_time||''])),pickup:Object.fromEntries((c.kpm_items||[]).map(i=>[String(i.kpm_id),i.pickup_time||'']))}))).replace(/</g,'\\u003c') %>;
+const allKpms=<%- JSON.stringify(kpms||[]).replace(/</g,'\\u003c') %>;
+let clusters=initialClusters.map(x=>({...x,kpm_ids:[...(x.kpm_ids||[])],handover:{...(x.handover||{})},pickup:{...(x.pickup||{})}}));
+let activeIndex=-1;
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function renderClusters(){
+  const list=$('#clusterList'); list.innerHTML=''; $('#clusterEmpty').hidden=clusters.length>0;
+  clusters.forEach((c,i)=>{const t=$('#clusterCardTemplate').innerHTML.replaceAll('__INDEX__',i).replaceAll('__NO__',esc(c.cluster_no||i+1));const wrap=document.createElement('div');wrap.innerHTML=t;const el=wrap.firstElementChild;list.appendChild(el);fillCluster(el,c,i);});
+  if(activeIndex<0&&clusters.length)activeIndex=0; if(activeIndex>=clusters.length)activeIndex=clusters.length-1; refreshPicker(); lucide.createIcons();
+}
+function fillCluster(el,c,i){
+  el.querySelector('.c-cluster-no').value=c.cluster_no||i+1;el.querySelector('.c-type').value=c.kpm_type||'SATUAN_PENDIDIKAN';el.querySelector('.c-route').value=c.route_name||'';el.querySelector('.c-staff').value=c.staff_id||'';el.querySelector('.c-vehicle').value=c.vehicle||'E 8684 RD';
+  [['c-departure','departure_time'],['c-return','return_time'],['c-prep-start','prep_start'],['c-prep-end','prep_end'],['c-processing-start','processing_start'],['c-processing-end','processing_end'],['c-portioning-start','portioning_start'],['c-portioning-end','portioning_end'],['c-washing-start','washing_start'],['c-washing-end','washing_end']].forEach(([a,b])=>el.querySelector('.'+a).value=c[b]||'');el.querySelector('.c-notes').value=c.notes||'';
+  el.querySelector('.cluster-kpm-count').textContent=(c.kpm_ids||[]).length+' KPM';updateClusterSummary(el,c);
+  el.querySelector('.choose-kpm-btn').onclick=()=>{activeIndex=i;refreshPicker();document.querySelector('#kpmPickerSection').scrollIntoView({behavior:'smooth',block:'start'})};
+  el.querySelector('.remove-cluster-btn').onclick=()=>{clusters.splice(i,1);activeIndex=Math.min(activeIndex,clusters.length-1);renderClusters()};
+  el.querySelectorAll('input,select,textarea').forEach(inp=>inp.addEventListener('change',()=>syncClusterFromDOM(i)));
+  el.classList.toggle('active',i===activeIndex);
+}
+function syncClusterFromDOM(i){const el=$$('.dist-builder-cluster')[i];if(!el)return;const c=clusters[i];c.cluster_no=Number(el.querySelector('.c-cluster-no').value)||i+1;c.kpm_type=el.querySelector('.c-type').value;c.route_name=el.querySelector('.c-route').value;c.staff_id=el.querySelector('.c-staff').value;c.vehicle=el.querySelector('.c-vehicle').value;c.departure_time=el.querySelector('.c-departure').value;c.return_time=el.querySelector('.c-return').value;c.prep_start=el.querySelector('.c-prep-start').value;c.prep_end=el.querySelector('.c-prep-end').value;c.processing_start=el.querySelector('.c-processing-start').value;c.processing_end=el.querySelector('.c-processing-end').value;c.portioning_start=el.querySelector('.c-portioning-start')?.value||el.querySelector('.c-portioning-start')?.value||el.querySelector('.c-portioning-start')?.value||el.querySelector('.c-portioning-start')?.value;c.portioning_start=el.querySelector('.c-portioning-start').value;c.portioning_end=el.querySelector('.c-portioning-end').value;c.washing_start=el.querySelector('.c-washing-start').value;c.washing_end=el.querySelector('.c-washing-end').value;c.notes=el.querySelector('.c-notes').value;updateClusterSummary(el,c);}
+function updateClusterSummary(el,c){const chosen=(c.kpm_ids||[]).map(id=>allKpms.find(k=>Number(k.id)===Number(id))).filter(Boolean),small=chosen.reduce((a,k)=>a+Number(k.small_portions||0),0),large=chosen.reduce((a,k)=>a+Number(k.large_portions||0),0);el.querySelector('.cluster-kpm-count').textContent=chosen.length+' KPM';el.querySelector('.cluster-small').textContent=small;el.querySelector('.cluster-large').textContent=large;el.querySelector('.cluster-total').textContent=small+large;el.querySelector('.cluster-kpm-label').textContent=chosen.length?chosen.length+' KPM terpilih':'Belum ada KPM';}
+function refreshPicker(){const sec=$('#kpmPickerSection');if(activeIndex<0||!clusters[activeIndex]){sec.hidden=true;return}sec.hidden=false;const c=clusters[activeIndex];$('#pickerHint').textContent='KPM untuk Kloter '+c.cluster_no+' · '+(c.kpm_type==='POSYANDU'?'Posyandu':'Satuan Pendidikan')+'. Porsi otomatis mengikuti Master KPM tanggal '+document.querySelector('[name="distribution_date"]').value+'.';const q=($('#builderKpmSearch').value||'').toLowerCase().trim(),grid=$('#builderKpmGrid');grid.innerHTML='';let visible=0,small=0,large=0;allKpms.filter(k=>k.type===c.kpm_type).forEach(k=>{const show=!q||(k.code+' '+k.name).toLowerCase().includes(q);if(!show)return;visible++;const checked=(c.kpm_ids||[]).map(Number).includes(Number(k.id));if(checked){small+=Number(k.small_portions||0);large+=Number(k.large_portions||0)}const card=document.createElement('div');card.className='dist-kpm-card'+(checked?' selected':'');card.innerHTML='<label class="dist-kpm-check"><input type="checkbox" '+(checked?'checked':'')+'><span class="dist-checkmark"></span><span class="dist-kpm-main"><strong>'+esc(k.name)+'</strong><small>'+esc(k.code)+' · '+(k.type==='POSYANDU'?'Posyandu':'Satuan Pendidikan')+'</small></span></label><div class="dist-kpm-portions"><span><b>'+Number(k.small_portions||0)+'</b><small>Porsi Kecil</small></span><span><b>'+Number(k.large_portions||0)+'</b><small>Porsi Besar</small></span><span><b>'+Number(k.small_portions||0)+Number(k.large_portions||0)+'</b><small>Total PM</small></span></div><div class="dist-kpm-times"><label>Serah Terima<input class="input dist-time-input handover" type="time" value="'+esc(c.handover?.[String(k.id)]||'')+'"></label><label>Pengambilan<input class="input dist-time-input pickup" type="time" value="'+esc(c.pickup?.[String(k.id)]||'')+'"></label></div>';
+const box=card.querySelector('input');box.onchange=()=>{const ids=new Set((c.kpm_ids||[]).map(Number));if(box.checked)ids.add(Number(k.id));else ids.delete(Number(k.id));c.kpm_ids=[...ids];card.classList.toggle('selected',box.checked);updatePickerTotals();const el=$$('.dist-builder-cluster')[activeIndex];if(el)updateClusterSummary(el,c);};card.querySelector('.handover').onchange=e=>{c.handover=c.handover||{};c.handover[String(k.id)]=e.target.value};card.querySelector('.pickup').onchange=e=>{c.pickup=c.pickup||{};c.pickup[String(k.id)]=e.target.value};grid.appendChild(card);});$('#builderKpmVisible').textContent=visible+' KPM tersedia';$('#builderSelectedCount').textContent=(c.kpm_ids||[]).length;$('#builderSelectedSmall').textContent=small;$('#builderSelectedLarge').textContent=large;}
+function updatePickerTotals(){const c=clusters[activeIndex];let s=0,l=0;(c.kpm_ids||[]).forEach(id=>{const k=allKpms.find(x=>Number(x.id)===Number(id));if(k){s+=Number(k.small_portions||0);l+=Number(k.large_portions||0)}});$('#builderSelectedCount').textContent=(c.kpm_ids||[]).length;$('#builderSelectedSmall').textContent=s;$('#builderSelectedLarge').textContent=l;}
+$('#addClusterBtn').onclick=()=>{syncAll();clusters.push({cluster_no:clusters.length+1,kpm_type:'SATUAN_PENDIDIKAN',route_name:'',staff_id:'',vehicle:'E 8684 RD',kpm_ids:[],handover:{},pickup:{}});activeIndex=clusters.length-1;renderClusters();setTimeout(()=>document.querySelector('#clusterList .dist-builder-cluster:last-child .choose-kpm-btn').click(),0)};
+$('#builderKpmSearch').oninput=refreshPicker;
+function syncAll(){ $$('.dist-builder-cluster').forEach((el,i)=>{if(clusters[i]){const ev=new Event('change');el.querySelector('.c-cluster-no').dispatchEvent(ev);}}); }
+$('#scheduleBuilderForm').onsubmit=e=>{syncAll();if(!clusters.length){e.preventDefault();alert('Tambahkan minimal satu kloter.');return}for(const c of clusters){if(!c.kpm_ids?.length){e.preventDefault();alert('Kloter '+c.cluster_no+' belum memiliki KPM. Silakan pilih KPM terlebih dahulu.');activeIndex=clusters.indexOf(c);refreshPicker();document.querySelector('#kpmPickerSection').scrollIntoView({behavior:'smooth'});return}}document.querySelector('#clustersJson').value=JSON.stringify(clusters)};
+renderClusters();
+</script>
+<%- include('../partials/footer') %>

@@ -1,0 +1,58 @@
+<%- include('../partials/header') %>
+<div class="kpm-head">
+  <div>
+    <div class="eyebrow">OPERASIONAL SPPG</div>
+    <h2 style="margin:0">Master KPM</h2>
+    <p class="sub">Data penerima manfaat berlaku berdasarkan tanggal. Jika tidak ada perubahan, data otomatis tetap berlaku tanpa perlu diperbarui setiap hari.</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn gray" href="/kpm/template.xlsx">↓ Template Excel KPM PM</a><a class="btn gray" href="/kpm/export.xlsx?date=<%= date %>&type=<%= encodeURIComponent(type) %>">↓ Export Excel</a><a class="btn secondary" href="/kpm/import?date=<%= date %>">↑ Import Excel</a><a class="btn" href="/kpm/new?date=<%= date %>">＋ Tambah KPM</a></div>
+</div>
+<div class="grid kpm-summary">
+  <div class="card"><div class="label">Satuan Pendidikan</div><div class="metric"><%= summary.school %></div><div class="sub">KPM aktif</div></div>
+  <div class="card"><div class="label">Posyandu</div><div class="metric"><%= summary.pos %></div><div class="sub">KPM aktif</div></div>
+  <div class="card"><div class="label">Total PM pada tanggal terpilih</div><div class="metric"><%= summary.pm.toLocaleString('id-ID') %></div><div class="sub"><%= summary.small.toLocaleString('id-ID') %> kecil · <%= summary.large.toLocaleString('id-ID') %> besar</div></div>
+</div>
+<form class="card kpm-filter" method="get" action="/kpm">
+  <div class="field"><label>Tanggal Data</label><input class="input" type="date" name="date" value="<%= date %>"></div>
+  <div class="field"><label>Jenis KPM</label><select class="select" name="type"><option value="">Semua Jenis</option><option value="SATUAN_PENDIDIKAN" <%= type==='SATUAN_PENDIDIKAN'?'selected':'' %>>Satuan Pendidikan</option><option value="POSYANDU" <%= type==='POSYANDU'?'selected':'' %>>Posyandu</option></select></div>
+  <div class="field field-grow"><label>Pencarian</label><input class="input" name="q" value="<%= q %>" placeholder="Nama KPM atau kode KPM"></div>
+  <button class="btn" type="submit">Terapkan Filter</button>
+</form>
+<% if(!type || type==='SATUAN_PENDIDIKAN'){ %>
+<div class="kpm-section-title"><div><h3>Satuan Pendidikan</h3><span><%= rows.filter(r=>r.type==='SATUAN_PENDIDIKAN').length %> KPM pada hasil filter</span></div></div>
+<div class="kpm-cards">
+<% rows.filter(r=>r.type==='SATUAN_PENDIDIKAN').forEach(r=>{ %>
+  <article class="kpm-card">
+    <div class="kpm-card-top"><div><span class="kpm-type school">Satuan Pendidikan</span><h3><%= r.name %></h3><div class="kpm-code"><%= r.code %> · <%= r.education_level||'-' %></div><div class="kpm-card-meta">Kelengkapan data <strong><%= r.completeness %>%</strong><% if(r.period_reason){ %> · <%= r.period_reason %><% } %></div></div><span class="status <%= r.display_status==='AKTIF'?'success':r.display_status==='NONAKTIF_SEMENTARA'?'warning':'muted' %>"><%= r.display_status==='NONAKTIF_SEMENTARA'?'Nonaktif Sementara':r.display_status==='NONAKTIF'?'Nonaktif':'Aktif' %></span></div>
+    <div class="kpm-count-grid">
+      <div><span>Porsi Kecil</span><strong><%= r.totals.small %></strong><small>L <%= r.small_male||0 %> · P <%= r.small_female||0 %></small></div>
+      <div><span>Porsi Besar</span><strong><%= r.totals.large %></strong><small>PD L <%= r.large_male||0 %> · P <%= r.large_female||0 %></small></div>
+      <div><span>Pendidik</span><strong><%= (Number(r.teacher_male)||0)+(Number(r.teacher_female)||0) %></strong><small>L <%= r.teacher_male||0 %> · P <%= r.teacher_female||0 %></small></div>
+      <div><span>Tendik</span><strong><%= (Number(r.staff_male)||0)+(Number(r.staff_female)||0) %></strong><small>L <%= r.staff_male||0 %> · P <%= r.staff_female||0 %></small></div>
+    </div>
+    <div class="kpm-total"><span>Total PM</span><strong><%= r.totals.total.toLocaleString('id-ID') %></strong></div>
+    <div class="kpm-card-actions"><a class="btn" href="/portal/kpm/preview/<%= r.id %>">Dashboard KPM</a><a class="btn gray" href="/kpm/<%= r.id %>?date=<%= date %>">Detail</a><a class="btn secondary" href="/kpm/<%= r.id %>/edit?date=<%= date %>">✏️ Edit</a></div>
+  </article>
+<% }) %>
+</div>
+<% } %>
+<% if(!type || type==='POSYANDU'){ %>
+<div class="kpm-section-title" style="margin-top:28px"><div><h3>Posyandu</h3><span><%= rows.filter(r=>r.type==='POSYANDU').length %> KPM pada hasil filter</span></div></div>
+<div class="kpm-cards">
+<% rows.filter(r=>r.type==='POSYANDU').forEach(r=>{ %>
+  <article class="kpm-card">
+    <div class="kpm-card-top"><div><span class="kpm-type posyandu">Posyandu</span><h3><%= r.name %></h3><div class="kpm-code"><%= r.code %></div><div class="kpm-card-meta">Kelengkapan data <strong><%= r.completeness %>%</strong><% if(r.period_reason){ %> · <%= r.period_reason %><% } %></div></div><span class="status <%= r.display_status==='AKTIF'?'success':r.display_status==='NONAKTIF_SEMENTARA'?'warning':'muted' %>"><%= r.display_status==='NONAKTIF_SEMENTARA'?'Nonaktif Sementara':r.display_status==='NONAKTIF'?'Nonaktif':'Aktif' %></span></div>
+    <div class="kpm-count-grid">
+      <div><span>Balita</span><strong><%= r.totals.balita %></strong><small>L <%= r.balita_male||0 %> · P <%= r.balita_female||0 %></small></div>
+      <div><span>Bumil</span><strong><%= r.bumil||0 %></strong><small>P</small></div>
+      <div><span>Busui</span><strong><%= r.busui||0 %></strong><small>P</small></div>
+      <div><span>Porsi Besar</span><strong><%= r.totals.large %></strong><small>Bumil + Busui</small></div>
+    </div>
+    <div class="kpm-total"><span>Total PM</span><strong><%= r.totals.total.toLocaleString('id-ID') %></strong></div>
+    <div class="kpm-card-actions"><a class="btn" href="/portal/kpm/preview/<%= r.id %>">Dashboard KPM</a><a class="btn gray" href="/kpm/<%= r.id %>?date=<%= date %>">Detail</a><a class="btn secondary" href="/kpm/<%= r.id %>/edit?date=<%= date %>">✏️ Edit</a></div>
+  </article>
+<% }) %>
+</div>
+<% } %>
+<% if(!rows.length){ %><div class="empty card">Tidak ada KPM yang sesuai dengan filter tanggal, jenis, atau pencarian.</div><% } %>
+<%- include('../partials/footer') %>

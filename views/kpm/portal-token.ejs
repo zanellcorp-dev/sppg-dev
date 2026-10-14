@@ -1,0 +1,3 @@
+<%- include('../partials/header') %>
+<div class="card"><div class="eyebrow">PORTAL KPM</div><h2>Akses Portal Berhasil Dibuat</h2><p class="sub"><strong><%= kpm.name %></strong> · <%= kpm.code %></p><div class="notice"><strong>Link akses privat:</strong><br><input class="input" value="<%= portalUrl %>" readonly onclick="this.select()"><small>Jaga link ini seperti kredensial. Siapa pun yang memiliki link dapat melihat data portal KPM sampai token dicabut.</small></div><div class="actions" style="margin-top:16px"><a class="btn" href="<%= portalUrl %>" target="_blank" rel="noopener">Buka Portal</a><a class="btn gray" href="/kpm/<%= kpm.id %>">Kembali ke KPM</a></div></div>
+<%- include('../partials/footer') %>

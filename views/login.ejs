@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#071e49">
+  <meta name="color-scheme" content="light">
+  <title>Masuk · <%= appSettings?.app_name||'SPPG Monitoring' %></title>
+  <link rel="stylesheet" href="/public/style.css?v=1.5.8">
+</head>
+<body class="login-page login-reference">
+  <main class="login-ref-shell">
+    <section class="login-ref-brand" aria-label="Identitas aplikasi">
+      <div class="login-ref-grid" aria-hidden="true"></div>
+      <div class="login-ref-ring login-ref-ring-a" aria-hidden="true"></div>
+      <div class="login-ref-ring login-ref-ring-b" aria-hidden="true"></div>
+
+      <div class="login-ref-brand-inner">
+        <img class="login-ref-logo-main" src="<%= appSettings?.opening_logo_path?'/branding/opening_logo':(appSettings?.logo_path?'/branding/logo':'/public/bgn-logo.png') %>" alt="Logo aplikasi">
+        <h1><%= appSettings?.app_name||'SPPG Monitoring' %></h1>
+        <p class="login-ref-desc">
+          <%= appSettings?.tagline||'Sistem internal untuk mengelola data, administrasi, dan informasi operasional Satuan Pelayanan Pemenuhan Gizi secara terpusat, tertib, dan terkontrol.' %>
+        </p>
+
+        <div class="login-ref-features">
+          <article>
+            <span class="ref-feature-icon">✓</span>
+            <div><strong>Aman &amp; Terpercaya</strong><small>Akses terbatas bagi pengguna terdaftar</small></div>
+          </article>
+          <article>
+            <span class="ref-feature-icon">⌁</span>
+            <div><strong>Data Terpusat</strong><small>Informasi tersusun dalam satu sistem</small></div>
+          </article>
+          <article>
+            <span class="ref-feature-icon">▥</span>
+            <div><strong>Operasional</strong><small>Mendukung pengelolaan SPPG sehari-hari</small></div>
+          </article>
+        </div>
+      </div>
+
+      <footer class="login-ref-brand-footer">
+        <span><%= appSettings?.sppg_name||'SPPG Subang Pusakajaya' %> <%= appSettings?.location_name||'Kebondanas' %></span>
+        <span><i></i> Sistem Internal</span>
+      </footer>
+    </section>
+
+    <section class="login-ref-form" aria-label="Form masuk">
+      <div class="login-ref-form-inner">
+        <img class="login-ref-logo-small" src="<%= appSettings?.login_logo_path?'/branding/login_logo':(appSettings?.logo_path?'/branding/logo':'/public/bgn-logo.png') %>" alt="Logo aplikasi">
+
+        <div class="login-ref-heading">
+          <span>Selamat datang di</span>
+          <h2><%= appSettings?.app_name||'SPPG Monitoring' %></h2>
+          <p><%= appSettings?.sppg_name||'SPPG Subang Pusakajaya' %><%= appSettings?.location_name?' · '+appSettings.location_name:'' %></p>
+        </div>
+
+        
+
+        <% if (flash) { %>
+          <div class="login-ref-alert <%= flash.type === 'error' ? 'error' : '' %>" role="alert">
+            <span><%= flash.type === 'error' ? '!' : '✓' %></span>
+            <p><%= flash.message %></p>
+          </div>
+        <% } %>
+
+        <form method="post" action="/login" class="login-ref-form-fields" autocomplete="on">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+          <div class="login-ref-field">
+            <label for="username">Username</label>
+            <input id="username" type="text" name="username" placeholder="Masukkan username" autocomplete="username" required autofocus>
+          </div>
+
+          <div class="login-ref-field">
+            <div class="login-ref-label-row"><label for="password">Password</label></div>
+            <div class="login-ref-password">
+              <input id="password" type="password" name="password" placeholder="Masukkan password" autocomplete="current-password" required>
+              <button type="button" id="password-toggle" aria-label="Tampilkan password" title="Tampilkan password">Lihat</button>
+            </div>
+          </div>
+
+          <label class="login-ref-remember"><input type="checkbox" name="remember" value="1"><span>Ingat saya</span></label>
+
+          <button type="submit" class="login-ref-submit"><span>Masuk ke Aplikasi</span><b aria-hidden="true">→</b></button>
+        </form>
+
+        <div class="login-ref-security">
+          <span class="login-ref-lock" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.7 2.9 8.9 7 10 4.1-1.1 7-5.3 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+          <p><strong>Akses Terbatas.</strong> Hanya pengguna yang memiliki akun resmi yang dapat mengakses sistem.</p>
+        </div>
+
+        <div class="login-ref-footer">© 2026 <%= appSettings?.app_name||'SPPG Monitoring' %> · <%= appSettings?.sppg_name||'SPPG Subang Pusakajaya' %></div>
+      </div>
+    </section>
+  </main>
+  <script src="/public/app.js?v=1.5.8"></script>
+</body>
+</html>

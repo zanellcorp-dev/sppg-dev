@@ -1,0 +1,112 @@
+<%- include('partials/header') %>
+    <section class="module-hero panel">
+        <div><span class="panel-kicker">PROFIL SPPG</span>
+            <h2>Dashboard Profil</h2>
+            <p>Ringkasan identitas SPPG, yayasan, dan Kepala SPPG. Gunakan Edit Profil untuk memperbarui data.</p>
+        </div><a class="primary-btn" href="/profile/edit"><i data-lucide="pencil"></i>Edit Profil</a>
+    </section>
+    <div class="dashboard-grid two-col">
+        <section class="panel">
+            <div class="panel-head">
+                <div><span class="panel-kicker">IDENTITAS SPPG</span>
+                    <h3>
+                        <%= profile.name||'Belum diisi' %>
+                    </h3>
+                </div><span class="status-pill <%= profile.status==='OPERASIONAL'?'success':'warning' %>">
+                    <%= profile.status||'Belum diatur' %>
+                </span>
+            </div>
+            <div class="info-list">
+                <div><span>ID SPPG</span><strong>
+                        <%= profile.sppg_id||'-' %>
+                    </strong></div>
+                <div><span>Alamat</span><strong>
+                        <%= profile.address||'-' %>
+                    </strong></div>
+                <div><span>Bank</span><strong>
+                        <%= profile.bank_name||'-' %>
+                    </strong></div>
+                <div><span>No. VA</span><strong>
+                        <%= profile.va_number||'-' %>
+                    </strong></div>
+                <div><span>Nama VA</span><strong>
+                        <%= profile.va_name||'-' %>
+                    </strong></div>
+            </div>
+        </section>
+        <section class="panel">
+            <div class="panel-head">
+                <div><span class="panel-kicker">KEPALA SPPG</span>
+                    <h3>KaSPPG</h3>
+                </div>
+            </div>
+            <div class="info-list">
+                <div><span>Nama</span><strong>
+                        <%= profile.kasp_name||'-' %>
+                    </strong></div>
+                <div><span>NIK</span><strong>
+                        <%= profile.kasp_nik||'-' %>
+                    </strong></div>
+                <div><span>NIP</span><strong>
+                        <%= profile.kasp_nip||'-' %>
+                    </strong></div>
+                <div><span>HP / WhatsApp</span><strong>
+                        <%= profile.kasp_phone||'-' %>
+                    </strong></div>
+                <div><span>SKEP Penempatan</span><strong>
+                        <%= profile.kasp_skep_number||'-' %>
+                            <%= profile.kasp_skep_date?'· '+new Date(profile.kasp_skep_date).toLocaleDateString('
+                                id-ID'):'' %>
+                    </strong></div>
+            </div>
+        </section>
+    </div>
+    <section class="panel" style="margin-top:14px">
+        <div class="panel-head">
+            <div><span class="panel-kicker">YAYASAN</span>
+                <h3>
+                    <%= profile.foundation_name||'Belum diisi' %>
+                </h3>
+            </div>
+        </div>
+        <div class="info-grid">
+            <div><span>ID Yayasan</span><strong>
+                    <%= profile.foundation_id||'-' %>
+                </strong></div>
+            <div><span>Alamat</span><strong>
+                    <%= profile.foundation_address||'-' %>
+                </strong></div>
+            <div><span>Ketua Yayasan</span><strong>
+                    <%= profile.foundation_chair_name||'-' %>
+                </strong><small>
+                    <%= profile.foundation_chair_phone||'-' %>
+                </small></div>
+            <div><span>Perwakilan Yayasan</span><strong>
+                    <%= profile.foundation_rep_name||'-' %>
+                </strong><small>
+                    <%= profile.foundation_rep_phone||'-' %>
+                </small></div>
+        </div>
+    </section>
+    <section class="panel" style="margin-top:14px">
+        <div class="panel-head">
+            <div><span class="panel-kicker">DOKUMEN PROFIL</span>
+                <h3>BA Verval & SKEP</h3>
+            </div>
+        </div>
+        <div class="info-grid">
+            <div><span>BA Verval</span><strong>
+                    <%= profile.ba_verval_name||'Belum diunggah' %>
+                </strong>
+                <% if(profile.ba_verval_path){ %><a href="/profile/document/BA_VERVAL" target="_blank">Lihat dokumen</a>
+                    <% } %>
+            </div>
+            <div><span>SKEP Penempatan</span><strong>
+                    <%= profile.kasp_skep_name||'Belum diunggah' %>
+                </strong>
+                <% if(profile.kasp_skep_path){ %><a href="/profile/document/SKEP" target="_blank">Lihat dokumen</a>
+                    <% } %>
+            </div>
+        </div>
+    </section>
+    <%- include('partials/footer') %>

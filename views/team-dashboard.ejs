@@ -1,0 +1,69 @@
+<%- include('partials/header') %>
+<section class="team-hero panel">
+  <div>
+    <span class="panel-kicker">DASHBOARD KERJA TIM</span>
+    <h2><i data-lucide="<%= config.icon %>"></i> <%= config.label %></h2>
+    <p>Realiasi pekerjaan berdasarkan Jadwal Distribusi. Konfirmasi tersimpan sebagai riwayat dan tidak menghapus data sebelumnya.</p>
+  </div>
+  <form class="date-filter" method="get" action="/work/<%= team %>">
+    <label>Tanggal<input type="date" name="date" value="<%= date %>"></label>
+    <button class="primary-btn" type="submit"><i data-lucide="calendar-check"></i>Tampilkan</button>
+  </form>
+</section>
+
+<nav class="team-tabs" aria-label="Dashboard tim">
+  <% [['PERSIAPAN','Persiapan','package-check'],['PENGOLAHAN','Pengolahan','chef-hat'],['PEMORSIAN','Pemorsian','utensils'],['DISTRIBUSI','Distribusi','truck'],['PENCUCIAN','Pencucian','waves']].forEach(([k,l,ic])=>{ %>
+    <a class="<%= team===k?'active':'' %>" href="/work/<%= k %>?date=<%= date %>"><i data-lucide="<%= ic %>"></i><span><%= l %></span></a>
+  <% }) %>
+</nav>
+
+<section class="panel team-attendance-panel"><div class="panel-head"><div><span class="panel-kicker">KEHADIRAN TIM</span><h3><%= config.label %> · <%= teamAttendance.length %> orang dijadwalkan</h3><p class="muted">Isi siapa yang hadir/tidak hadir. Penggantian dicatat tanpa mengubah anggota tim permanen.</p></div><a class="outline-btn" href="/staff/attendance?date=<%= date %><%= teamAttendance.length && teamAttendance[0].team_id ? '&team_id='+teamAttendance[0].team_id : '' %>">Kelola Absensi</a></div><div class="team-attendance-summary"><span>🟢 Hadir <strong><%= attendanceSummary.HADIR %></strong></span><span>⚪ Belum <strong><%= attendanceSummary.BELUM_DIISI %></strong></span><span>🟠 Tidak hadir <strong><%= attendanceSummary.LAIN %></strong></span></div><div class="team-attendance-list"><% teamAttendance.forEach(a=>{ %><div class="attendance-chip"><strong><%= a.name %></strong><span class="badge <%= a.status==='HADIR'?'green':a.status==='BELUM_DIISI'?'yellow':'red' %>"><%= a.status.replaceAll('_',' ') %></span></div><% }) %><% if(!teamAttendance.length){ %><span class="muted">Belum ada staf yang dijadwalkan untuk tim ini pada tanggal tersebut.</span><% } %></div></section>
+
+<% if(!schedule){ %>
+<section class="panel empty-state team-empty"><i data-lucide="calendar-x"></i><strong>Belum ada Jadwal Distribusi untuk <%= date %>.</strong><span>Buat jadwal terlebih dahulu. Dashboard tim akan otomatis mengikuti kloter dan KPM dari jadwal.</span><a class="outline-btn" href="/distribution/new?date=<%= date %>">Buka Jadwal Distribusi</a></section>
+<% } else if(team==='PENCUCIAN'){ %>
+<section class="work-summary-grid">
+  <div class="work-summary"><small>Total KPM</small><strong><%= units.length %></strong></div>
+  <div class="work-summary"><small>Belum</small><strong><%= units.filter(x=>x.status==='BELUM').length %></strong></div>
+  <div class="work-summary"><small>Sedang</small><strong><%= units.filter(x=>x.status==='SEDANG').length %></strong></div>
+  <div class="work-summary"><small>Selesai</small><strong><%= units.filter(x=>x.status==='SELESAI').length %></strong></div>
+</section>
+<div class="operational-card-grid">
+<% units.forEach(u=>{ const started=eventMap.get(`PENCUCIAN|KPM|${u.unitId}|MULAI_CUCI`); const finished=eventMap.get(`PENCUCIAN|KPM|${u.unitId}|SELESAI_CUCI`); %>
+  <article class="operational-task-card">
+    <div class="task-card-head"><div><span class="task-eyebrow">KPM · KLoter <%= u.cluster.cluster_no %></span><h3><%= u.kpm.name %></h3><small><%= u.kpm.code %></small></div><span class="task-status <%= u.status==='SELESAI'?'done':u.status==='SEDANG'?'progress':'pending' %>"><%= u.status==='SELESAI'?'SELESAI':u.status==='SEDANG'?'SEDANG DICUCI':'BELUM DIKERJAKAN' %></span></div>
+    <div class="task-metrics"><div><small>Pengambilan</small><b><%= u.pickup||'—' %></b></div><div><small>Mulai Cuci</small><b><%= started?new Date(started.created_at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}):'—' %></b></div><div><small>Selesai Cuci</small><b><%= finished?new Date(finished.created_at).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}):'—' %></b></div></div>
+    <div class="task-actions">
+      <% if(u.status==='BELUM'){ %><form method="post" action="/work/action"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="team" value="PENCUCIAN"><input type="hidden" name="unit_type" value="KPM"><input type="hidden" name="unit_id" value="<%= u.unitId %>"><input type="hidden" name="work_date" value="<%= date %>"><input type="hidden" name="action" value="MULAI_CUCI"><button class="primary-btn" type="submit"><i data-lucide="play"></i>Mulai Pencucian</button></form><% } else if(u.status==='SEDANG'){ %><form method="post" action="/work/action"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="team" value="PENCUCIAN"><input type="hidden" name="unit_type" value="KPM"><input type="hidden" name="unit_id" value="<%= u.unitId %>"><input type="hidden" name="work_date" value="<%= date %>"><input type="hidden" name="action" value="SELESAI_CUCI"><button class="primary-btn" type="submit"><i data-lucide="check"></i>Selesai Pencucian</button></form><% } else { %><span class="task-complete"><i data-lucide="circle-check"></i>Pekerjaan selesai</span><% } %>
+      <a class="task-secondary" href="/work/<%= team %>?date=<%= date %>">⚠️ Laporkan Kendala</a><a class="task-secondary" href="/work/<%= team %>?date=<%= date %>">💬 Beri Feedback</a>
+    </div>
+  </article>
+<% }) %>
+</div>
+<% } else { %>
+<% const done=clusters.filter(x=>x.status==='SELESAI').length, prog=clusters.filter(x=>x.status==='SEDANG').length; %>
+<section class="work-summary-grid">
+  <div class="work-summary"><small>Total Kloter</small><strong><%= clusters.length %></strong></div>
+  <div class="work-summary"><small>Belum</small><strong><%= clusters.filter(x=>x.status==='BELUM').length %></strong></div>
+  <div class="work-summary"><small>Sedang</small><strong><%= prog %></strong></div>
+  <div class="work-summary"><small>Selesai</small><strong><%= done %></strong></div>
+</section>
+<div class="operational-card-grid">
+<% clusters.forEach(c=>{ const startAction=team==='DISTRIBUSI'?'KEBERANGKATAN':'MULAI'; const endAction=team==='DISTRIBUSI'?'KEMBALI':'SELESAI'; const started=eventMap.get(`${team}|KLOTER|${c.id}|${startAction}`); const finished=eventMap.get(`${team}|KLOTER|${c.id}|${endAction}`); %>
+  <article class="operational-task-card">
+    <div class="task-card-head"><div><span class="task-eyebrow">KLOTER <%= c.cluster_no %></span><h3><%= c.route_name||'Jalur belum diisi' %></h3><small><%= c.kpm_count %> KPM · <%= c.pm_total %> PM</small></div><span class="task-status <%= c.status==='SELESAI'?'done':c.status==='SEDANG'?'progress':'pending' %>"><%= c.status==='SELESAI'?'SELESAI':c.status==='SEDANG'?'SEDANG DIKERJAKAN':'BELUM DIKERJAKAN' %></span></div>
+    <div class="task-metrics"><div><small>Porsi Kecil</small><b><%= c.small_total %></b></div><div><small>Porsi Besar</small><b><%= c.large_total %></b></div><div><small><%= team==='DISTRIBUSI'?'Kembali':'Target Selesai' %></small><b><%= c[config.endField]||'—' %></b></div></div>
+    <% if(team==='DISTRIBUSI'){ %><div class="task-meta-line"><span>Kurir: <strong><%= c.driver_name||'—' %></strong></span><span>Kendaraan: <strong><%= c.vehicle||'—' %></strong></span></div><div class="task-kpm-list"><% (c.kpm_items||[]).forEach(k=>{ const h=eventMap.get(`DISTRIBUSI|KPM|${k.id}|SERAH_TERIMA`); const pu=eventMap.get(`DISTRIBUSI|KPM|${k.id}|PENGAMBILAN`); %><div><span><strong><%= k.name %></strong><small><%= k.code %> · <%= Number(k.small_portions||0)+Number(k.large_portions||0) %> PM</small></span><span class="kpm-action"><em><%= pu?'🟢 Selesai':h?'🟡 Serah Terima':'🔴 Belum' %></em><% if(!pu){ %><form method="post" action="/work/action"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="team" value="DISTRIBUSI"><input type="hidden" name="unit_type" value="KPM"><input type="hidden" name="unit_id" value="<%= k.id %>"><input type="hidden" name="work_date" value="<%= date %>"><input type="hidden" name="action" value="<%= h?'PENGAMBILAN':'SERAH_TERIMA' %>"><button type="submit" class="mini-action"><%= h?'Pengambilan':'Serah Terima' %></button></form><% } %></span></div><% }) %></div><% } %>
+    <% if(team==='PEMORSIAN'){ const evSlots={}; (c.pemEvidence||[]).forEach(e=>evSlots[e.slot]=e); const slots=[['FOODTRAY_TERBUKA_KECIL','Foodtray terbuka · porsi kecil'],['FOODTRAY_TERBUKA_BESAR','Foodtray terbuka · porsi besar'],['LABEL_KECIL','Foodtray label · porsi kecil'],['LABEL_BESAR','Foodtray label · porsi besar'],['FOODTRAY_SEBELUM_DISTRIBUSI','Kondisi foodtray sebelum distribusi']]; %>
+    <div class="pem-evidence"><div class="task-eyebrow">5 EVIDENCE PEMORSIAN · <%= Object.keys(evSlots).length %>/5</div><div class="evidence-grid">
+      <% slots.forEach(([slot,label])=>{ const e=evSlots[slot]; %><div class="evidence-slot"><strong><%= label %></strong><% if(e){ %><a href="/uploads/<%= encodeURIComponent(e.file_path) %>" target="_blank" rel="noopener">Lihat foto</a><% } else { %><span class="muted">Belum ada</span><% } %><% if(c.status!=='SELESAI'){ %><form method="post" action="/work/pemorsian/<%= c.id %>/evidence" enctype="multipart/form-data"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="work_date" value="<%= date %>"><input type="hidden" name="slot" value="<%= slot %>"><input type="file" name="photo" accept="image/jpeg,image/png" required><button class="mini-action" type="submit"><%= e?'Ganti Foto':'Upload Foto' %></button></form><% } %></div><% }) %>
+    </div></div><% } %>
+    <div class="task-actions">
+      <% if(c.status==='BELUM'){ %><form method="post" action="/work/action"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="team" value="<%= team %>"><input type="hidden" name="unit_type" value="KLOTER"><input type="hidden" name="unit_id" value="<%= c.id %>"><input type="hidden" name="work_date" value="<%= date %>"><input type="hidden" name="action" value="<%= startAction %>"><button class="primary-btn" type="submit"><i data-lucide="play"></i><%= team==='DISTRIBUSI'?'Konfirmasi Keberangkatan':'Mulai Pekerjaan' %></button></form><% } else if(c.status==='SEDANG'){ %><form method="post" action="/work/action"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="team" value="<%= team %>"><input type="hidden" name="unit_type" value="KLOTER"><input type="hidden" name="unit_id" value="<%= c.id %>"><input type="hidden" name="work_date" value="<%= date %>"><input type="hidden" name="action" value="<%= endAction %>"><button class="primary-btn" type="submit"><i data-lucide="check"></i><%= team==='DISTRIBUSI'?'Konfirmasi Kembali ke SPPG':'Tandai Selesai' %></button></form><% } else { %><span class="task-complete"><i data-lucide="circle-check"></i>Pekerjaan selesai</span><% } %>
+      <a class="task-secondary" href="/work/<%= team %>?date=<%= date %>">⚠️ Laporkan Kendala</a><a class="task-secondary" href="/work/<%= team %>?date=<%= date %>">💬 Beri Feedback</a>
+    </div>
+  </article>
+<% }) %>
+</div>
+<% } %>
+<%- include('partials/footer') %>

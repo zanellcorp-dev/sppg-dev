@@ -1,0 +1,13 @@
+<%- include('../partials/header') %>
+<section class="panel"><div class="panel-head"><div><span class="panel-kicker">KENDALA OPERASIONAL</span><h2>Laporkan Kendala</h2><p class="muted">Konteks pekerjaan dicatat bersama laporan agar tindak lanjut dapat ditelusuri.</p></div></div>
+<form method="post" action="/issues" class="form-grid"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
+<label>Tanggal Kerja<input type="date" name="work_date" value="<%= workDate %>" required></label>
+<label>Tim<select name="team" required><option value="">Pilih tim</option><% operationalTeams.forEach(t=>{ %><option value="<%= t %>" <%= team===t?'selected':'' %>><%= t %></option><% }) %></select></label>
+<label>Kategori<select name="category" required><% issueCategories.forEach(x=>{ %><option value="<%= x %>"><%= x.replaceAll('_',' ') %></option><% }) %></select></label>
+<label>Dampak<select name="impact" required><% issueImpacts.forEach(x=>{ %><option value="<%= x %>"><%= x.replaceAll('_',' ') %></option><% }) %></select></label>
+<label>Prioritas<select name="priority" required><% issuePriorities.forEach(x=>{ %><option value="<%= x %>"><%= x %></option><% }) %></select></label>
+<label>Cluster ID<input type="number" min="1" name="cluster_id" value="<%= clusterId||'' %>"></label>
+<label class="full">Uraian Kendala<textarea name="description" rows="5" required placeholder="Jelaskan kejadian, dampak, dan kondisi saat ini."></textarea></label>
+<div class="form-actions"><button class="primary-btn" type="submit">Simpan Kendala</button><a class="outline-btn" href="/issues">Batal</a></div>
+</form></section>
+<%- include('../partials/footer') %>

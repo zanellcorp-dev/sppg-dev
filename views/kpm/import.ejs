@@ -1,0 +1,31 @@
+<%- include('../partials/header') %>
+<div class="kpm-head">
+  <div>
+    <div class="eyebrow">MASTER KPM</div>
+    <h2 style="margin:0">Import Excel KPM</h2>
+    <p class="sub">Gunakan format <strong>Template Excel KPM PM</strong>. Data yang diimpor akan menjadi kondisi PM yang berlaku mulai tanggal yang dipilih.</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn gray" href="/kpm/template.xlsx">↓ Template Excel KPM PM</a><a class="btn secondary" href="/kpm">← Kembali ke Master KPM</a></div>
+</div>
+<div class="grid" style="grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:16px">
+  <div class="card">
+    <h3 style="margin-top:0">Upload Data KPM</h3>
+    <form method="post" action="/kpm/import" enctype="multipart/form-data">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="field"><label>Tanggal Mulai Berlaku *</label><input class="input" type="date" name="effective_from" value="<%= effectiveDate %>" required><div class="help">Jika data sudah ada untuk tanggal ini, data PM pada tanggal tersebut akan diperbarui. Data tanggal lain tetap tersimpan.</div></div>
+      <div class="field" style="margin-top:14px"><label>File Excel (.xlsx) *</label><input class="input" type="file" name="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required><div class="help">Gunakan file <strong>Template Excel KPM PM</strong> tanpa mengubah struktur kolomnya.</div></div>
+      <div class="actions" style="margin-top:18px"><button class="btn" type="submit">↑ Import Excel</button><a class="btn gray" href="/kpm">Batal</a></div>
+    </form>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">Format yang digunakan</h3>
+    <ul class="sub" style="line-height:1.8;padding-left:20px;margin-bottom:0">
+      <li><strong>Satuan Pendidikan:</strong> Porsi Kecil L/P, Porsi Besar L/P, Pendidik L/P, Tendik L/P.</li>
+      <li><strong>Posyandu:</strong> Balita L/P, Bumil P, Busui P.</li>
+      <li>Kolom jumlah dan total pada Excel dihitung sebagai informasi; sistem menghitung ulang dari angka input.</li>
+      <li>Kelompok yang kosong pada baris berikutnya mengikuti kelompok sebelumnya, sama seperti format Excel sumber.</li>
+      <li>Kode KPM digunakan sebagai kunci utama pencocokan data. Nama KPM tidak digunakan sebagai kunci pencarian, sehingga perubahan/kemiripan nama tidak menyebabkan salah KPM.</li>
+    </ul>
+  </div>
+</div>
+<%- include('../partials/footer') %>

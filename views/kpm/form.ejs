@@ -1,0 +1,42 @@
+<%- include('../partials/header') %>
+<form method="post" action="<%= kpm?'/kpm/'+kpm.id:'/kpm' %>" id="kpm-form">
+<input type="hidden" name="_csrf" value="<%= csrfToken %>"><% if(kpm){ %><input type="hidden" name="_method" value="PUT"><% } %>
+<div class="card"><div class="kpm-form-head"><div><h2><%= kpm?'Edit KPM':'Tambah KPM' %></h2><p class="sub">Identitas KPM disimpan sebagai master. Jumlah PM memiliki tanggal mulai berlaku dan tidak perlu diperbarui setiap hari.</p></div><% if(kpm){ %><span class="kpm-code"><%= kpm.code %></span><% } %></div>
+<div class="form-grid">
+<div class="field"><label>Nama KPM *</label><input required class="input" name="name" value="<%= kpm?.name||'' %>"></div>
+<div class="field"><label>Kode KPM</label><input class="input" value="<%= kpm?.code||'Otomatis oleh sistem' %>" readonly></div>
+<div class="field"><label>Jenis KPM *</label><select required class="select" id="kpm-type" name="type"><option value="SATUAN_PENDIDIKAN" <%= (!kpm||kpm.type==='SATUAN_PENDIDIKAN')?'selected':'' %>>Satuan Pendidikan</option><option value="POSYANDU" <%= kpm?.type==='POSYANDU'?'selected':'' %>>Posyandu</option></select></div>
+<div class="field" id="education-field"><label>Kelompok Satuan Pendidikan *</label><select class="select" name="education_level"><option value="">Pilih kelompok</option><% levels.forEach(x=>{ %><option value="<%= x %>" <%= kpm?.education_level===x?'selected':'' %>><%= x %></option><% }) %></select></div>
+<div class="field full"><label>Alamat *</label><textarea required class="textarea" name="address"><%= kpm?.address||'' %></textarea></div>
+<div class="field full"><label>Catatan Operasional KPM</label><textarea class="textarea" name="operational_note" placeholder="Catatan khusus untuk kebutuhan operasional KPM"><%= kpm?.operational_note||'' %></textarea><div class="help">Contoh: akses kendaraan, perubahan PIC, jadwal Posyandu, atau catatan operasional lain.</div></div>
+<div class="field school-only"><label>NPSN</label><input class="input" name="npsn" value="<%= kpm?.npsn||'' %>"></div>
+<div class="field school-only"><label>Kepala Satuan Pendidikan</label><input class="input" name="head_name" value="<%= kpm?.head_name||'' %>"></div>
+<div class="field school-only"><label>HP Kepala Satuan</label><input class="input" name="head_phone" value="<%= kpm?.head_phone||'' %>"></div>
+<div class="field school-only"><label>PIC MBG</label><input class="input" name="pic_name" value="<%= kpm?.pic_name||'' %>"></div>
+<div class="field school-only"><label>HP/WhatsApp PIC</label><input class="input" name="pic_phone" value="<%= kpm?.pic_phone||'' %>"></div>
+<div class="field posyandu-only"><label>Kader Posyandu</label><input class="input" name="cadre_name" value="<%= kpm?.cadre_name||'' %>"></div>
+<div class="field posyandu-only"><label>HP/WhatsApp Kader</label><input class="input" name="cadre_phone" value="<%= kpm?.cadre_phone||'' %>"></div>
+<div class="field"><label>Latitude</label><input id="kpm-lat" class="input" name="latitude" value="<%= kpm?.latitude||'' %>" placeholder="-6.xxxxxxx"></div>
+<div class="field"><label>Longitude</label><input id="kpm-lng" class="input" name="longitude" value="<%= kpm?.longitude||'' %>" placeholder="107.xxxxxxx"></div>
+</div></div>
+
+<div class="card kpm-data-card"><div class="kpm-form-head"><div><h2>Data Penerima Manfaat</h2><p class="sub">Jumlah kosong diperlakukan sebagai 0. L = Laki-laki · P = Perempuan.</p></div><div class="field-inline"><label>Mulai Berlaku</label><input class="input" type="date" name="effective_from" value="<%= effectiveDate %>" required></div></div>
+<div id="school-counts">
+<div class="count-section"><h3>Peserta Didik · Porsi Kecil</h3><div class="count-grid"><div class="field"><label>P (Perempuan)</label><input class="input" type="number" min="0" name="small_female" value="<%= countData?.small_female||0 %>"></div><div class="field"><label>L (Laki-laki)</label><input class="input" type="number" min="0" name="small_male" value="<%= countData?.small_male||0 %>"></div></div></div>
+<div class="count-section"><h3>Peserta Didik · Porsi Besar</h3><div class="count-grid"><div class="field"><label>P (Perempuan)</label><input class="input" type="number" min="0" name="large_female" value="<%= countData?.large_female||0 %>"></div><div class="field"><label>L (Laki-laki)</label><input class="input" type="number" min="0" name="large_male" value="<%= countData?.large_male||0 %>"></div></div></div>
+<div class="count-section"><h3>Pendidik</h3><div class="count-grid"><div class="field"><label>P (Perempuan)</label><input class="input" type="number" min="0" name="teacher_female" value="<%= countData?.teacher_female||0 %>"></div><div class="field"><label>L (Laki-laki)</label><input class="input" type="number" min="0" name="teacher_male" value="<%= countData?.teacher_male||0 %>"></div></div></div>
+<div class="count-section"><h3>Tenaga Kependidikan</h3><div class="count-grid"><div class="field"><label>P (Perempuan)</label><input class="input" type="number" min="0" name="staff_female" value="<%= countData?.staff_female||0 %>"></div><div class="field"><label>L (Laki-laki)</label><input class="input" type="number" min="0" name="staff_male" value="<%= countData?.staff_male||0 %>"></div></div></div>
+</div>
+<div id="posyandu-counts">
+<div class="count-section"><h3>Balita</h3><div class="count-grid"><div class="field"><label>P (Perempuan)</label><input class="input" type="number" min="0" name="balita_female" value="<%= countData?.balita_female||0 %>"></div><div class="field"><label>L (Laki-laki)</label><input class="input" type="number" min="0" name="balita_male" value="<%= countData?.balita_male||0 %>"></div></div></div>
+<div class="count-section"><h3>Bumil</h3><div class="count-grid"><div class="field"><label>P (Perempuan)</label><input class="input" type="number" min="0" name="bumil" value="<%= countData?.bumil||0 %>"></div></div></div>
+<div class="count-section"><h3>Busui</h3><div class="count-grid"><div class="field"><label>P (Perempuan)</label><input class="input" type="number" min="0" name="busui" value="<%= countData?.busui||0 %>"></div></div></div>
+</div>
+<div class="kpm-rule-note"><strong>Perhitungan otomatis:</strong> Porsi Kecil = Balita untuk Posyandu; Porsi Besar = Bumil + Busui. Pada Satuan Pendidikan, porsi mengikuti kelompok satuan pendidikan.</div>
+</div>
+
+<div class="card"><h2>Lokasi KPM</h2><div id="kpm-map" class="map-picker" data-lat-input="kpm-lat" data-lng-input="kpm-lng" data-link-id="kpm-map-link" data-locate-id="kpm-map-locate"></div><div class="map-actions"><button type="button" class="btn gray" id="kpm-map-locate"><i data-lucide="crosshair"></i> Gunakan lokasi perangkat</button><a id="kpm-map-link" class="btn secondary" href="#" target="_blank" rel="noopener"><i data-lucide="map"></i> Buka Google Maps</a></div></div>
+<div class="actions"><button class="btn" type="submit">💾 <%= kpm?'Simpan Perubahan':'Simpan KPM' %></button><a class="btn gray" href="<%= kpm?'/kpm/'+kpm.id:'/kpm' %>">Batal</a></div>
+</form>
+<script src="/public/kpm-form.js?v=1.7.0"></script>
+<%- include('../partials/footer') %>

@@ -1,0 +1,37 @@
+<%- include('partials/header') %>
+<section class="welcome-panel">
+  <div class="welcome-copy">
+    <span class="welcome-kicker">BADAN GIZI NASIONAL</span>
+    <h2>Selamat datang,<br><strong>SPPG Kebondanas</strong></h2>
+    <h3>Pusakajaya · Subang</h3>
+    <p>Sistem informasi internal untuk pengelolaan profil SPPG, kepegawaian, dan penerima manfaat secara terintegrasi, akurat, dan tertib.</p>
+    <div class="welcome-rule"></div>
+  </div>
+  <div class="welcome-art"><div class="art-building"><span>BADAN GIZI<br>NASIONAL</span></div><div class="leaf leaf-a"></div><div class="leaf leaf-b"></div><div class="leaf leaf-c"></div></div>
+</section>
+<div class="dashboard-grid stats-grid" style="margin-top:14px">
+  <div class="stat-card green"><div class="stat-icon"><i data-lucide="users-round"></i></div><div><small>Total Penerima Manfaat</small><strong><%= stats.pm %></strong><span>Orang</span></div></div>
+  <div class="stat-card blue"><div class="stat-icon"><i data-lucide="school"></i></div><div><small>Satuan Pendidikan</small><strong><%= stats.school.kpm %></strong><span>Satuan</span></div></div>
+  <div class="stat-card orange"><div class="stat-icon"><i data-lucide="heart-pulse"></i></div><div><small>Posyandu</small><strong><%= stats.posyandu.kpm %></strong><span>Satuan</span></div></div>
+  <div class="stat-card purple"><div class="stat-icon"><i data-lucide="user-round"></i></div><div><small>Total Pegawai</small><strong><%= stats.staff.total %></strong><span><%= stats.staff.active %> aktif</span></div></div>
+</div>
+<div class="dashboard-grid two-col" style="margin-top:14px">
+  <section class="panel"><div class="panel-head"><div><span class="panel-kicker">PROFIL SPPG</span><h3>Informasi SPPG</h3></div><a href="/profile" class="outline-btn">Kelola <i data-lucide="arrow-right"></i></a></div><div class="profile-summary"><div class="profile-symbol"><i data-lucide="building-2"></i></div><div><strong><%= profile.name || 'Profil belum diisi' %></strong><span>ID SPPG: <%= profile.sppg_id || '-' %></span><span><i data-lucide="map-pin"></i> <%= profile.address || 'Alamat belum diisi' %></span></div><span class="status-pill <%= profile.status==='OPERASIONAL'?'success':'warning' %>"><%= profile.status || 'BELUM DIATUR' %></span></div></section>
+  <section class="panel"><div class="panel-head"><div><span class="panel-kicker">KEPEGAWAIAN</span><h3>Status Pegawai</h3></div><a href="/staff" class="outline-btn">Lihat Data <i data-lucide="arrow-right"></i></a></div><div class="status-row"><div><span class="dot green-dot"></span>Aktif</div><strong><%= stats.staff.active %></strong></div><div class="status-row"><div><span class="dot yellow-dot"></span>Cuti / sementara</div><strong><%= stats.staff.inactive %></strong></div><div class="status-row"><div><span class="dot gray-dot"></span>Sudah keluar</div><strong><%= stats.staff.left %></strong></div></section>
+</div>
+<div class="dashboard-grid three-col" style="margin-top:14px">
+  <section class="panel"><div class="panel-head"><div><span class="panel-kicker">PENERIMA MANFAAT</span><h3>Data KPM</h3></div><a href="/kpm" class="outline-btn">Detail <i data-lucide="arrow-right"></i></a></div><div class="big-line"><span>Satuan Pendidikan</span><strong><%= stats.school.kpm %></strong></div><div class="big-line"><span>Posyandu</span><strong><%= stats.posyandu.kpm %></strong></div><div class="big-line"><span>Total PM</span><strong><%= stats.pm %></strong></div></section>
+  <section class="panel"><div class="panel-head"><div><span class="panel-kicker">PEMORSIAN</span><h3>Ringkasan Porsi</h3></div></div><div class="portion-box"><div><span>Porsi Kecil</span><strong><%= portions.small %></strong></div><div><span>Porsi Besar</span><strong><%= portions.large %></strong></div></div><p class="panel-note">Total porsi: <strong><%= portions.small + portions.large %></strong></p></section>
+  <section class="panel attention"><div class="panel-head"><div><span class="panel-kicker">DATA QUALITY</span><h3>Perlu Perhatian</h3></div></div><div class="attention-row"><span>Staf tanpa dokumen lengkap</span><b><%= quality.staffMissingDocs %></b></div><div class="attention-row"><span>KPM tanpa koordinat</span><b><%= quality.kpmMissingCoords %></b></div><div class="attention-row"><span>PM tanpa NIK</span><b><%= quality.pmMissingNik %></b></div></section>
+</div>
+<section class="panel team-overview-panel" style="margin-top:14px">
+  <div class="panel-head"><div><span class="panel-kicker">OPERASIONAL HARI INI</span><h3>Dashboard 5 Tim</h3><p class="panel-note">Lu memiliki akses penuh untuk melihat dan mengendalikan seluruh pekerjaan tim.</p></div><a href="/distribution?date=<%= workDate %>" class="outline-btn">Jadwal Hari Ini <i data-lucide="arrow-right"></i></a></div>
+  <div class="team-overview-grid">
+  <% [['PERSIAPAN','Persiapan','package-check'],['PENGOLAHAN','Pengolahan','chef-hat'],['PEMORSIAN','Pemorsian','utensils'],['DISTRIBUSI','Distribusi','truck'],['PENCUCIAN','Pencucian','waves']].forEach(([key,label,icon])=>{ const x=teamSummary[key]||{total:0,done:0,started:0,pct:0}; %>
+    <a class="team-overview-card" href="/work/<%= key %>?date=<%= workDate %>"><div class="team-overview-head"><span class="team-icon"><i data-lucide="<%= icon %>"></i></span><span class="team-overview-status <%= x.total&&x.done===x.total?'done':x.started?'progress':'pending' %>"><%= x.total&&x.done===x.total?'SELESAI':x.started?'BERJALAN':'BELUM' %></span></div><strong><%= label %></strong><div class="team-progress"><i style="width:<%= x.pct %>%"></i></div><small><b><%= x.done %></b> / <%= x.total %> selesai · <%= x.started %> berjalan</small></a>
+  <% }) %>
+  </div>
+</section>
+<section class="panel backup-dashboard-card" style="margin-top:14px"><div class="panel-head"><div><span class="panel-kicker">KEAMANAN DATA</span><h3>Backup & Perlindungan Data</h3></div><a href="/backup" class="outline-btn">Kelola Backup <i data-lucide="arrow-right"></i></a></div><div class="backup-dashboard-grid"><div class="backup-dashboard-item"><span class="backup-dashboard-icon"><i data-lucide="cloud"></i></span><div><strong>Backup Harian Hostinger</strong><small>Backup infrastruktur dikelola oleh Hostinger sesuai layanan hosting.</small></div><b class="status-pill info">HOSTINGER</b></div><div class="backup-dashboard-item"><span class="backup-dashboard-icon"><i data-lucide="database-backup"></i></span><div><strong>Backup Manual SPPG</strong><small>Buat snapshot database + persistent files sebelum perubahan besar.</small></div><a href="/backup" class="text-link">Backup Sekarang</a></div></div></section>
+<section class="panel quality-panel" style="margin-top:14px"><div class="panel-head"><div><span class="panel-kicker">KUALITAS DATA</span><h3>Kelengkapan Data Utama</h3></div></div><div class="quality-grid"><div><div class="quality-label"><span>KPM memiliki koordinat</span><strong><%= quality.kpmPct %>%</strong></div><div class="progress"><i style="width:<%= quality.kpmPct %>%"></i></div></div><div><div class="quality-label"><span>PM memiliki NIK</span><strong><%= quality.pmPct %>%</strong></div><div class="progress blue-progress"><i style="width:<%= quality.pmPct %>%"></i></div></div></div></section>
+<%- include('partials/footer') %>

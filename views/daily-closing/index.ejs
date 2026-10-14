@@ -1,0 +1,36 @@
+<%- include('../partials/header') %>
+    <section class="panel">
+        <div class="panel-head">
+            <div><span class="panel-kicker">AKHIR HARI</span>
+                <h2>Daily Closing</h2>
+                <p class="muted">Menutup hari operasional setelah seluruh kondisi penting ditindaklanjuti.</p>
+            </div>
+            <form class="filter-inline"><label>Tanggal<input type="date" name="date" value="<%= date %>"></label><button
+                    class="outline-btn">Tampilkan</button></form>
+        </div>
+        <div class="work-summary-grid">
+            <% checks.forEach(c=>{ %><div class="work-summary"><small>
+                        <%= c.label %>
+                    </small><strong>
+                        <%= c.count %>
+                    </strong></div>
+                <% }) %>
+        </div>
+        <div class="panel" style="margin-top:16px">
+            <p>Status: <strong>
+                    <%= closing.status %>
+                </strong></p>
+            <% if(canManage && closing.status!=='CLOSED' ){ %>
+                <form method="post" action="/daily-closing/close"><input type="hidden" name="_csrf"
+                        value="<%= csrfToken %>"><input type="hidden" name="date" value="<%= date %>"><button
+                        class="primary-btn" type="submit">Kunci Daily Closing</button></form>
+                <% } %>
+                    <% if(canManage && closing.status==='CLOSED' ){ %>
+                        <form method="post" action="/daily-closing/reopen" class="form-grid"><input type="hidden"
+                                name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="date"
+                                value="<%= date %>"><label>Alasan Reopen<textarea name="reason" rows="3" required
+                                    minlength="5"></textarea></label><button class="outline-btn" type="submit">Buka
+                                Kembali dengan Alasan</button></form>
+                        <% } %>
+        </div>
+    </section><%- include('../partials/footer') %>

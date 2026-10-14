@@ -1,0 +1,51 @@
+<%- include('partials/header') %>
+<section class="settings-hero"><div><span class="panel-kicker">SISTEM</span><h2>Pengaturan</h2><p>Kelola identitas, logo, warna, font, dan ukuran tampilan SPPG Monitoring.</p></div></section>
+<form class="settings-layout settings-v1832" method="post" action="/settings" enctype="multipart/form-data">
+<input type="hidden" name="_csrf" value="<%= csrfToken %>">
+<section class="panel settings-main">
+  <div class="settings-section-title"><div><span class="panel-kicker">IDENTITAS</span><h3>Identitas Aplikasi</h3><p>Data ini digunakan pada sidebar, topbar, halaman opening, dan login.</p></div></div>
+  <div class="settings-fields">
+    <label class="settings-field"><span>Nama Aplikasi</span><input class="input" name="app_name" value="<%= settings.app_name||'' %>" maxlength="150"></label>
+    <label class="settings-field"><span>Nama SPPG</span><input class="input" name="sppg_name" value="<%= settings.sppg_name||'' %>" maxlength="200"></label>
+    <label class="settings-field"><span>Lokasi / Wilayah</span><input class="input" name="location_name" value="<%= settings.location_name||'' %>" maxlength="200"></label>
+    <label class="settings-field"><span>Slogan / Tagline <small>Opsional</small></span><input class="input" name="tagline" value="<%= settings.tagline||'' %>" maxlength="255"></label>
+  </div>
+  <div class="settings-section-title settings-subsection"><div><span class="panel-kicker">LOGO</span><h3>Logo & Ikon</h3><p>Logo Opening dan Login dipisahkan agar masing-masing bisa diatur sendiri.</p></div></div>
+  <div class="settings-section-title settings-subsection"><div><span class="panel-kicker">PORTAL KPM</span><h3>Header Dashboard KPM</h3><p>Seperti header Google Forms: banner dapat diganti kapan saja. Logo utama, nama SPPG, dan judul dashboard tampil di bawah banner.</p></div></div>
+  <div class="settings-logo-card" style="margin-bottom:18px"><strong>Banner Header Dashboard KPM</strong><small>Disarankan rasio lebar 4:1 atau 1600×400 px</small><div class="settings-upload-row"><div class="upload-preview wide" style="width:240px;height:70px;overflow:hidden"><% if(settings.portal_header_path){ %><img src="/branding/portal_header" alt="Header Portal KPM" style="width:100%;height:100%;object-fit:cover"><% }else{ %><span>HEADER KPM</span><% } %></div><label class="file-control"><input type="file" name="portal_header" accept=".png,.jpg,.jpeg"><span>Pilih Banner Header</span><em>PNG/JPG · maks. 5 MB</em></label></div></div>
+  <div class="settings-fields">
+    <label class="settings-field"><span>Judul Dashboard KPM</span><input class="input" name="portal_dashboard_title" value="<%= settings.portal_dashboard_title||'Pusat Data Penerima Manfaat' %>" maxlength="200"></label>
+    <label class="settings-field"><span>Subjudul Dashboard KPM</span><input class="input" name="portal_dashboard_subtitle" value="<%= settings.portal_dashboard_subtitle||'Kelola dan perbarui data penerima manfaat KPM' %>" maxlength="255"></label>
+  </div>
+  <div class="settings-logo-grid">
+    <div class="settings-logo-card"><strong>Logo Utama</strong><small>Sidebar & topbar</small><div class="settings-upload-row"><div class="upload-preview"><% if(settings.logo_path){ %><img src="/branding/logo" alt="Logo utama"><% }else{ %><span>BGN</span><% } %></div><label class="file-control"><input type="file" name="logo" accept=".png,.jpg,.jpeg"><span>Pilih Logo</span><em>PNG/JPG · maks. 5 MB · 1:1</em></label></div></div>
+    <div class="settings-logo-card"><strong>Logo Opening</strong><small>Panel kiri halaman login/opening</small><div class="settings-upload-row"><div class="upload-preview wide"><% if(settings.opening_logo_path){ %><img src="/branding/opening_logo" alt="Logo opening"><% }else if(settings.logo_path){ %><img src="/branding/logo" alt="Logo opening"><% }else{ %><span>BGN</span><% } %></div><label class="file-control"><input type="file" name="opening_logo" accept=".png,.jpg,.jpeg"><span>Pilih Logo Opening</span><em>PNG/JPG · maks. 5 MB</em></label></div></div>
+    <div class="settings-logo-card"><strong>Logo Login</strong><small>Logo pada panel form login</small><div class="settings-upload-row"><div class="upload-preview wide"><% if(settings.login_logo_path){ %><img src="/branding/login_logo" alt="Logo login"><% }else if(settings.logo_path){ %><img src="/branding/logo" alt="Logo login"><% }else{ %><span>BGN</span><% } %></div><label class="file-control"><input type="file" name="login_logo" accept=".png,.jpg,.jpeg"><span>Pilih Logo Login</span><em>PNG/JPG · maks. 5 MB · 1:1</em></label></div></div>
+    <div class="settings-logo-card"><strong>Favicon</strong><small>Ikon tab browser</small><div class="settings-upload-row"><div class="upload-preview small"><% if(settings.favicon_path){ %><img src="/branding/favicon" alt="Favicon"><% }else{ %><span>BGN</span><% } %></div><label class="file-control"><input type="file" name="favicon" accept=".png,.jpg,.jpeg"><span>Pilih Favicon</span><em>PNG/JPG · maks. 5 MB</em></label></div></div>
+  </div>
+</section>
+
+<section class="settings-side">
+  <div class="panel"><div class="settings-card-head"><div><span class="panel-kicker">WARNA</span><h3>Warna Sidebar</h3><p>Atur warna setiap elemen teks dan ikon sidebar.</p></div></div>
+    <div class="settings-color-list">
+      <% const colors=[['sidebar_color','Background Sidebar'],['sidebar_title_color','Teks Judul Instansi'],['sidebar_subtitle_color','Teks Sub Judul'],['sidebar_caption_color','Teks Keterangan'],['sidebar_menu_color','Teks Menu'],['sidebar_menu_hover_color','Teks Menu Hover'],['sidebar_menu_active_color','Teks Menu Aktif'],['sidebar_section_color','Judul Section'],['sidebar_icon_color','Ikon Menu'],['sidebar_icon_active_color','Ikon Menu Aktif']]; colors.forEach(([key,label])=>{ %>
+      <label class="theme-control"><span><%= label %></span><div><input type="color" name="<%= key %>" value="<%= settings[key]||'#ffffff' %>"><code><%= settings[key]||'#ffffff' %></code></div></label>
+      <% }) %>
+      <label class="theme-control"><span>Warna Utama</span><div><input type="color" name="primary_color" value="<%= settings.primary_color||'#007a5e' %>"><code><%= settings.primary_color||'#007a5e' %></code></div></label>
+    </div>
+  </div>
+  <div class="panel"><div class="settings-card-head"><div><span class="panel-kicker">TIPOGRAFI</span><h3>Font & Ukuran</h3><p>Pengaturan langsung diterapkan pada sidebar.</p></div></div>
+    <div class="typography-grid">
+      <label class="settings-field full"><span>Font Sidebar</span><select class="input" name="font_family"><% ['Arial','Inter','Poppins','Roboto','Nunito'].forEach(f=>{ %><option value="<%= f %>" <%= settings.font_family===f?'selected':'' %>><%= f %></option><% }) %></select></label>
+      <label class="settings-field"><span>Ukuran Judul Instansi</span><input class="input" type="number" name="font_size_title" min="10" max="22" value="<%= settings.font_size_title||14 %>"></label>
+      <label class="settings-field"><span>Ukuran Sub Judul</span><input class="input" type="number" name="font_size_subtitle" min="9" max="20" value="<%= settings.font_size_subtitle||12 %>"></label>
+      <label class="settings-field"><span>Ukuran Keterangan</span><input class="input" type="number" name="font_size_caption" min="8" max="18" value="<%= settings.font_size_caption||10 %>"></label>
+      <label class="settings-field"><span>Ukuran Menu</span><input class="input" type="number" name="font_size_menu" min="10" max="22" value="<%= settings.font_size_menu||14 %>"></label>
+      <label class="settings-field full"><span>Ukuran Judul Section</span><input class="input" type="number" name="font_size_section" min="9" max="18" value="<%= settings.font_size_section||11 %>"></label>
+    </div>
+  </div>
+  <div class="panel settings-live-preview"><div class="settings-card-head"><div><span class="panel-kicker">PREVIEW</span><h3>Preview Sidebar</h3><p>Contoh tampilan berdasarkan pengaturan tersimpan.</p></div></div><div class="mini-sidebar-preview"><div class="brand"><div class="brand-seal"><% if(settings.logo_path){ %><img src="/branding/logo" alt="Logo"><% }else{ %>BGN<% } %></div><div class="brand-copy"><strong>BADAN GIZI NASIONAL</strong><b><%= settings.app_name||'SPPG Monitoring' %></b><small><%= settings.sppg_name||'SPPG Subang Pusakajaya' %> · <%= settings.location_name||'Kebondanas' %></small></div></div><div class="mini-nav"><div class="active">▦ <span>Dashboard</span></div><h5>PROFIL SPPG</h5><div>▥ <span>Dashboard Profil</span></div><h5>KEPEGAWAIAN SPPG</h5><div>♙ <span>Data Staf</span></div><div>▦ <span>Jadwal Staf</span></div><h5>DOKUMEN & SOP BGN</h5><div>▱ <span>Dashboard Dokumen</span></div></div></div></div>
+</section>
+<div class="settings-actions"><a class="outline-btn" href="/">Batal</a><button class="primary-btn" type="submit"><i data-lucide="save"></i> Simpan Perubahan</button></div>
+</form>
+<%- include('partials/footer') %>
