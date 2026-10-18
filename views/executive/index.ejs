@@ -1,0 +1,238 @@
+<%- include('../partials/header') %>
+
+<div class="executive-workspace">
+  <!-- Executive Banner -->
+  <div class="card" style="border-left: 5px solid #006b4f; background: linear-gradient(135deg, #ffffff 0%, #f4faf7 100%); margin-bottom: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+      <div>
+        <div style="display:inline-flex; align-items:center; gap:6px; background:#071e49; color:#fff; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; letter-spacing:0.5px; margin-bottom:8px;">
+          <i data-lucide="shield-check" style="width:14px; height:14px;"></i>
+          <span>RUANG KERJA PIMPINAN &amp; ADMINISTRATOR SAH</span>
+        </div>
+        <h2 style="margin:0 0 4px; font-size:20px; color:#0b2d61;">Pusat Komando &amp; Tata Kelola Operasional (Governance)</h2>
+        <p style="margin:0; color:#556980; font-size:13px;">
+          Pusat pemantauan integritas data, maker-checker persetujuan perubahan publik/lapangan, dan sertifikasi penguncian harian SPPG.
+        </p>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="text-align:right;">
+          <small style="display:block; color:#718092; font-size:11px; font-weight:600;">STATUS OPERASIONAL HARI INI (<%= today %>)</small>
+          <% if(closing.status === 'CLOSED'){ %>
+            <span class="status-pill success" style="font-size:13px; font-weight:800; padding:6px 12px; display:inline-flex; align-items:center; gap:6px;">
+              <i data-lucide="lock" style="width:14px; height:14px;"></i> TERKUNCI &amp; TERSERTIFIKASI
+            </span>
+          <% } else if(closing.status === 'REOPENED'){ %>
+            <span class="status-pill warning" style="font-size:13px; font-weight:800; padding:6px 12px; display:inline-flex; align-items:center; gap:6px;">
+              <i data-lucide="unlock" style="width:14px; height:14px;"></i> DIBUKA KEMBALI (REOPEN)
+            </span>
+          <% } else { %>
+            <span class="status-pill info" style="font-size:13px; font-weight:800; padding:6px 12px; display:inline-flex; align-items:center; gap:6px;">
+              <i data-lucide="radio" style="width:14px; height:14px;"></i> AKTIF (BELUM DIKUNCI)
+            </span>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Metrics 4-Grid -->
+  <div class="kpm-cards" style="grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 24px;">
+    <!-- Metric 1: Pending Approvals -->
+    <div class="kpm-card" style="border-top: 4px solid #f59e0b;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <span style="font-size:11px; font-weight:700; color:#854d0e; text-transform:uppercase;">Menunggu Persetujuan</span>
+          <strong style="display:block; font-size:28px; margin:6px 0 2px; color:#1e293b;"><%= pendingApprovalsCount %></strong>
+          <small style="color:#64748b; font-size:12px;">Pengajuan perubahan data</small>
+        </div>
+        <div style="background:#fef3c7; color:#d97706; padding:10px; border-radius:10px;">
+          <i data-lucide="check-check" style="width:22px; height:22px;"></i>
+        </div>
+      </div>
+      <div style="margin-top:14px; border-top:1px solid #f1f5f9; padding-top:10px;">
+        <a href="/executive/approvals" class="primary-btn" style="width:100%; font-size:11px; padding:7px 10px; justify-content:center; background:#d97706;">
+          Buka Persetujuan <i data-lucide="arrow-right" style="width:13px; height:13px;"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Metric 2: Daily Lock Status -->
+    <div class="kpm-card" style="border-top: 4px solid <%= closing.status==='CLOSED' ? '#10b981' : '#3b82f6' %>;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <span style="font-size:11px; font-weight:700; color:#475569; text-transform:uppercase;">Kunci Buku Harian</span>
+          <strong style="display:block; font-size:20px; margin:10px 0 4px; color:#1e293b;">
+            <%= closing.status === 'CLOSED' ? 'Terkunci' : (closing.status === 'REOPENED' ? 'Reopened' : 'Terbuka') %>
+          </strong>
+          <small style="color:#64748b; font-size:12px;"><%= closing.status==='CLOSED' ? 'Data lapangan terlindungi' : 'Koreksi masih dapat diinput' %></small>
+        </div>
+        <div style="background:<%= closing.status==='CLOSED' ? '#d1fae5' : '#dbeafe' %>; color:<%= closing.status==='CLOSED' ? '#059669' : '#2563eb' %>; padding:10px; border-radius:10px;">
+          <i data-lucide="<%= closing.status==='CLOSED' ? 'lock' : 'unlock' %>" style="width:22px; height:22px;"></i>
+        </div>
+      </div>
+      <div style="margin-top:14px; border-top:1px solid #f1f5f9; padding-top:10px;">
+        <a href="/executive/lock-control" class="outline-btn" style="width:100%; font-size:11px; padding:7px 10px; justify-content:center; text-decoration:none;">
+          Kelola Kunci Harian <i data-lucide="arrow-right" style="width:13px; height:13px;"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Metric 3: Total KPM & PM Terverifikasi -->
+    <div class="kpm-card" style="border-top: 4px solid #007a5e;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <span style="font-size:11px; font-weight:700; color:#047857; text-transform:uppercase;">Cakupan SPPG</span>
+          <strong style="display:block; font-size:28px; margin:6px 0 2px; color:#1e293b;"><%= totalPm %> PM</strong>
+          <small style="color:#64748b; font-size:12px;"><%= totalKpm %> Satuan Pendidikan &amp; Posyandu</small>
+        </div>
+        <div style="background:#e6f4ea; color:#007a5e; padding:10px; border-radius:10px;">
+          <i data-lucide="school" style="width:22px; height:22px;"></i>
+        </div>
+      </div>
+      <div style="margin-top:14px; border-top:1px solid #f1f5f9; padding-top:10px;">
+        <a href="/data-kpm-pm" class="outline-btn" style="width:100%; font-size:11px; padding:7px 10px; justify-content:center; text-decoration:none;">
+          Database KPM &amp; PM <i data-lucide="arrow-right" style="width:13px; height:13px;"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Metric 4: Audit & Log Riwayat -->
+    <div class="kpm-card" style="border-top: 4px solid #0b2d61;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <span style="font-size:11px; font-weight:700; color:#1e3a8a; text-transform:uppercase;">Jejak Audit Sah</span>
+          <strong style="display:block; font-size:28px; margin:6px 0 2px; color:#1e293b;">100%</strong>
+          <small style="color:#64748b; font-size:12px;">Terekam dengan IP &amp; Aktor</small>
+        </div>
+        <div style="background:#eff6ff; color:#1d4ed8; padding:10px; border-radius:10px;">
+          <i data-lucide="history" style="width:22px; height:22px;"></i>
+        </div>
+      </div>
+      <div style="margin-top:14px; border-top:1px solid #f1f5f9; padding-top:10px;">
+        <a href="/executive/history" class="outline-btn" style="width:100%; font-size:11px; padding:7px 10px; justify-content:center; text-decoration:none;">
+          Riwayat Lengkap <i data-lucide="arrow-right" style="width:13px; height:13px;"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main 2-Column Split: Pending Submissions & Recent Executive Logs -->
+  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; align-items:start;">
+    <!-- Left Column: Pending Submissions -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #eef2f6; padding-bottom:10px;">
+        <div>
+          <h3 style="margin:0; font-size:15px; color:#0b2d61; display:flex; align-items:center; gap:7px;">
+            <i data-lucide="clipboard-list" style="color:#007a5e; width:18px; height:18px;"></i>
+            Antrean Pengajuan Perubahan (Maker-Checker)
+          </h3>
+          <p style="margin:2px 0 0; color:#718092; font-size:12px;">Verifikasi data diajukan dari Portal Publik &amp; Lapangan</p>
+        </div>
+        <a href="/executive/approvals" class="outline-btn" style="font-size:11px; padding:5px 10px;">Lihat Semua</a>
+      </div>
+
+      <% if(recentPending && recentPending.length > 0){ %>
+        <div class="table-wrap">
+          <table class="table" style="font-size:12px;">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>KPM / Sekolah</th>
+                <th>Tipe</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% recentPending.forEach(sub => { %>
+                <tr>
+                  <td><strong>#<%= sub.id %></strong></td>
+                  <td>
+                    <strong><%= sub.kpm_name || ('KPM #'+sub.kpm_id) %></strong>
+                    <small style="display:block; color:#8898aa;"><%= sub.kpm_type %></small>
+                  </td>
+                  <td><span class="badge"><%= sub.submission_type %></span></td>
+                  <td>
+                    <% if(sub.status === 'DIAJUKAN' || sub.status === 'DITINJAU'){ %>
+                      <span class="status-pill warning">Menunggu</span>
+                    <% } else if(sub.status === 'DISETUJUI' || sub.status === 'DITERAPKAN'){ %>
+                      <span class="status-pill success">Disetujui</span>
+                    <% } else { %>
+                      <span class="status-pill" style="background:#fee2e2; color:#b91c1c;">Ditolak</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <a href="/executive/approvals" class="outline-btn" style="padding:4px 8px; font-size:11px;">Tinjau</a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state compact">
+          <i data-lucide="check-circle" style="color:#10b981;"></i>
+          <strong>Semua pengajuan telah diproses</strong>
+          <span>Tidak ada antrean perubahan data yang tertunda saat ini.</span>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Right Column: Recent Activity & Audit Logs -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid #eef2f6; padding-bottom:10px;">
+        <div>
+          <h3 style="margin:0; font-size:15px; color:#0b2d61; display:flex; align-items:center; gap:7px;">
+            <i data-lucide="history" style="color:#007a5e; width:18px; height:18px;"></i>
+            Riwayat Aksi Pimpinan &amp; Pengawasan Terkini
+          </h3>
+          <p style="margin:2px 0 0; color:#718092; font-size:12px;">Audit trail real-time aktivitas manajerial dan sistem</p>
+        </div>
+        <a href="/executive/history" class="outline-btn" style="font-size:11px; padding:5px 10px;">Buka Audit Trail</a>
+      </div>
+
+      <% if(recentLogs && recentLogs.length > 0){ %>
+        <div class="table-wrap">
+          <table class="table" style="font-size:12px;">
+            <thead>
+              <tr>
+                <th>Waktu</th>
+                <th>Aktor</th>
+                <th>Aksi</th>
+                <th>Keterangan</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% recentLogs.forEach(log => { %>
+                <tr>
+                  <td style="white-space:nowrap; color:#64748b; font-size:11px;">
+                    <%= new Date(log.created_at).toLocaleString('id-ID', { hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short' }) %>
+                  </td>
+                  <td>
+                    <strong><%= log.user_name || 'Sistem / Portal' %></strong>
+                    <% if(log.user_role){ %><small style="display:block; color:#8898aa;"><%= log.user_role %></small><% } %>
+                  </td>
+                  <td>
+                    <span style="font-weight:700; color:#0b2d61;"><%= log.action %></span>
+                  </td>
+                  <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    <%= log.description || '-' %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state compact">
+          <i data-lucide="history"></i>
+          <strong>Belum ada riwayat aktivitas</strong>
+          <span>Aktivitas sistem dan keputusan pimpinan akan tercatat di sini.</span>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

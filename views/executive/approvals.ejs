@@ -1,0 +1,158 @@
+<%- include('../partials/header') %>
+
+<div class="executive-workspace">
+  <!-- Top Explanatory Banner -->
+  <div class="card" style="border-left: 5px solid #d97706; background:#fffcf6; margin-bottom: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+      <div>
+        <div style="display:inline-flex; align-items:center; gap:6px; background:#d97706; color:#fff; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700;">
+          <i data-lucide="shield-alert" style="width:13px; height:13px;"></i>
+          <span>MEKANISME KONTROL MAKER - CHECKER</span>
+        </div>
+        <h2 style="margin:6px 0 3px; font-size:19px; color:#0b2d61;">Pusat Persetujuan Perubahan Data (Approval Center)</h2>
+        <p style="margin:0; color:#556980; font-size:13px;">
+          Setiap penambahan atau modifikasi data penerima manfaat (PM) dari portal publik maupun petugas lapangan berstatus <em>tertunda</em> dan tidak akan merubah database operasional SPPG sampai disetujui sah oleh Pimpinan/Administrator.
+        </p>
+      </div>
+
+      <a href="/executive" class="outline-btn" style="text-decoration:none;">
+        <i data-lucide="arrow-left" style="width:14px; height:14px;"></i> Kembali ke Pusat Komando
+      </a>
+    </div>
+  </div>
+
+  <!-- Status Filter Tabs -->
+  <div class="chip-row">
+    <a href="/executive/approvals?status=ALL" class="filter-chip <%= statusFilter==='ALL' || !statusFilter ? 'active' : '' %>">
+      Semua Pengajuan
+    </a>
+    <a href="/executive/approvals?status=DIAJUKAN" class="filter-chip <%= statusFilter==='DIAJUKAN' ? 'active' : '' %>" style="display:inline-flex; align-items:center; gap:6px;">
+      <span style="width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span> Menunggu Persetujuan
+    </a>
+    <a href="/executive/approvals?status=DISETUJUI" class="filter-chip <%= statusFilter==='DISETUJUI' ? 'active' : '' %>" style="display:inline-flex; align-items:center; gap:6px;">
+      <span style="width:8px; height:8px; border-radius:50%; background:#10b981;"></span> Disetujui / Diterapkan
+    </a>
+    <a href="/executive/approvals?status=DITOLAK" class="filter-chip <%= statusFilter==='DITOLAK' ? 'active' : '' %>" style="display:inline-flex; align-items:center; gap:6px;">
+      <span style="width:8px; height:8px; border-radius:50%; background:#ef4444;"></span> Ditolak
+    </a>
+  </div>
+
+  <!-- Submissions List -->
+  <% if(submissions && submissions.length > 0){ %>
+    <div style="display:grid; gap:16px;">
+      <% submissions.forEach(sub => { %>
+        <div class="card" style="border:1px solid #e2e8f0; border-radius:12px; padding:18px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
+            <div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-weight:800; font-size:15px; color:#0b2d61;">Pengajuan #<%= sub.id %></span>
+                <span class="badge"><%= sub.submission_type %></span>
+                <% if(sub.status === 'DIAJUKAN' || sub.status === 'DITINJAU'){ %>
+                  <span class="status-pill warning" style="font-size:11px;">MENUNGGU KEPUTUSAN PIMPINAN</span>
+                <% } else if(sub.status === 'DISETUJUI' || sub.status === 'DITERAPKAN'){ %>
+                  <span class="status-pill success" style="font-size:11px;">DISETUJUI &amp; DIKUNCI</span>
+                <% } else { %>
+                  <span class="status-pill" style="background:#fee2e2; color:#b91c1c; font-size:11px;">DITOLAK OLEH PIMPINAN</span>
+                <% } %>
+              </div>
+              <h3 style="margin:6px 0 2px; font-size:16px;">
+                <%= sub.kpm_name %> <small style="color:#64748b; font-size:12px;">(<%= sub.kpm_code %> - <%= sub.kpm_type %>)</small>
+              </h3>
+              <p style="margin:0; font-size:12px; color:#64748b;">
+                Tanggal Efektif: <strong><%= sub.effective_from ? new Date(sub.effective_from).toLocaleDateString('id-ID') : '-' %></strong> · Diajukan pada: <%= new Date(sub.created_at).toLocaleString('id-ID') %>
+              </p>
+            </div>
+
+            <div style="text-align:right; font-size:12px; color:#64748b;">
+              <div>Diajukan oleh: <strong><%= sub.submitter_name || 'Petugas Portal Lapangan' %></strong></div>
+              <% if(sub.reviewer_name){ %>
+                <div style="margin-top:3px;">Diverifikasi oleh: <strong><%= sub.reviewer_name %></strong></div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Items Diff / Content -->
+          <div style="margin:14px 0;">
+            <div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:8px;">
+              RINCIAN PERUBAHAN DATA PENERIMA MANFAAT (<%= sub.items ? sub.items.length : 0 %> Data):
+            </div>
+            <% if(sub.items && sub.items.length > 0){ %>
+              <div class="table-wrap">
+                <table class="table" style="font-size:12px;">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Nama Lengkap</th>
+                      <th>NIK / NISN</th>
+                      <th>L/P</th>
+                      <th>Kelas / Rombel</th>
+                      <th>Kategori</th>
+                      <th>Catatan Validasi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% sub.items.forEach((item, idx) => { %>
+                      <tr>
+                        <td><%= idx + 1 %></td>
+                        <td><strong><%= item.full_name %></strong></td>
+                        <td>
+                          <span>NIK: <%= item.nik || '-' %></span><br>
+                          <small style="color:#64748b;">NISN: <%= item.nisn || '-' %></small>
+                        </td>
+                        <td><span class="badge"><%= item.gender || '-' %></span></td>
+                        <td><%= item.class_group || '-' %></td>
+                        <td><span class="badge"><%= item.category %></span></td>
+                        <td><small style="color:#007a5e;"><%= item.validation_note || 'Data valid' %></small></td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            <% } else { %>
+              <div style="padding:10px; background:#f8fafc; border-radius:6px; font-size:12px; color:#64748b;">
+                Tidak ada baris data tambahan atau pengajuan berupa pembaruan dokumen.
+              </div>
+            <% } %>
+
+            <% if(sub.review_note){ %>
+              <div style="margin-top:10px; padding:10px 14px; background:#f1f5f9; border-left:4px solid #0b2d61; border-radius:4px; font-size:12px;">
+                <strong>Catatan Resmi Pimpinan:</strong> <%= sub.review_note %>
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Decision Action Form (Only for DIAJUKAN or DITINJAU) -->
+          <% if(sub.status === 'DIAJUKAN' || sub.status === 'DITINJAU'){ %>
+            <div style="border-top:1px dashed #cbd5e1; padding-top:14px; margin-top:14px; background:#f8fafc; padding:14px; border-radius:8px;">
+              <form method="post" action="/executive/approvals/<%= sub.id %>/decide" style="display:grid; gap:10px;">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <div>
+                  <label style="font-size:12px; font-weight:700; color:#1e293b; display:block; margin-bottom:4px;">
+                    Catatan Keputusan Pimpinan / Berita Acara Review:
+                  </label>
+                  <input type="text" name="review_note" class="input" placeholder="Masukkan alasan jika menolak, atau catatan verifikasi (opsional jika menyetujui)..." style="width:100%; font-size:12px;">
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                  <button type="submit" name="decision" value="DITOLAK" class="btn" style="background:#dc2626; color:#fff; border:0; padding:8px 16px;" onclick="return confirm('Apakah Anda yakin ingin menolak pengajuan perubahan data ini?')">
+                    <i data-lucide="x" style="width:14px; height:14px;"></i> Tolak Pengajuan
+                  </button>
+                  <button type="submit" name="decision" value="DISETUJUI" class="btn primary-btn" style="background:#059669; border:0; padding:8px 18px;" onclick="return confirm('Setujui pengajuan ini dan terapkan secara sah ke Master Database?')">
+                    <i data-lucide="check-check" style="width:14px; height:14px;"></i> Setujui &amp; Terapkan Sah
+                  </button>
+                </div>
+              </form>
+            </div>
+          <% } %>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <div class="card empty-state">
+      <i data-lucide="inbox" style="width:36px; height:36px; color:#94a3b8;"></i>
+      <strong style="font-size:16px;">Tidak ada pengajuan ditemukan</strong>
+      <span>Tidak ada data pengajuan perubahan dengan filter status '<%= statusFilter %>'.</span>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

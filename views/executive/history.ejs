@@ -1,0 +1,160 @@
+<%- include('../partials/header') %>
+
+<div class="executive-workspace">
+  <!-- Top Banner -->
+  <div class="card" style="border-left: 5px solid #0b2d61; background:#f8fafc; margin-bottom: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+      <div>
+        <div style="display:inline-flex; align-items:center; gap:6px; background:#0b2d61; color:#fff; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700;">
+          <i data-lucide="history" style="width:13px; height:13px;"></i>
+          <span>AUDIT TRAIL &amp; JEJAK DIGITAL RESMI SPPG</span>
+        </div>
+        <h2 style="margin:6px 0 3px; font-size:19px; color:#0b2d61;">Riwayat &amp; Audit Trail Eksekutif</h2>
+        <p style="margin:0; color:#556980; font-size:13px;">
+          Pencatatan menyeluruh terhadap seluruh persetujuan pimpinan, penolakan pengajuan, sertifikasi penguncian harian, perubahan master data, dan akses operasional.
+        </p>
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <a href="/executive/history/export.xlsx" class="outline-btn" style="text-decoration:none;">
+          <i data-lucide="download" style="width:14px; height:14px;"></i> Ekspor Excel (.xlsx)
+        </a>
+        <button type="button" class="btn" onclick="window.print()" style="background:#fff; border:1px solid #cbd5e1; padding:8px 12px;">
+          <i data-lucide="printer" style="width:14px; height:14px;"></i> Cetak Laporan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Card -->
+  <div class="card" style="margin-bottom: 20px; padding: 16px;">
+    <form method="get" action="/executive/history" style="display:grid; grid-template-columns: 2fr 1.5fr 1fr 1fr auto; gap:10px; align-items:end;">
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:4px;">Cari Kata Kunci:</label>
+        <input type="text" name="q" value="<%= q %>" class="input" placeholder="Cari nama aktor, deskripsi, IP..." style="width:100%; font-size:12px;">
+      </div>
+
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:4px;">Kategori Entitas / Tindakan:</label>
+        <select name="action" class="input" style="width:100%; font-size:12px;">
+          <option value="ALL" <%= actionFilter==='ALL'?'selected':'' %>>Semua Kategori</option>
+          <option value="EXECUTIVE_APPROVAL" <%= actionFilter==='EXECUTIVE_APPROVAL'?'selected':'' %>>Persetujuan &amp; Penolakan Pimpinan</option>
+          <option value="EXECUTIVE_LOCK" <%= actionFilter==='EXECUTIVE_LOCK'?'selected':'' %>>Penguncian Buku Harian</option>
+          <option value="EXECUTIVE_REOPEN" <%= actionFilter==='EXECUTIVE_REOPEN'?'selected':'' %>>Pembukaan Kunci (Reopen)</option>
+          <option value="DATA_KPM_PM" <%= actionFilter==='DATA_KPM_PM'?'selected':'' %>>Pengajuan KPM &amp; PM</option>
+          <option value="DOCUMENTATION" <%= actionFilter==='DOCUMENTATION'?'selected':'' %>>Dokumentasi Lapangan</option>
+          <option value="USER" <%= actionFilter==='USER'?'selected':'' %>>Manajemen Akun / Pengguna</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:4px;">Dari Tanggal:</label>
+        <input type="date" name="date_from" value="<%= dateFrom %>" class="input" style="width:100%; font-size:12px;">
+      </div>
+
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; color:#475569; margin-bottom:4px;">Sampai Tanggal:</label>
+        <input type="date" name="date_to" value="<%= dateTo %>" class="input" style="width:100%; font-size:12px;">
+      </div>
+
+      <div style="display:flex; gap:6px;">
+        <button type="submit" class="primary-btn" style="padding:0 14px; font-size:12px; height:40px;">
+          <i data-lucide="filter" style="width:14px; height:14px;"></i> Filter
+        </button>
+        <% if(q || actionFilter !== 'ALL' || dateFrom || dateTo){ %>
+          <a href="/executive/history" class="btn" style="background:#f1f5f9; padding:0 10px; height:40px; display:inline-flex; align-items:center; text-decoration:none; color:#64748b;" title="Reset Filter">
+            <i data-lucide="rotate-ccw" style="width:14px; height:14px;"></i>
+          </a>
+        <% } %>
+      </div>
+    </form>
+  </div>
+
+  <!-- Audit Table Card -->
+  <div class="card" style="padding:0; overflow:hidden;">
+    <div style="padding:14px 18px; border-bottom:1px solid #eef2f6; display:flex; justify-content:space-between; align-items:center;">
+      <strong style="color:#0b2d61; font-size:14px;">Total <%= logs ? logs.length : 0 %> Catatan Audit Terfilter</strong>
+      <span style="font-size:12px; color:#64748b;">Diurutkan dari catatan paling baru (real-time)</span>
+    </div>
+
+    <% if(logs && logs.length > 0){ %>
+      <div class="table-wrap">
+        <table class="table" style="font-size:12px;">
+          <thead>
+            <tr>
+              <th style="width:140px;">Waktu (WIB)</th>
+              <th style="width:180px;">Aktor / Pengguna</th>
+              <th style="width:180px;">Aksi Tindakan</th>
+              <th style="width:130px;">Kategori / Target</th>
+              <th>Keterangan &amp; Berita Acara</th>
+              <th style="width:110px;">Alamat IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% logs.forEach(log => { %>
+              <tr>
+                <td style="white-space:nowrap; color:#475569; font-size:11px;">
+                  <strong><%= new Date(log.created_at).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }) %></strong>
+                  <span style="display:block; color:#8898aa;"><%= new Date(log.created_at).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) %></span>
+                </td>
+                <td>
+                  <strong><%= log.user_name || 'Portal Lapangan / Publik' %></strong>
+                  <% if(log.user_role){ %>
+                    <span class="badge" style="display:inline-block; margin-top:2px; font-size:10px;"><%= log.user_role %></span>
+                  <% } else { %>
+                    <small style="display:block; color:#94a3b8;">Akses Publik</small>
+                  <% } %>
+                </td>
+                <td>
+                  <% if(log.action.includes('Persetujuan') || log.action.includes('Disetujui')){ %>
+                    <span class="status-pill success" style="font-size:11px; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
+                      <i data-lucide="check" style="width:12px; height:12px;"></i> <%= log.action %>
+                    </span>
+                  <% } else if(log.action.includes('Tolak') || log.action.includes('Hapus')){ %>
+                    <span class="status-pill" style="background:#fee2e2; color:#b91c1c; font-size:11px; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
+                      <i data-lucide="x" style="width:12px; height:12px;"></i> <%= log.action %>
+                    </span>
+                  <% } else if(log.action.includes('Kunci') || log.action.includes('Closing')){ %>
+                    <span class="status-pill" style="background:#e0e7ff; color:#3730a3; font-size:11px; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
+                      <i data-lucide="lock" style="width:12px; height:12px;"></i> <%= log.action %>
+                    </span>
+                  <% } else if(log.action.includes('Reopen')){ %>
+                    <span class="status-pill warning" style="font-size:11px; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
+                      <i data-lucide="unlock" style="width:12px; height:12px;"></i> <%= log.action %>
+                    </span>
+                  <% } else { %>
+                    <strong style="color:#1e293b;"><%= log.action %></strong>
+                  <% } %>
+                </td>
+                <td>
+                  <span class="badge" style="background:#f1f5f9; color:#334155;"><%= log.entity_type || '-' %></span>
+                  <% if(log.entity_id){ %><small style="color:#64748b;">#<%= log.entity_id %></small><% } %>
+                </td>
+                <td>
+                  <div><%= log.description || '-' %></div>
+                  <% if(log.after_json){ %>
+                    <details style="margin-top:4px; font-size:11px; color:#0369a1;">
+                      <summary style="cursor:pointer;">Lihat Payload Data</summary>
+                      <pre style="background:#f8fafc; border:1px solid #e2e8f0; padding:6px; border-radius:4px; font-size:10px; overflow:auto; margin-top:4px; max-height:120px;"><%= typeof log.after_json === 'string' ? log.after_json : JSON.stringify(log.after_json, null, 2) %></pre>
+                    </details>
+                  <% } %>
+                </td>
+                <td style="color:#64748b; font-size:11px; font-family:monospace;">
+                  <%= log.ip_address || '127.0.0.1' %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="empty-state" style="padding:40px 20px;">
+        <i data-lucide="history" style="width:36px; height:36px; color:#94a3b8;"></i>
+        <strong style="font-size:16px;">Tidak ada riwayat aktivitas ditemukan</strong>
+        <span>Coba sesuaikan kata kunci atau rentang tanggal pencarian.</span>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

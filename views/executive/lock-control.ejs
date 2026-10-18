@@ -1,0 +1,199 @@
+<%- include('../partials/header') %>
+
+<div class="executive-workspace">
+  <!-- Top Banner -->
+  <div class="card" style="border-left: 5px solid #10b981; background:#f0fdf4; margin-bottom: 20px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;">
+      <div>
+        <div style="display:inline-flex; align-items:center; gap:6px; background:#047857; color:#fff; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:700;">
+          <i data-lucide="lock" style="width:13px; height:13px;"></i>
+          <span>SERTIFIKASI &amp; INTEGRITAS OPERASIONAL</span>
+        </div>
+        <h2 style="margin:6px 0 3px; font-size:19px; color:#0b2d61;">Kontrol Penguncian Operasional Harian (Daily Lock)</h2>
+        <p style="margin:0; color:#556980; font-size:13px;">
+          Fitur penguncian buku harian memastikan seluruh angka porsi, distribusi, dan rekapitulasi harian dibekukan. Petugas lapangan tidak dapat mengubah atau memanipulasi data setelah pimpinan menandatangani penguncian.
+        </p>
+      </div>
+
+      <a href="/executive" class="outline-btn" style="text-decoration:none;">
+        <i data-lucide="arrow-left" style="width:14px; height:14px;"></i> Kembali ke Pusat Komando
+      </a>
+    </div>
+  </div>
+
+  <!-- Date Selector -->
+  <div class="card" style="margin-bottom: 20px; padding: 14px 18px;">
+    <form method="get" action="/executive/lock-control" style="display:flex; align-items:center; gap:14px;">
+      <label style="font-size:13px; font-weight:700; color:#1e293b;">Pilih Tanggal Operasional:</label>
+      <input type="date" name="date" value="<%= date %>" class="input" style="width:180px; font-size:13px;">
+      <button type="submit" class="primary-btn" style="padding:0 16px; font-size:12px; height:38px;">
+        <i data-lucide="calendar" style="width:14px; height:14px;"></i> Tampilkan Status
+      </button>
+    </form>
+  </div>
+
+  <!-- Status & Certification State -->
+  <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:20px; margin-bottom:24px; align-items:start;">
+    <!-- Left: Current Lock State & Actions -->
+    <div class="card" style="border:1px solid #e2e8f0;">
+      <h3 style="margin:0 0 12px; font-size:16px; color:#0b2d61; display:flex; align-items:center; gap:8px;">
+        <i data-lucide="shield-check" style="color:#007a5e;"></i>
+        Status Kunci Operasional Tanggal <%= date %>
+      </h3>
+
+      <div style="padding:16px; border-radius:10px; background:<%= closing.status==='CLOSED' ? '#ecfdf5' : (closing.status==='REOPENED' ? '#fffbeb' : '#eff6ff') %>; border:1px solid <%= closing.status==='CLOSED' ? '#a7f3d0' : (closing.status==='REOPENED' ? '#fde68a' : '#bfdbfe') %>; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <span style="font-size:11px; font-weight:800; color:#475569; text-transform:uppercase;">STATUS BUKU HARIAN:</span>
+            <strong style="display:block; font-size:22px; color:<%= closing.status==='CLOSED' ? '#047857' : (closing.status==='REOPENED' ? '#b45309' : '#1d4ed8') %>; margin-top:2px;">
+              <%= closing.status === 'CLOSED' ? 'TERKUNCI & TERSERTIFIKASI' : (closing.status === 'REOPENED' ? 'DIBUKA KEMBALI (REOPENED)' : 'TERBUKA (BELUM DIKUNCI)') %>
+            </strong>
+          </div>
+          <div style="background:#fff; border-radius:50%; width:44px; height:44px; display:grid; place-items:center; box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+            <i data-lucide="<%= closing.status==='CLOSED' ? 'lock' : 'unlock' %>" style="width:22px; height:22px; color:<%= closing.status==='CLOSED' ? '#047857' : '#d97706' %>;"></i>
+          </div>
+        </div>
+
+        <% if(closing.status === 'CLOSED'){ %>
+          <div style="margin-top:12px; font-size:12px; color:#374151; border-top:1px solid #a7f3d0; padding-top:10px;">
+            <div>Dikunci &amp; Disahkan oleh: <strong><%= closingUser ? closingUser.name : 'Pimpinan SPPG' %></strong> (<%= closingUser ? closingUser.role : 'ADMIN' %>)</div>
+            <div style="color:#6b7280; font-size:11px; margin-top:2px;">Waktu Kunci: <%= closing.closed_at ? new Date(closing.closed_at).toLocaleString('id-ID') : '-' %></div>
+          </div>
+        <% } else if(closing.status === 'REOPENED'){ %>
+          <div style="margin-top:12px; font-size:12px; color:#92400e; border-top:1px solid #fde68a; padding-top:10px;">
+            <div>Dibuka kembali oleh: <strong><%= reopenUser ? reopenUser.name : 'Pimpinan' %></strong></div>
+            <div>Waktu Pembukaan: <%= closing.reopened_at ? new Date(closing.reopened_at).toLocaleString('id-ID') : '-' %></div>
+            <div style="margin-top:4px; font-style:italic;">"<%= closing.reopen_reason %>"</div>
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Action: Lock Form or Reopen Form -->
+      <% if(closing.status !== 'CLOSED'){ %>
+        <form method="post" action="/executive/lock-control/lock">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="date" value="<%= date %>">
+          <p style="font-size:12px; color:#64748b; margin-bottom:12px;">
+            Dengan menekan tombol di bawah ini, pimpinan menyatakan buku operasional tanggal <strong><%= date %></strong> telah ditutup secara sah. Akses modifikasi lapangan akan dibekukan.
+          </p>
+          <button type="submit" class="primary-btn" style="width:100%; justify-content:center; padding:12px; font-size:13px; background:#059669;" onclick="return confirm('Apakah Anda yakin ingin mengunci dan membekukan data operasional tanggal <%= date %>?')">
+            <i data-lucide="lock" style="width:16px; height:16px;"></i> Kunci &amp; Sertifikasi Buku Harian <%= date %>
+          </button>
+        </form>
+      <% } else { %>
+        <form method="post" action="/executive/lock-control/reopen" style="border-top:1px solid #e2e8f0; padding-top:14px;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="date" value="<%= date %>">
+          <label style="display:block; font-size:12px; font-weight:700; color:#1e293b; margin-bottom:4px;">
+            Berita Acara Pembukaan Kembali (Wajib diisi pimpinan jika perlu perbaikan):
+          </label>
+          <textarea name="reason" class="textarea" placeholder="Tuliskan alasan resmi dan instruksi perbaikan data..." style="min-height:75px; font-size:12px; margin-bottom:10px;" required></textarea>
+          <button type="submit" class="outline-btn" style="width:100%; justify-content:center; color:#b45309; border-color:#f59e0b; font-size:12px;" onclick="return confirm('Buka kembali kunci operasional dengan berita acara resmi?')">
+            <i data-lucide="unlock" style="width:14px; height:14px;"></i> Buka Kunci dengan Berita Acara
+          </button>
+        </form>
+      <% } %>
+    </div>
+
+    <!-- Right: Operational Integrity Checklist -->
+    <div class="card" style="border:1px solid #e2e8f0;">
+      <h3 style="margin:0 0 12px; font-size:15px; color:#0b2d61; display:flex; align-items:center; gap:8px;">
+        <i data-lucide="list-checks" style="color:#007a5e;"></i>
+        Checklist Integritas Pra-Penguncian
+      </h3>
+      <p style="margin:0 0 14px; font-size:12px; color:#64748b;">
+        Kondisi kepatuhan sebelum pimpinan menandatangani penguncian harian:
+      </p>
+
+      <div style="display:grid; gap:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8fafc; border-radius:8px; border:1px solid #edf2f7;">
+          <span style="font-size:12px; font-weight:600; color:#334155;">Kendala Operasional Terbuka:</span>
+          <% if(checklist.issuesOpen === 0){ %>
+            <span class="status-pill success" style="font-size:11px;">0 Kendala (Aman)</span>
+          <% } else { %>
+            <span class="status-pill warning" style="font-size:11px;"><%= checklist.issuesOpen %> Kendala Perlu Ditindaklanjuti</span>
+          <% } %>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8fafc; border-radius:8px; border:1px solid #edf2f7;">
+          <span style="font-size:12px; font-weight:600; color:#334155;">Feedback Sekolah/Posyandu Terbuka:</span>
+          <% if(checklist.feedbackOpen === 0){ %>
+            <span class="status-pill success" style="font-size:11px;">0 Terbuka (Aman)</span>
+          <% } else { %>
+            <span class="status-pill warning" style="font-size:11px;"><%= checklist.feedbackOpen %> Perlu Respon</span>
+          <% } %>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; background:#f8fafc; border-radius:8px; border:1px solid #edf2f7;">
+          <span style="font-size:12px; font-weight:600; color:#334155;">Dokumentasi Foto Dapur &amp; Distribusi:</span>
+          <% if(checklist.docRecords > 0){ %>
+            <span class="status-pill success" style="font-size:11px;"><%= checklist.docRecords %> Bukti Terekam</span>
+          <% } else { %>
+            <span class="status-pill info" style="font-size:11px;">0 Bukti Upload</span>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historical Closings Table -->
+  <div class="card" style="padding:0; overflow:hidden;">
+    <div style="padding:14px 18px; border-bottom:1px solid #eef2f6;">
+      <h3 style="margin:0; font-size:15px; color:#0b2d61;">Riwayat Penguncian Harian Terakhir</h3>
+    </div>
+    <% if(closingHistory && closingHistory.length > 0){ %>
+      <div class="table-wrap">
+        <table class="table" style="font-size:12px;">
+          <thead>
+            <tr>
+              <th>Tanggal Kerja</th>
+              <th>Status</th>
+              <th>Penyertifikasi / Pengunci</th>
+              <th>Waktu Kunci</th>
+              <th>Status Pembukaan (Jika Ada)</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% closingHistory.forEach(ch => { %>
+              <tr>
+                <td><strong><%= ch.work_date %></strong></td>
+                <td>
+                  <% if(ch.status === 'CLOSED'){ %>
+                    <span class="status-pill success">TERKUNCI</span>
+                  <% } else if(ch.status === 'REOPENED'){ %>
+                    <span class="status-pill warning">REOPENED</span>
+                  <% } else { %>
+                    <span class="status-pill info">TERBUKA</span>
+                  <% } %>
+                </td>
+                <td><%= ch.closed_by_name || '-' %></td>
+                <td><%= ch.closed_at ? new Date(ch.closed_at).toLocaleString('id-ID') : '-' %></td>
+                <td>
+                  <% if(ch.reopened_by_name){ %>
+                    <span style="color:#b45309; font-weight:600;">Dibuka oleh <%= ch.reopened_by_name %>:</span>
+                    <small style="display:block; color:#78350f;">"<%= ch.reopen_reason %>"</small>
+                  <% } else { %>
+                    -
+                  <% } %>
+                </td>
+                <td>
+                  <a href="/executive/lock-control?date=<%= ch.work_date %>" class="outline-btn" style="padding:4px 8px; font-size:11px;">
+                    Lihat
+                  </a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="empty-state compact">
+        <i data-lucide="archive"></i>
+        <span>Belum ada riwayat penguncian harian sebelumnya.</span>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

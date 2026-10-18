@@ -1,1 +1,194 @@
-<%- include('../partials/header') %><form method="post" action="<%= pm?'/pm/'+pm.id:'/kpm/'+kpm.id+'/pm' %>"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><% if(pm){ %><input type="hidden" name="_method" value="PUT"><% } %><div class="card"><h2>👨‍🎓 <%= pm?'Edit':'Tambah' %> Penerima Manfaat</h2><p class="sub">PM = Penerima Manfaat (orang). KPM: <strong><%= kpm.name %></strong>.</p><div class="form-grid"><div class="field"><label>Nama Lengkap *</label><input required class="input" name="full_name" value="<%= pm?.full_name||'' %>"></div><div class="field"><label>Kategori *</label><select required class="select" name="category"><% pmCategories.forEach(x=>{ %><option value="<%= x %>" <%= pm?.category===x?'selected':'' %>><%= x.replaceAll('_',' ') %></option><% }) %></select></div><div class="field"><label>NIK</label><input maxlength="16" class="input" name="nik" value="<%= pm?.nik||'' %>"></div><div class="field"><label>NISN</label><input class="input" name="nisn" value="<%= pm?.nisn||'' %>"></div><div class="field"><label>Nomor Identitas Lain</label><input class="input" name="identity_number" value="<%= pm?.identity_number||'' %>"></div><div class="field"><label>Jenis Kelamin</label><select class="select" name="gender"><option value="">Pilih</option><option value="L" <%= pm?.gender==='L'?'selected':'' %>>Laki-laki</option><option value="P" <%= pm?.gender==='P'?'selected':'' %>>Perempuan</option></select></div><div class="field"><label>Kelas/Kelompok</label><select class="select" name="class_group"><option value="">Pilih</option><% (rules?.classes||[]).forEach(x=>{ %><option <%= pm?.class_group===x?'selected':'' %>><%= x %></option><% }) %></select><div class="help"><%= rules?'Klasifikasi menyesuaikan jenjang KPM.':'Pilih kategori sesuai KPM.' %></div></div><div class="field"><label>Tanggal Lahir</label><input type="date" class="input" name="birth_date" value="<%= pm?.birth_date?new Date(pm.birth_date).toISOString().slice(0,10):'' %>"></div><div class="field"><label>No. HP/WhatsApp</label><input class="input" name="phone" value="<%= pm?.phone||'' %>"></div></div></div><button class="btn" style="margin-top:16px">💾 Simpan PM</button> <a class="btn gray" href="/kpm/<%= kpm.id %>">Batal</a></form><%- include('../partials/footer') %>
+<%- include('../partials/header') %>
+<%
+  const isPosyandu = kpm.type === 'POSYANDU';
+  const posyanduCategories = ['BALITA', 'BUMIL', 'BUSUI'];
+  const schoolCategories = ['PESERTA_DIDIK', 'PENDIDIK', 'TENAGA_KEPENDIDIKAN'];
+  const availableCats = isPosyandu ? posyanduCategories : schoolCategories;
+  const currentCat = pm?.category || (isPosyandu ? 'BALITA' : 'PESERTA_DIDIK');
+%>
+<form method="post" action="<%= pm ? '/pm/' + pm.id : '/kpm/' + kpm.id + '/pm' %>" id="pmForm">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <% if(pm){ %><input type="hidden" name="_method" value="PUT"><% } %>
+  
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <div>
+        <div class="eyebrow"><%= isPosyandu ? 'POSYANDU TERPADU' : 'SATUAN PENDIDIKAN' %></div>
+        <h2 style="margin:2px 0 0"><%= pm ? 'Edit' : 'Tambah' %> Penerima Manfaat (PM)</h2>
+        <p class="sub">KPM: <strong><%= kpm.name %></strong> · <%= isPosyandu ? 'Posyandu' : (kpm.education_level || 'Satuan Pendidikan') %></p>
+      </div>
+      <span class="status <%= isPosyandu ? 'info' : 'success' %>"><%= isPosyandu ? 'Ruang Posyandu' : 'Sekolah' %></span>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label>Nama Lengkap *</label>
+        <input required class="input" name="full_name" value="<%= pm?.full_name || '' %>" placeholder="Nama lengkap penerima manfaat">
+      </div>
+
+      <div class="field">
+        <label>Kategori PM *</label>
+        <select required class="select" name="category" id="pmCategorySelect">
+          <% availableCats.forEach(x => { %>
+            <option value="<%= x %>" <%= currentCat === x ? 'selected' : '' %>>
+              <%= x === 'BALITA' ? '👶 Balita (Porsi Kecil)' : x === 'BUMIL' ? '🤰 Ibu Hamil (Porsi Besar)' : x === 'BUSUI' ? '🤱 Ibu Menyusui (Porsi Besar)' : x.replaceAll('_', ' ') %>
+            </option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>NIK (Nomor Induk Kependudukan)</label>
+        <input maxlength="16" class="input" name="nik" value="<%= pm?.nik || '' %>" placeholder="16 digit NIK">
+      </div>
+
+      <% if(!isPosyandu){ %>
+        <div class="field">
+          <label>NISN</label>
+          <input class="input" name="nisn" value="<%= pm?.nisn || '' %>" placeholder="Nomor Induk Siswa Nasional">
+        </div>
+      <% } %>
+
+      <div class="field">
+        <label>Jenis Kelamin *</label>
+        <select required class="select" name="gender" id="pmGenderSelect">
+          <option value="">Pilih Jenis Kelamin</option>
+          <option value="L" <%= pm?.gender === 'L' ? 'selected' : '' %>>Laki-laki (L)</option>
+          <option value="P" <%= pm?.gender === 'P' ? 'selected' : '' %>>Perempuan (P)</option>
+        </select>
+        <div class="help" id="genderHelp">Pilih jenis kelamin</div>
+      </div>
+
+      <div class="field">
+        <label id="classGroupLabel"><%= isPosyandu ? 'Sub-Kelompok Pengelompokan *' : 'Kelas / Kelompok' %></label>
+        <select class="select" name="class_group" id="pmClassGroupSelect">
+          <option value="">— Pilih Kelompok —</option>
+          <% if(rules?.classes && rules.classes.length){ %>
+            <% rules.classes.forEach(x => { %>
+              <option value="<%= x %>" <%= pm?.class_group === x ? 'selected' : '' %>><%= x %></option>
+            <% }) %>
+          <% } %>
+        </select>
+        <div class="help" id="classGroupHelp"><%= isPosyandu ? 'Pilih sub-kategori spesifik untuk pengelompokan porsi dan gizi.' : 'Klasifikasi menyesuaikan jenjang sekolah.' %></div>
+      </div>
+
+      <div class="field">
+        <label>Tanggal Lahir</label>
+        <input type="date" class="input" name="birth_date" id="pmBirthDate" value="<%= pm?.birth_date ? new Date(pm.birth_date).toISOString().slice(0, 10) : '' %>">
+        <div class="help" id="birthDateHelp"><%= isPosyandu ? 'Untuk balita, tanggal lahir membantu menentukan usia bulan.' : 'Format YYYY-MM-DD' %></div>
+      </div>
+
+      <div class="field">
+        <label>No. HP / WhatsApp</label>
+        <input class="input" name="phone" value="<%= pm?.phone || '' %>" placeholder="08xxxxxxxxxx">
+      </div>
+    </div>
+  </div>
+
+  <div class="actions" style="margin-top:16px">
+    <button class="btn" type="submit">💾 Simpan Data PM</button>
+    <a class="btn gray" href="/kpm/<%= kpm.id %>">Batal</a>
+  </div>
+</form>
+
+<script>
+(function(){
+  var isPosyandu = <%= isPosyandu ? 'true' : 'false' %>;
+  var catSelect = document.getElementById('pmCategorySelect');
+  var genderSelect = document.getElementById('pmGenderSelect');
+  var genderHelp = document.getElementById('genderHelp');
+  var groupSelect = document.getElementById('pmClassGroupSelect');
+  var groupLabel = document.getElementById('classGroupLabel');
+  var groupHelp = document.getElementById('classGroupHelp');
+  var birthInput = document.getElementById('pmBirthDate');
+
+  var posyanduSubGroups = {
+    BALITA: [
+      { val: '0-5 Bulan (Bayi)', label: '0–5 Bulan (Bayi)' },
+      { val: '6-23 Bulan (Baduta)', label: '6–23 Bulan (Baduta)' },
+      { val: '24-59 Bulan (Balita)', label: '24–59 Bulan (Balita)' }
+    ],
+    BUMIL: [
+      { val: 'Trimester 1 (1–12 Minggu)', label: 'Trimester 1 (1–12 Minggu)' },
+      { val: 'Trimester 2 (13–27 Minggu)', label: 'Trimester 2 (13–27 Minggu)' },
+      { val: 'Trimester 3 (28–40 Minggu)', label: 'Trimester 3 (28–40 Minggu)' }
+    ],
+    BUSUI: [
+      { val: 'Bayi 0–6 Bulan (ASI Eksklusif)', label: 'Bayi 0–6 Bulan (ASI Eksklusif)' },
+      { val: 'Bayi 7–12 Bulan', label: 'Bayi 7–12 Bulan' },
+      { val: 'Bayi 13–24 Bulan', label: 'Bayi 13–24 Bulan' }
+    ]
+  };
+
+  var initialGroup = "<%= pm?.class_group || '' %>";
+
+  function syncPosyanduFields(){
+    if(!isPosyandu || !catSelect) return;
+    var cat = catSelect.value;
+
+    if(cat === 'BALITA'){
+      if(groupLabel) groupLabel.textContent = 'Tahapan Usia Balita *';
+      if(groupHelp) groupHelp.textContent = 'Porsi Kecil · Menentukan tekstur makanan lumat / lembik / padat balita.';
+      if(genderSelect){
+        genderSelect.disabled = false;
+        if(genderHelp) genderHelp.textContent = 'Balita Laki-laki atau Perempuan';
+      }
+    } else if(cat === 'BUMIL'){
+      if(groupLabel) groupLabel.textContent = 'Usia Kehamilan / Trimester *';
+      if(groupHelp) groupHelp.textContent = 'Porsi Besar · Menentukan kecukupan gizi ibu hamil.';
+      if(genderSelect){
+        genderSelect.value = 'P';
+        if(genderHelp) genderHelp.textContent = 'Ibu Hamil otomatis Perempuan (P)';
+      }
+    } else if(cat === 'BUSUI'){
+      if(groupLabel) groupLabel.textContent = 'Usia Bayi yang Disusui *';
+      if(groupHelp) groupHelp.textContent = 'Porsi Besar · Menentukan pemenuhan kalori masa laktasi.';
+      if(genderSelect){
+        genderSelect.value = 'P';
+        if(genderHelp) genderHelp.textContent = 'Ibu Menyusui otomatis Perempuan (P)';
+      }
+    }
+
+    var list = posyanduSubGroups[cat] || [];
+    if(groupSelect){
+      groupSelect.innerHTML = '<option value="">— Pilih Kelompok —</option>';
+      list.forEach(function(item){
+        var opt = document.createElement('option');
+        opt.value = item.val;
+        opt.textContent = item.label;
+        if(initialGroup && (item.val === initialGroup || initialGroup.indexOf(item.val) !== -1 || item.val.indexOf(initialGroup) !== -1)){
+          opt.selected = true;
+        }
+        groupSelect.appendChild(opt);
+      });
+    }
+  }
+
+  if(catSelect){
+    catSelect.addEventListener('change', function(){
+      initialGroup = '';
+      syncPosyanduFields();
+    });
+  }
+
+  // Auto calculate age for balita if birth date changed
+  if(birthInput && isPosyandu){
+    birthInput.addEventListener('change', function(){
+      if(catSelect && catSelect.value === 'BALITA' && birthInput.value){
+        var bDate = new Date(birthInput.value);
+        var now = new Date();
+        var months = (now.getFullYear() - bDate.getFullYear()) * 12 + (now.getMonth() - bDate.getMonth());
+        if(months < 0) return;
+        if(groupSelect){
+          if(months <= 5) groupSelect.value = '0-5 Bulan (Bayi)';
+          else if(months <= 23) groupSelect.value = '6-23 Bulan (Baduta)';
+          else if(months <= 59) groupSelect.value = '24-59 Bulan (Balita)';
+        }
+      }
+    });
+  }
+
+  syncPosyanduFields();
+})();
+</script>
+<%- include('../partials/footer') %>

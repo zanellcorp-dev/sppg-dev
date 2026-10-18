@@ -1,0 +1,1231 @@
+<%
+  const schoolGroups = [['PENDIDIK','Pendidik'],['TENAGA_KEPENDIDIKAN','Tenaga Kependidikan'],['PESERTA_DIDIK','Peserta Didik']];
+  const posyanduGroups = [['BALITA','Balita'],['BUMIL','Bumil'],['BUSUI','Busui']];
+  const groups = access.kpm_type === 'POSYANDU' ? posyanduGroups : schoolGroups;
+  const isPosyandu = access.kpm_type === 'POSYANDU';
+  const totalPm = pm.length;
+  const activePmCount = pm.filter(x => Number(x.active) === 1).length;
+  const pendingPmCount = pm.filter(x => x.approval_status === 'MENUNGGU_VERIFIKASI_BGN').length;
+  const inactivePmCount = totalPm - activePmCount - pendingPmCount;
+%>
+
+<section class="kpm-section pm-management-section" id="pm-management-section" aria-label="Manajemen Penerima Manfaat">
+  <!-- Header & Keterangan Ruang Privat -->
+  <div class="kpm-section-head pm-management-head">
+    <div class="pm-head-title-wrap">
+      <div class="pm-eyebrow-row">
+        <span class="pm-eyebrow-tag">DATA MASTER PENERIMA MANFAAT</span>
+        <span class="pm-privacy-pill" title="Data KPM ini berdiri sendiri dan tidak terhubung ke KPM lain">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Ruang Privat <%= isPosyandu ? 'Posyandu' : 'Satuan Pendidikan' %> · Terisolasi
+        </span>
+        <% if(previewMode){ %>
+          <span class="pm-bgn-badge">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Otorisasi Kepala / Admin BGN Aktif
+          </span>
+        <% } %>
+      </div>
+      <h2>Manajemen Penerima Manfaat KPM · <%= access.kpm_name %> <span class="pm-code-tag"><%= access.kpm_code %></span></h2>
+      <p>Data operasional ruang privat <%= access.kpm_name %>. Seluruh pencatatan terisolasi secara mandiri. Kader/KPM dapat mengajukan perbaikan atau penonaktifan ke riwayat, dengan keputusan akhir dan pemulihan data diawasi oleh Kepala / Admin BGN.</p>
+    </div>
+  </div>
+
+  <!-- Toolbar: Pencarian, Tab Kategori & Filter Status -->
+  <div class="pm-toolbar">
+    <!-- Kolom Kiri: Search Input -->
+    <div class="pm-search-wrap">
+      <svg class="pm-search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="pmSearchInput" class="pm-search-input" placeholder="Cari nama lengkap, NIK, NISN..." autocomplete="off">
+    </div>
+
+    <!-- Kolom Tengah: Tab Kategori -->
+    <div class="pm-cat-tabs" id="pmCatTabs" role="tablist">
+      <button type="button" class="pm-tab-btn active" data-cat="ALL" onclick="window.setPmCategory('ALL')">
+        <span>Semua</span>
+        <span class="pm-tab-badge"><%= totalPm %></span>
+      </button>
+      <% groups.forEach(([cat, label]) => { 
+        const count = pm.filter(x => x.category === cat).length;
+      %>
+        <button type="button" class="pm-tab-btn" data-cat="<%= cat %>" onclick="window.setPmCategory('<%= cat %>')">
+          <span><%= label %></span>
+          <span class="pm-tab-badge"><%= count %></span>
+        </button>
+      <% }) %>
+    </div>
+
+    <!-- Kolom Kanan: Filter Status -->
+    <div class="pm-status-filter">
+      <label for="pmStatusSelect" class="pm-filter-label">Status:</label>
+      <select id="pmStatusSelect" class="pm-select-status">
+        <option value="ALL">Semua Status (<%= totalPm %>)</option>
+        <option value="ACTIVE" selected>Hanya Aktif (<%= activePmCount %>)</option>
+        <% if(pendingPmCount > 0){ %>
+          <option value="PENDING">Menunggu BGN (<%= pendingPmCount %>)</option>
+        <% } %>
+        <option value="INACTIVE">Nonaktif / Arsip (<%= inactivePmCount %>)</option>
+      </select>
+    </div>
+  </div>
+
+  <% if(isPosyandu){ %>
+    <!-- Posyandu Sub-Grouping Cluster Bar -->
+    <div class="pm-posyandu-cluster-bar" id="pmPosyanduClusterBar">
+      <div class="pm-cluster-header">
+        <div class="pm-cluster-title">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span id="pmClusterCategoryTitle">Pengelompokan Penerima Manfaat Posyandu</span>
+        </div>
+        <div class="pm-cluster-metrics" id="pmClusterMetrics">
+          <!-- Metrik porsi dinamis via JS -->
+        </div>
+      </div>
+      <div class="pm-cluster-subnav" id="pmClusterSubNav">
+        <!-- Sub-filter pills dinamis via JS -->
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Tabel Penerima Manfaat Terpadu -->
+  <div class="kpm-table-wrap pm-table-wrap">
+    <table class="kpm-table pm-table" id="pmDataTable">
+      <thead>
+        <tr>
+          <th style="width:48px;text-align:center">No</th>
+          <th>Nama Lengkap</th>
+          <th>NIK</th>
+          <th style="width:60px;text-align:center">L/P</th>
+          <th>Kategori</th>
+          <th id="pmGroupHeaderCol"><%= !isPosyandu ? 'Kelas / Kelompok' : 'Sub-Kelompok' %></th>
+          <th style="width:130px;text-align:center">Status</th>
+          <th style="width:240px;text-align:center">Aksi & Tata Kelola</th>
+        </tr>
+      </thead>
+      <tbody id="pmTableBody">
+        <% pm.forEach((x, i) => { 
+          const isAct = Number(x.active) === 1;
+          const isPending = x.approval_status === 'MENUNGGU_VERIFIKASI_BGN';
+          let statusCategory = 'INACTIVE';
+          if(isPending) statusCategory = 'PENDING';
+          else if(isAct) statusCategory = 'ACTIVE';
+        %>
+          <tr class="pm-row <%= !isAct ? 'is-inactive' : '' %> <%= isPending ? 'is-pending' : '' %>" 
+              data-cat="<%= x.category %>" 
+              data-subcat="<%= (x.class_group || '').toLowerCase() %>"
+              data-gender="<%= x.gender || '' %>"
+              data-active="<%= isAct ? '1' : '0' %>"
+              data-status="<%= statusCategory %>"
+              data-search="<%= [x.full_name, x.nik, x.nisn, x.category, x.class_group].filter(Boolean).join(' ').toLowerCase() %>">
+            <td style="text-align:center;font-weight:700;color:#6b7e94" class="pm-row-index"><%= i + 1 %></td>
+            <td>
+              <div class="pm-name-cell">
+                <strong class="pm-fullname"><%= x.full_name %></strong>
+                <% if(x.nisn){ %><small class="pm-meta-nisn">NISN: <%= x.nisn %></small><% } %>
+              </div>
+            </td>
+            <td><code class="pm-nik-code"><%= x.nik || '-' %></code></td>
+            <td style="text-align:center">
+              <span class="pm-gender-badge <%= x.gender === 'P' ? 'female' : 'male' %>"><%= x.gender || '-' %></span>
+            </td>
+            <td>
+              <span class="pm-cat-pill"><%= x.category ? x.category.replaceAll('_', ' ') : '-' %></span>
+            </td>
+            <td>
+              <span class="pm-class-pill <%= isPosyandu ? 'posyandu-subgroup' : '' %>"><%= x.class_group || (isPosyandu ? 'Belum Dikelompokkan' : '-') %></span>
+            </td>
+            <td style="text-align:center">
+              <% if(isPending){ %>
+                <span class="pm-badge-pending" title="Permohonan nonaktif sedang menunggu keputusan Kepala BGN">
+                  <span class="pm-dot-amber"></span> Menunggu BGN
+                </span>
+              <% } else if(isAct){ %>
+                <span class="pm-badge-active">
+                  <span class="pm-dot-green"></span> Aktif
+                </span>
+              <% } else { %>
+                <span class="pm-badge-inactive" title="<%= x.deactivation_reason ? ('Alasan: ' + x.deactivation_reason) : 'Dinonaktifkan di arsip' %>">
+                  <span class="pm-dot-gray"></span> Nonaktif
+                </span>
+              <% } %>
+            </td>
+            <td style="text-align:center">
+              <div class="pm-action-group">
+                <!-- 1. Tombol Edit -->
+                <% if(previewMode){ %>
+                  <a class="pm-btn pm-btn-edit" href="/pm/<%= x.id %>/edit" target="_blank" rel="noopener" title="Edit Data Master PM">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span>Edit</span>
+                  </a>
+                <% } else if(isAct && !isPending){ %>
+                  <a class="pm-btn pm-btn-edit" href="/portal/kpm/<%= portalToken %>/pm/<%= x.id %>/edit" title="Ajukan Perubahan Data PM">
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span>Edit</span>
+                  </a>
+                <% } %>
+
+                <!-- 2. Tombol Aksi Status & Otorisasi BGN -->
+                <% if(previewMode){ %>
+                  <!-- AKSI OTORISASI INTERNAL KEPALA / ADMIN BGN -->
+                  <% if(isPending){ %>
+                    <button type="button" class="pm-btn pm-btn-approve" 
+                            onclick="openBgnApproveModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
+                            title="Setujui Penonaktifan (Otorisasi Kepala BGN)">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <span>Setujui</span>
+                    </button>
+                    <button type="button" class="pm-btn pm-btn-reject" 
+                            onclick="openBgnRejectModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
+                            title="Tolak / Batalkan Permohonan Hapus (Tetap Aktif)">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      <span>Batalkan</span>
+                    </button>
+                  <% } else if(isAct){ %>
+                    <button type="button" class="pm-btn pm-btn-delete" 
+                            onclick="openDeactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', true)" 
+                            title="Nonaktifkan PM langsung ke arsip riwayat">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <span>Hapus</span>
+                    </button>
+                  <% } else { %>
+                    <button type="button" class="pm-btn pm-btn-reactivate" 
+                            onclick="openReactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
+                            title="Pulihkan / Kembalikan Data ke Aktif (Otorisasi Kepala BGN)">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                      <span>Pulihkan</span>
+                    </button>
+                  <% } %>
+                <% } else { %>
+                  <!-- AKSI PENGGUNA UMUM / KADER PORTAL KPM -->
+                  <% if(isPending){ %>
+                    <span class="pm-action-locked" title="Permohonan telah terkirim. Menunggu keputusan resmi Kepala / Admin BGN.">
+                      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      Menunggu BGN
+                    </span>
+                  <% } else if(isAct){ %>
+                    <button type="button" class="pm-btn pm-btn-delete" 
+                            onclick="openDeactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', false)" 
+                            title="Ajukan Penonaktifan PM ke Arsip Riwayat">
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <span>Hapus</span>
+                    </button>
+                  <% } else { %>
+                    <span class="pm-action-locked" title="Data berada di arsip riwayat resmi. Hanya Kepala / Admin BGN yang berwenang memulihkan data.">
+                      <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Arsip BGN
+                    </span>
+                  <% } %>
+                <% } %>
+
+                <!-- 3. Tombol Riwayat Rekam Jejak (Tersambung ke Riwayat BGN) -->
+                <button type="button" class="pm-btn pm-btn-history" 
+                        onclick="openHistoryModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', <%= isAct ? 1 : 0 %>, '<%= x.approval_status || (isAct ? 'AKTIF' : 'NONAKTIF_DISETUJUI') %>')" 
+                        title="Lihat Riwayat & Rekam Jejak Otorisasi BGN">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span>Riwayat</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+        <tr id="pmEmptyRow" style="display:none">
+          <td colspan="<%= !isPosyandu ? 8 : 8 %>" class="kpm-empty pm-empty-box">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#8fa0b5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div><strong>Tidak ada data penerima manfaat yang sesuai pada kategori ini.</strong></div>
+            <small style="color:#788b9e">Silakan klik kategori lain atau bersihkan kata kunci pencarian.</small>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<!-- MODAL 1: HAPUS / NONAKTIFKAN (SOFT DELETE / PERMOHONAN KE BGN) -->
+<!-- ============================================================== -->
+<div id="pmDeactivateModal" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="deactModalTitle">
+  <div class="pm-modal-card">
+    <div class="pm-modal-head danger">
+      <div class="pm-modal-icon-wrap danger">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </div>
+      <div>
+        <h3 id="deactModalTitle">Hapus / Nonaktifkan Penerima Manfaat</h3>
+        <p id="deactModalSubtitle">Data tersimpan aman di riwayat arsip dan tidak terhapus permanen.</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeDeactivateModal()" aria-label="Tutup">&times;</button>
+    </div>
+
+    <form id="pmDeactivateForm" method="post" action="">
+      <input type="hidden" name="active" value="0">
+      <% if(previewMode){ %><input type="hidden" name="decision" value="DIRECT_DEACTIVATE"><% } %>
+
+      <div class="pm-modal-body">
+        <div class="pm-target-summary">
+          <small>PENERIMA MANFAAT YANG DIPILIH</small>
+          <strong id="deactTargetName">-</strong>
+          <span id="deactTargetMeta" class="pm-target-meta">NIK: -</span>
+        </div>
+
+        <div class="pm-notice-softdelete">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <div>
+            <strong id="deactNoticeHeading">Penerima manfaat ini akan dinonaktifkan dari distribusi harian.</strong>
+            <span id="deactNoticeBody">Data historis tetap utuh dan dicatat di riwayat rekam jejak. Sesuai tata kelola, keputusan akhir berada di bawah otorisasi Kepala / Admin BGN.</span>
+          </div>
+        </div>
+
+        <div class="pm-form-field">
+          <label for="deactReasonSelect">Pilih Alasan Penonaktifan <span style="color:#d92d20">*</span></label>
+          <select id="deactReasonSelect" name="reason" class="pm-modal-select" required>
+            <option value="">— Pilih Alasan Resmi —</option>
+            <% if(isPosyandu){ %>
+              <option value="Melewati Batas Usia Balita (> 2 Tahun / > 5 Tahun)">Melewati Batas Usia Balita (> 2 Tahun / > 5 Tahun)</option>
+              <option value="Ibu Sudah Melahirkan / Selesai Masa Menyusui">Ibu Sudah Melahirkan / Selesai Masa Menyusui</option>
+              <option value="Pindah Domisili / Pindah Alamat">Pindah Domisili / Pindah Alamat</option>
+              <option value="Nonaktif Sementara">Nonaktif Sementara</option>
+              <option value="Koreksi / Data Duplikat">Koreksi / Data Duplikat</option>
+              <option value="Lainnya">Lainnya</option>
+            <% } else { %>
+              <option value="Lulus Sekolah">Lulus Sekolah</option>
+              <option value="Pindah Sekolah / Mutasi">Pindah Sekolah / Mutasi</option>
+              <option value="Mengundurkan Diri">Mengundurkan Diri</option>
+              <option value="Purna Tugas / Mutasi Guru & Tendik">Purna Tugas / Mutasi Guru & Tendik</option>
+              <option value="Nonaktif Sementara">Nonaktif Sementara</option>
+              <option value="Koreksi / Data Duplikat">Koreksi / Data Duplikat</option>
+              <option value="Lainnya">Lainnya</option>
+            <% } %>
+          </select>
+        </div>
+
+        <div class="pm-form-field" id="deactCustomField" style="display:none">
+          <label for="deactCustomNote">Keterangan Tambahan</label>
+          <input type="text" id="deactCustomNote" class="pm-modal-input" placeholder="Tuliskan keterangan detail alasan...">
+        </div>
+      </div>
+
+      <div class="pm-modal-foot">
+        <button type="button" class="pm-modal-btn secondary" onclick="closeDeactivateModal()">Batal</button>
+        <button type="submit" class="pm-modal-btn danger">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span id="deactSubmitBtnText"><%= previewMode ? 'Nonaktifkan & Simpan ke Riwayat' : 'Kirim Permohonan ke Kepala BGN' %></span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 2: OTORISASI KEPALA BGN - SETUJUI PENONAKTIFAN -->
+<!-- ============================================================== -->
+<div id="bgnApproveModal" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+  <div class="pm-modal-card">
+    <div class="pm-modal-head success">
+      <div class="pm-modal-icon-wrap success">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div>
+        <h3>Otorisasi Kepala BGN · Sahkan Penonaktifan</h3>
+        <p>Menyetujui permohonan penonaktifan PM dari kader KPM.</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeBgnApproveModal()" aria-label="Tutup">&times;</button>
+    </div>
+    <form id="bgnApproveForm" method="post" action="">
+      <input type="hidden" name="decision" value="APPROVE_DEACTIVATE">
+      <div class="pm-modal-body">
+        <div class="pm-target-summary">
+          <small>PENERIMA MANFAAT</small>
+          <strong id="approveTargetName">-</strong>
+          <div id="approveTargetReason" class="pm-prev-reason" style="color:#b45309">Alasan dari Kader: -</div>
+        </div>
+        <p style="font-size:13px;color:#334155;margin-top:14px;line-height:1.5">
+          Sebagai <strong>Kepala / Admin BGN</strong>, Anda memiliki wewenang mengesahkan penonaktifan ini. Penerima manfaat akan resmi dipindahkan ke arsip riwayat nonaktif.
+        </p>
+      </div>
+      <div class="pm-modal-foot">
+        <button type="button" class="pm-modal-btn secondary" onclick="closeBgnApproveModal()">Batal</button>
+        <button type="submit" class="pm-modal-btn success">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>Sahkan & Setujui Penonaktifan</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 3: OTORISASI KEPALA BGN - TOLAK / BATALKAN PERMOHONAN HAPUS -->
+<!-- ============================================================== -->
+<div id="bgnRejectModal" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+  <div class="pm-modal-card">
+    <div class="pm-modal-head danger">
+      <div class="pm-modal-icon-wrap danger">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </div>
+      <div>
+        <h3>Otorisasi Kepala BGN · Batalkan Permohonan Hapus</h3>
+        <p>Membatalkan permohonan hapus sehingga PM tetap berstatus Aktif.</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeBgnRejectModal()" aria-label="Tutup">&times;</button>
+    </div>
+    <form id="bgnRejectForm" method="post" action="">
+      <input type="hidden" name="decision" value="REJECT_DEACTIVATE">
+      <div class="pm-modal-body">
+        <div class="pm-target-summary">
+          <small>PENERIMA MANFAAT</small>
+          <strong id="rejectTargetName">-</strong>
+          <div id="rejectTargetReason" class="pm-prev-reason">Alasan pengajuan sebelumnya: -</div>
+        </div>
+        <p style="font-size:13px;color:#334155;margin-top:14px;line-height:1.5">
+          Apakah Anda yakin ingin membatalkan permohonan hapus ini? Status penerima manfaat akan dipulihkan menjadi <strong>Aktif</strong> dan keputusan dicatat di riwayat.
+        </p>
+      </div>
+      <div class="pm-modal-foot">
+        <button type="button" class="pm-modal-btn secondary" onclick="closeBgnRejectModal()">Tutup</button>
+        <button type="submit" class="pm-modal-btn danger">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span>Batalkan Permohonan (Tetap Aktif)</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 4: PULIHKAN DARI ARSIP (RESTORE - KHUSUS KEPALA BGN) -->
+<!-- ============================================================== -->
+<div id="pmReactivateModal" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+  <div class="pm-modal-card">
+    <div class="pm-modal-head success">
+      <div class="pm-modal-icon-wrap success">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+      </div>
+      <div>
+        <h3>Otorisasi Kepala BGN · Pulihkan Data Penerima Manfaat</h3>
+        <p>Memulihkan status penerima manfaat dari arsip kembali menjadi Aktif.</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeReactivateModal()" aria-label="Tutup">&times;</button>
+    </div>
+
+    <form id="pmReactivateForm" method="post" action="">
+      <input type="hidden" name="decision" value="RESTORE">
+      <input type="hidden" name="active" value="1">
+      <input type="hidden" name="reason" value="Dipulihkan kembali oleh Kepala BGN">
+
+      <div class="pm-modal-body">
+        <div class="pm-target-summary">
+          <small>PENERIMA MANFAAT YANG DIPULIHKAN</small>
+          <strong id="reactTargetName">-</strong>
+          <span id="reactTargetMeta" class="pm-target-meta">NIK: -</span>
+          <div id="reactTargetPrevReason" class="pm-prev-reason">Alasan nonaktif sebelumnya: -</div>
+        </div>
+
+        <p style="font-size:13px;color:#475569;margin-top:14px;line-height:1.5">
+          Sebagai Kepala / Admin BGN, Anda memiliki hak istimewa untuk memulihkan penerima manfaat ini ke daftar distribusi aktif. Tindakan pemulihan ini akan dicatat ke riwayat audit.
+        </p>
+      </div>
+
+      <div class="pm-modal-foot">
+        <button type="button" class="pm-modal-btn secondary" onclick="closeReactivateModal()">Batal</button>
+        <button type="submit" class="pm-modal-btn success">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          <span>Pulihkan ke Aktif</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 5: RIWAYAT REKAM JEJAK TERINTEGRASI BGN -->
+<!-- ============================================================== -->
+<div id="pmHistoryModal" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="histModalTitle">
+  <div class="pm-modal-card pm-modal-card-lg">
+    <div class="pm-modal-head neutral">
+      <div class="pm-modal-icon-wrap neutral">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div>
+        <h3 id="histModalTitle">Riwayat Rekam Jejak & Otorisasi BGN</h3>
+        <p>Jejak pendaftaran, pembaruan identitas, permohonan nonaktif, dan otorisasi Kepala BGN.</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeHistoryModal()" aria-label="Tutup">&times;</button>
+    </div>
+
+    <div class="pm-modal-body">
+      <!-- Ringkasan Identitas PM & Status Otorisasi -->
+      <div class="pm-history-profile-card">
+        <div>
+          <strong id="histProfileName" class="pm-hist-name">-</strong>
+          <div class="pm-hist-tags">
+            <span id="histProfileNik" class="pm-hist-nik">NIK: -</span>
+            <span id="histProfileCat" class="pm-cat-pill">-</span>
+            <span id="histProfileStatus" class="pm-badge-active">Aktif</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Banner Governance Note -->
+      <div class="pm-governance-banner">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#007a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div>
+          <strong>Tata Kelola Terpadu Badan Gizi Nasional:</strong>
+          <span>Seluruh persetujuan, pembatalan, dan pemulihan data diawasi oleh Kepala / Admin BGN guna menjamin akuntabilitas penyaluran porsi.</span>
+        </div>
+      </div>
+
+      <!-- Kontainer Timeline Riwayat -->
+      <div class="pm-timeline-wrapper">
+        <div id="pmHistoryLoading" class="pm-loading-state">
+          <div class="pm-spinner"></div>
+          <span>Memuat rekam jejak histori...</span>
+        </div>
+
+        <div id="pmHistoryTimeline" class="pm-timeline" style="display:none">
+          <!-- Item riwayat dinamis diinjeksi via JS -->
+        </div>
+
+        <div id="pmHistoryEmpty" class="pm-empty-timeline" style="display:none">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:6px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <strong style="display:block;color:#334155">Belum ada catatan perubahan</strong>
+          <small style="color:#64748b">Data penerima manfaat ini belum pernah mengalami perbaikan atau penonaktifan.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Foot Modal -->
+    <div class="pm-modal-foot" id="pmHistoryModalFoot">
+      <button type="button" class="pm-modal-btn primary" onclick="closeHistoryModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- CSS SCOPED PM MANAGEMENT & MODALS -->
+<!-- ============================================================== -->
+<style>
+/* PM Management Section Header & Privacy Badges */
+.pm-management-section{margin-top:24px;border:1px solid #dbe5ee;box-shadow:0 6px 24px rgba(15,35,55,.05);border-radius:18px;background:#fff;overflow:hidden}
+.pm-management-head{padding:22px 24px 18px;border-bottom:1px solid #edf2f7;background:#fff}
+.pm-eyebrow-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.pm-eyebrow-tag{font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#007a5e;text-transform:uppercase}
+.pm-privacy-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:10.5px;font-weight:700}
+.pm-bgn-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;font-size:10.5px;font-weight:700}
+.pm-code-tag{display:inline-block;padding:2px 8px;border-radius:6px;background:#f1f5f9;color:#334155;font-size:12px;font-family:monospace;font-weight:700;vertical-align:middle}
+.pm-management-head h2{font-size:19px;margin:0;color:#0f243d;line-height:1.3}
+.pm-management-head p{font-size:13px;color:#607387;margin:7px 0 0;line-height:1.55}
+
+/* Toolbar */
+.pm-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 24px;background:#f8fafc;border-bottom:1px solid #e8eef4;flex-wrap:wrap}
+.pm-search-wrap{position:relative;flex:1;min-width:240px;max-width:320px}
+.pm-search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#8fa0b5;pointer-events:none}
+.pm-search-input{width:100%;height:38px;padding:0 12px 0 34px;border-radius:9px;border:1px solid #d4dfe7;background:#fff;font-size:13px;color:#1e293b;transition:.15s}
+.pm-search-input:focus{outline:none;border-color:#007a5e;box-shadow:0 0 0 3px rgba(0,122,94,.12)}
+
+/* Category Tabs */
+.pm-cat-tabs{display:inline-flex;align-items:center;background:#eef2f6;padding:4px;border-radius:11px;gap:3px;border:1px solid #dce4ec}
+.pm-tab-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border:0;background:transparent;color:#475569;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all .15s ease;white-space:nowrap}
+.pm-tab-btn:hover{color:#0f172a;background:rgba(255,255,255,.65)}
+.pm-tab-btn.active{background:#fff;color:#007a5e;box-shadow:0 2px 8px rgba(15,35,55,.08);font-weight:700}
+.pm-tab-badge{display:inline-flex;align-items:center;justify-content:center;padding:1px 7px;border-radius:999px;background:#e2e8f0;font-size:11px;font-weight:700;color:#475569;min-width:20px}
+.pm-tab-btn.active .pm-tab-badge{background:#e8f7ef;color:#08734f}
+
+/* Status Filter */
+.pm-status-filter{display:inline-flex;align-items:center;gap:8px}
+.pm-filter-label{font-size:12px;font-weight:700;color:#64748b}
+.pm-select-status{height:36px;padding:0 12px;border-radius:8px;border:1px solid #d4dfe7;background:#fff;font-size:12.5px;font-weight:600;color:#1e293b;cursor:pointer}
+.pm-select-status:focus{outline:none;border-color:#007a5e}
+
+/* Posyandu Cluster Bar */
+.pm-posyandu-cluster-bar{background:#f8fbfd;border-bottom:1px solid #e1e9f1;padding:12px 24px}
+.pm-cluster-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.pm-cluster-title{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#0b4233}
+.pm-cluster-metrics{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pm-cluster-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:6px;background:#eef7f3;color:#065f46;border:1px solid #cce8dc;font-size:11.5px;font-weight:700}
+.pm-cluster-badge.amber{background:#fffbeb;color:#92400e;border-color:#fde68a}
+.pm-cluster-badge.blue{background:#eff6ff;color:#1e40af;border-color:#bfdbfe}
+.pm-cluster-subnav{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pm-subcat-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:7px;border:1px solid #d3e1ec;background:#fff;color:#334d67;font-size:12px;font-weight:600;cursor:pointer;transition:.15s}
+.pm-subcat-btn:hover{background:#f1f6fa;border-color:#b5cde0}
+.pm-subcat-btn.active{background:#007a5e;border-color:#007a5e;color:#fff;font-weight:700}
+.pm-subcat-count{display:inline-block;padding:1px 6px;border-radius:999px;font-size:10.5px;background:#e2e8f0;color:#334155}
+.pm-subcat-btn.active .pm-subcat-count{background:rgba(255,255,255,.25);color:#fff}
+.pm-class-pill.posyandu-subgroup{background:#e8f4fc;color:#035388;border:1px solid #cbe4f7;font-weight:700;padding:3px 8px}
+
+/* Table styling */
+.pm-table-wrap{padding:0;overflow-x:auto}
+.pm-table{width:100%;border-collapse:collapse;min-width:880px}
+.pm-table th{background:#f8fafc;color:#50657b;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:12px 16px;border-top:1px solid #e8eef4;border-bottom:1px solid #e1e9f1}
+.pm-table td{padding:13px 16px;border-bottom:1px solid #edf2f7;vertical-align:middle;font-size:13px}
+.pm-table tbody tr:hover{background:#fbfcfe}
+.pm-row.is-inactive{opacity:.65;background:#fafbfc}
+.pm-row.is-pending{background:#fffdfa}
+.pm-name-cell{display:flex;flex-direction:column;gap:2px}
+.pm-fullname{font-size:13.5px;color:#0f243d;font-weight:700}
+.pm-meta-nisn{font-size:11px;color:#718398}
+.pm-nik-code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;padding:3px 6px;background:#f1f5f9;border-radius:6px;color:#334155}
+.pm-gender-badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:800}
+.pm-gender-badge.female{background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8}
+.pm-gender-badge.male{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.pm-cat-pill{display:inline-block;padding:3px 9px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:11px;font-weight:700}
+.pm-class-pill{display:inline-block;padding:2px 7px;border-radius:6px;background:#eef4f9;color:#244b70;font-size:11px;font-weight:600}
+
+/* Status Badges */
+.pm-badge-active{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-size:11px;font-weight:700}
+.pm-dot-green{width:6px;height:6px;border-radius:50%;background:#10b981}
+.pm-badge-pending{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-size:11px;font-weight:700}
+.pm-dot-amber{width:6px;height:6px;border-radius:50%;background:#f59e0b}
+.pm-badge-inactive{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:11px;font-weight:700}
+.pm-dot-gray{width:6px;height:6px;border-radius:50%;background:#94a3b8}
+
+/* Action Group */
+.pm-action-group{display:inline-flex;align-items:center;gap:5px;justify-content:center}
+.pm-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:7px;font-size:11px;font-weight:700;text-decoration:none;cursor:pointer;border:1px solid transparent;transition:.15s;line-height:1}
+.pm-btn svg{flex-shrink:0}
+.pm-btn-edit{background:#eef6ff;color:#1e40af;border-color:#bfdbfe}
+.pm-btn-edit:hover{background:#dbeafe;color:#1d4ed8}
+.pm-btn-delete{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+.pm-btn-delete:hover{background:#fee2e2;color:#991b1b}
+.pm-btn-approve{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+.pm-btn-approve:hover{background:#d1fae5;color:#065f46}
+.pm-btn-reject{background:#fff7ed;color:#c2410c;border-color:#ffedd5}
+.pm-btn-reject:hover{background:#ffedd5;color:#9a3412}
+.pm-btn-reactivate{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+.pm-btn-reactivate:hover{background:#dcfce7;color:#166534}
+.pm-btn-history{background:#f8fafc;color:#334155;border-color:#cbd5e1}
+.pm-btn-history:hover{background:#e2e8f0;color:#0f172a}
+.pm-action-locked{display:inline-flex;align-items:center;gap:4px;padding:5px 7px;border-radius:6px;background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;font-size:10.5px;font-weight:600}
+
+/* Modal Backdrops & Cards */
+.pm-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);animation:pmFadeIn .18s ease-out}
+.pm-modal-card{background:#fff;border-radius:18px;max-width:520px;width:100%;box-shadow:0 24px 50px rgba(0,0,0,.25);overflow:hidden;animation:pmSlideUp .22s cubic-bezier(.16,1,.3,1)}
+.pm-modal-card-lg{max-width:660px}
+
+/* Modal Headings */
+.pm-modal-head{display:flex;align-items:flex-start;gap:14px;padding:20px 22px;border-bottom:1px solid #edf2f7;position:relative}
+.pm-modal-head.danger{background:#fff5f5}
+.pm-modal-head.success{background:#f0fdf4}
+.pm-modal-head.neutral{background:#f8fafc}
+.pm-modal-icon-wrap{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pm-modal-icon-wrap.danger{background:#fee2e2;color:#b91c1c}
+.pm-modal-icon-wrap.success{background:#dcfce7;color:#15803d}
+.pm-modal-icon-wrap.neutral{background:#e2e8f0;color:#334155}
+.pm-modal-head h3{font-size:16px;margin:0;color:#0f243d;font-weight:800}
+.pm-modal-head p{font-size:12.5px;color:#64748b;margin:3px 0 0}
+.pm-modal-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:24px;line-height:1;color:#94a3b8;cursor:pointer;padding:4px}
+.pm-modal-close:hover{color:#1e293b}
+
+/* Modal Body */
+.pm-modal-body{padding:20px 22px;max-height:68vh;overflow-y:auto}
+.pm-target-summary{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px}
+.pm-target-summary small{display:block;font-size:10px;font-weight:800;letter-spacing:.06em;color:#64748b;margin-bottom:2px}
+.pm-target-summary strong{display:block;font-size:14px;color:#0f172a}
+.pm-target-meta{display:inline-block;font-size:12px;color:#64748b;margin-top:2px}
+.pm-prev-reason{margin-top:6px;font-size:11.5px;color:#94a3b8;border-top:1px dashed #cbd5e1;padding-top:4px}
+.pm-notice-softdelete{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;margin:14px 0}
+.pm-notice-softdelete strong{display:block;font-size:12.5px;color:#92400e}
+.pm-notice-softdelete span{display:block;font-size:11.5px;color:#b45309;margin-top:2px;line-height:1.45}
+.pm-form-field{margin-top:14px}
+.pm-form-field label{display:block;font-size:12.5px;font-weight:700;color:#334155;margin-bottom:6px}
+.pm-modal-select, .pm-modal-input{width:100%;height:38px;padding:0 12px;border-radius:9px;border:1px solid #cbd5e1;background:#fff;font-size:13px;color:#1e293b}
+.pm-modal-select:focus, .pm-modal-input:focus{outline:none;border-color:#007a5e;box-shadow:0 0 0 3px rgba(0,122,94,.12)}
+
+/* Modal Foot */
+.pm-modal-foot{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 22px;background:#f8fafc;border-top:1px solid #e2e8f0}
+.pm-modal-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;font-size:12.5px;font-weight:700;border:none;cursor:pointer;transition:.15s}
+.pm-modal-btn.secondary{background:#fff;border:1px solid #cbd5e1;color:#475569}
+.pm-modal-btn.secondary:hover{background:#f1f5f9}
+.pm-modal-btn.danger{background:#dc2626;color:#fff}
+.pm-modal-btn.danger:hover{background:#b91c1c}
+.pm-modal-btn.success{background:#16a34a;color:#fff}
+.pm-modal-btn.success:hover{background:#15803d}
+.pm-modal-btn.primary{background:#007a5e;color:#fff}
+.pm-modal-btn.primary:hover{background:#00624b}
+
+/* Timeline & Governance in History Modal */
+.pm-history-profile-card{padding:14px 16px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:12px}
+.pm-hist-name{font-size:15px;color:#0f243d;display:block}
+.pm-hist-tags{display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap}
+.pm-hist-nik{font-family:monospace;font-size:12px;color:#475569}
+.pm-governance-banner{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:16px}
+.pm-governance-banner strong{display:block;font-size:12px;color:#166534}
+.pm-governance-banner span{display:block;font-size:11.5px;color:#15803d;line-height:1.4;margin-top:2px}
+.pm-timeline{position:relative;padding-left:26px;display:flex;flex-direction:column;gap:14px}
+.pm-timeline::before{content:"";position:absolute;left:8px;top:6px;bottom:6px;width:2px;background:#e2e8f0}
+.pm-timeline-item{position:relative}
+.pm-timeline-dot{position:absolute;left:-26px;top:4px;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid #94a3b8;display:flex;align-items:center;justify-content:center}
+.pm-timeline-dot.create{border-color:#10b981;background:#ecfdf5}
+.pm-timeline-dot.update{border-color:#3b82f6;background:#eff6ff}
+.pm-timeline-dot.deactivate{border-color:#ef4444;background:#fef2f2}
+.pm-timeline-dot.reactivate{border-color:#10b981;background:#ecfdf5}
+.pm-timeline-card{background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:12px 14px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.pm-timeline-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.pm-timeline-action{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.pm-timeline-action.create{color:#059669}
+.pm-timeline-action.update{color:#2563eb}
+.pm-timeline-action.deactivate{color:#dc2626}
+.pm-timeline-action.reactivate{color:#059669}
+.pm-timeline-date{font-size:11px;color:#64748b}
+.pm-timeline-desc{font-size:12.5px;color:#334155;line-height:1.45;margin:0}
+.pm-timeline-actor{font-size:11px;color:#94a3b8;margin-top:5px;display:block}
+
+/* Quick BGN Action Panel inside Modal */
+.pm-history-bgn-actions{display:flex;align-items:center;gap:8px;margin-right:auto}
+
+/* Loading & Empty */
+.pm-loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;gap:10px;color:#64748b;font-size:13px}
+.pm-spinner{width:26px;height:26px;border:3px solid #e2e8f0;border-top-color:#007a5e;border-radius:50%;animation:pmSpin .65s linear infinite}
+.pm-empty-timeline{text-align:center;padding:28px 16px;background:#f8fafc;border-radius:12px;border:1px dashed #cbd5e1}
+
+/* Animations */
+@keyframes pmFadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pmSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pmSpin{to{transform:rotate(360deg)}}
+
+/* Responsive */
+@media(max-width:768px){
+  .pm-toolbar{flex-direction:column;align-items:stretch}
+  .pm-search-wrap{max-width:100%}
+  .pm-cat-tabs{overflow-x:auto;padding-bottom:6px}
+  .pm-action-group{flex-direction:column;gap:4px}
+}
+</style>
+
+<!-- ============================================================== -->
+<!-- JAVASCRIPT LOGIC PM MANAGEMENT -->
+<!-- ============================================================== -->
+<script>
+(function(){
+  var isPreview = <%= previewMode ? 'true' : 'false' %>;
+  var kpmId = <%= access.kpm_id %>;
+  var token = "<%= portalToken || '' %>";
+  var isPosyandu = <%= isPosyandu ? 'true' : 'false' %>;
+
+  // 1. Filter Kategori, Sub-Kelompok, Status & Pencarian Instan
+  var searchInput = document.getElementById('pmSearchInput');
+  var catTabs = document.querySelectorAll('.pm-tab-btn');
+  var statusSelect = document.getElementById('pmStatusSelect');
+  var rows = document.querySelectorAll('.pm-row');
+  var emptyRow = document.getElementById('pmEmptyRow');
+  var clusterBar = document.getElementById('pmPosyanduClusterBar');
+  var clusterTitle = document.getElementById('pmClusterCategoryTitle');
+  var clusterMetrics = document.getElementById('pmClusterMetrics');
+  var clusterSubNav = document.getElementById('pmClusterSubNav');
+  var groupHeaderCol = document.getElementById('pmGroupHeaderCol');
+
+  // Read URL params if exists (e.g. ?cat=BALITA or #pm-management-section)
+  var urlParams = new URLSearchParams(window.location.search);
+  var initialCat = urlParams.get('cat') ? urlParams.get('cat').toUpperCase() : 'ALL';
+
+  var currentCat = initialCat;
+  var currentSubCat = 'ALL';
+  var currentStatus = 'ACTIVE'; // default aktif saja agar rapi
+  var currentQuery = '';
+
+  var posyanduClusters = {
+    BALITA: {
+      title: 'Kelompok Balita · 100% Standar Porsi Kecil',
+      headerLabel: 'Tahapan Usia Balita',
+      subgroups: [
+        { key: 'ALL', label: 'Semua Balita' },
+        { key: '0-5', label: '0–5 Bulan (Bayi)' },
+        { key: '6-23', label: '6–23 Bulan (Baduta)' },
+        { key: '24-59', label: '24–59 Bulan (Balita)' }
+      ]
+    },
+    BUMIL: {
+      title: 'Kelompok Ibu Hamil (Bumil) · 100% Standar Porsi Besar',
+      headerLabel: 'Usia Kehamilan / Trimester',
+      subgroups: [
+        { key: 'ALL', label: 'Semua Bumil' },
+        { key: 'trimester 1', label: 'Trimester 1 (1–12 Minggu)' },
+        { key: 'trimester 2', label: 'Trimester 2 (13–27 Minggu)' },
+        { key: 'trimester 3', label: 'Trimester 3 (28–40 Minggu)' }
+      ]
+    },
+    BUSUI: {
+      title: 'Kelompok Ibu Menyusui (Busui) · 100% Standar Porsi Besar',
+      headerLabel: 'Usia Bayi yang Disusui',
+      subgroups: [
+        { key: 'ALL', label: 'Semua Busui' },
+        { key: '0–6', label: 'Bayi 0–6 Bulan (ASI Eksklusif)' },
+        { key: '7–12', label: 'Bayi 7–12 Bulan' },
+        { key: '13–24', label: 'Bayi 13–24 Bulan' }
+      ]
+    }
+  };
+
+  function updateClusterBar(){
+    if(!isPosyandu || !clusterBar) return;
+
+    if(currentCat === 'ALL'){
+      if(clusterTitle) clusterTitle.textContent = 'Seluruh Penerima Manfaat Posyandu Terpadu';
+      if(groupHeaderCol) groupHeaderCol.textContent = 'Sub-Kelompok';
+
+      var bCount = 0, bumilCount = 0, busuiCount = 0;
+      rows.forEach(function(r){
+        var c = r.getAttribute('data-cat');
+        var act = r.getAttribute('data-status') === 'ACTIVE';
+        if(currentStatus === 'ACTIVE' && !act) return;
+        if(c === 'BALITA') bCount++;
+        else if(c === 'BUMIL') bumilCount++;
+        else if(c === 'BUSUI') busuiCount++;
+      });
+
+      if(clusterMetrics){
+        clusterMetrics.innerHTML = 
+          '<span class="pm-cluster-badge" style="background:#f1f5f9;color:#334155;border-color:#cbd5e1;font-weight:700">Total: ' + (bCount + bumilCount + busuiCount) + ' PM</span>' +
+          '<span class="pm-cluster-badge" style="background:#ecfdf5;color:#065f46;border-color:#a7f3d0;font-weight:700">Porsi Kecil: ' + bCount + '</span>' +
+          '<span class="pm-cluster-badge amber" style="font-weight:700">Porsi Besar: ' + (bumilCount + busuiCount) + '</span>';
+      }
+
+      if(clusterSubNav){
+        clusterSubNav.innerHTML = '';
+        clusterSubNav.style.display = 'none';
+      }
+      return;
+    }
+
+    var cfg = posyanduClusters[currentCat];
+    if(!cfg) return;
+
+    if(clusterTitle) clusterTitle.textContent = cfg.title;
+    if(groupHeaderCol) groupHeaderCol.textContent = 'Sub-Kelompok';
+    if(clusterSubNav) clusterSubNav.style.display = 'flex';
+
+    var lCount = 0, pCount = 0, totalInCat = 0;
+    var subCounts = {};
+    cfg.subgroups.forEach(function(sg){ subCounts[sg.key] = 0; });
+
+    rows.forEach(function(r){
+      var rCat = r.getAttribute('data-cat') || '';
+      if(rCat !== currentCat) return;
+      var act = r.getAttribute('data-status') === 'ACTIVE';
+      if(currentStatus === 'ACTIVE' && !act) return;
+      totalInCat++;
+      var g = r.getAttribute('data-gender');
+      if(g === 'L') lCount++;
+      else if(g === 'P') pCount++;
+      var sc = (r.getAttribute('data-subcat') || '').toLowerCase();
+      cfg.subgroups.forEach(function(sg){
+        if(sg.key === 'ALL') subCounts['ALL']++;
+        else if(sc.indexOf(sg.key.toLowerCase()) !== -1) subCounts[sg.key]++;
+      });
+    });
+
+    if(clusterMetrics){
+      if(currentCat === 'BALITA'){
+        clusterMetrics.innerHTML = 
+          '<span class="pm-cluster-badge">Porsi Kecil: ' + totalInCat + '</span>' +
+          '<span class="pm-cluster-badge blue">Laki-laki (L): ' + lCount + '</span>' +
+          '<span class="pm-cluster-badge amber">Perempuan (P): ' + pCount + '</span>';
+      } else {
+        clusterMetrics.innerHTML = 
+          '<span class="pm-cluster-badge">Porsi Besar: ' + totalInCat + '</span>' +
+          '<span class="pm-cluster-badge amber">Perempuan (P): ' + pCount + '</span>';
+      }
+    }
+
+    if(clusterSubNav){
+      var navHtml = '<button type="button" class="pm-subcat-btn" style="background:#f1f5f9;color:#475569" onclick="window.setPmCategory(\'ALL\')">← Kembali ke Semua</button>';
+      cfg.subgroups.forEach(function(sg){
+        var isAct = currentSubCat === sg.key;
+        var cnt = subCounts[sg.key] !== undefined ? subCounts[sg.key] : 0;
+        navHtml += '<button type="button" class="pm-subcat-btn ' + (isAct ? 'active' : '') + '" data-sub="' + sg.key + '">' +
+                     '<span>' + sg.label + '</span>' +
+                     '<span class="pm-subcat-count">' + cnt + '</span>' +
+                   '</button>';
+      });
+      clusterSubNav.innerHTML = navHtml;
+
+      clusterSubNav.querySelectorAll('.pm-subcat-btn').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          currentSubCat = btn.getAttribute('data-sub') || 'ALL';
+          clusterSubNav.querySelectorAll('.pm-subcat-btn').forEach(function(b){ b.classList.remove('active'); });
+          btn.classList.add('active');
+          applyFilters();
+        });
+      });
+    }
+  }
+
+  function applyFilters(){
+    var visibleCount = 0;
+    rows.forEach(function(row){
+      var rowCat = (row.getAttribute('data-cat') || '').toUpperCase();
+      var rowSubCat = (row.getAttribute('data-subcat') || '').toLowerCase();
+      var rowStatus = row.getAttribute('data-status') || '';
+      var rowSearch = (row.getAttribute('data-search') || '').toLowerCase();
+
+      var matchCat = (currentCat === 'ALL') || (rowCat === currentCat);
+      var matchSubCat = true;
+      if (currentCat !== 'ALL' && currentSubCat !== 'ALL') {
+        matchSubCat = (rowSubCat.indexOf(currentSubCat.toLowerCase()) !== -1) ||
+                      (currentSubCat === '0-5' && (rowSubCat.indexOf('0–5') !== -1 || rowSubCat.indexOf('bayi') !== -1)) ||
+                      (currentSubCat === '6-23' && (rowSubCat.indexOf('6–23') !== -1 || rowSubCat.indexOf('baduta') !== -1)) ||
+                      (currentSubCat === '24-59' && (rowSubCat.indexOf('24–59') !== -1 || rowSubCat.indexOf('balita') !== -1));
+      }
+
+      var matchStatus = (currentStatus === 'ALL') || 
+                        (currentStatus === 'ACTIVE' && rowStatus === 'ACTIVE') || 
+                        (currentStatus === 'PENDING' && rowStatus === 'PENDING') || 
+                        (currentStatus === 'INACTIVE' && rowStatus === 'INACTIVE');
+      var matchQuery = !currentQuery || (rowSearch.indexOf(currentQuery) !== -1);
+
+      if(matchCat && matchSubCat && matchStatus && matchQuery){
+        row.style.display = '';
+        visibleCount++;
+        var idxCell = row.querySelector('.pm-row-index');
+        if(idxCell) idxCell.textContent = visibleCount;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    if(emptyRow){
+      emptyRow.style.display = visibleCount === 0 ? '' : 'none';
+    }
+  }
+
+  // Handler Tab Kategori
+  function setCategory(cat){
+    if (window.PMGrouper) {
+      window.PMGrouper.filter(cat, 'ALL');
+      return;
+    }
+    currentCat = (cat || 'ALL').toUpperCase();
+    currentSubCat = 'ALL';
+
+    catTabs.forEach(function(t){
+      var btnCat = (t.getAttribute('data-cat') || '').toUpperCase();
+      if(btnCat === currentCat){
+        t.classList.add('active');
+      } else {
+        t.classList.remove('active');
+      }
+    });
+
+    updateClusterBar();
+    applyFilters();
+  }
+  window.setPmCategory = setCategory;
+
+  // Event listener tab kategori di toolbar
+  catTabs.forEach(function(tab){
+    tab.addEventListener('click', function(e){
+      e.preventDefault();
+      var cat = tab.getAttribute('data-cat') || 'ALL';
+      setCategory(cat);
+    });
+  });
+
+  // Event listener search input
+  if(searchInput){
+    searchInput.addEventListener('input', function(){
+      currentQuery = (searchInput.value || '').toLowerCase().trim();
+      applyFilters();
+    });
+  }
+
+  // Event listener status filter
+  if(statusSelect){
+    statusSelect.addEventListener('change', function(){
+      currentStatus = statusSelect.value || 'ALL';
+      updateClusterBar();
+      applyFilters();
+    });
+  }
+
+  // Inisialisasi awal
+  if(initialCat !== 'ALL'){
+    setCategory(initialCat);
+    var sec = document.getElementById('pm-management-section');
+    if(sec){
+      setTimeout(function(){
+        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+    }
+  } else {
+    updateClusterBar();
+    applyFilters();
+  }
+
+  // 2. Handler Modal Soft Delete (Hapus / Nonaktifkan)
+  var deactModal = document.getElementById('pmDeactivateModal');
+  var deactForm = document.getElementById('pmDeactivateForm');
+  var deactTargetName = document.getElementById('deactTargetName');
+  var deactTargetMeta = document.getElementById('deactTargetMeta');
+  var deactModalTitle = document.getElementById('deactModalTitle');
+  var deactModalSubtitle = document.getElementById('deactModalSubtitle');
+  var deactSubmitBtnText = document.getElementById('deactSubmitBtnText');
+  var deactReasonSelect = document.getElementById('deactReasonSelect');
+  var deactCustomField = document.getElementById('deactCustomField');
+  var deactCustomNote = document.getElementById('deactCustomNote');
+
+  window.openDeactivateModal = function(id, name, nik, cat, isAdmin){
+    if(deactTargetName) deactTargetName.textContent = name || '-';
+    if(deactTargetMeta) deactTargetMeta.textContent = 'NIK: ' + (nik || '-') + ' · Kategori: ' + (cat || '').replace(/_/g, ' ');
+    if(deactReasonSelect) deactReasonSelect.value = '';
+    if(deactCustomField) deactCustomField.style.display = 'none';
+    if(deactCustomNote) deactCustomNote.value = '';
+
+    if(isAdmin){
+      if(deactModalTitle) deactModalTitle.textContent = 'Nonaktifkan Penerima Manfaat (Otorisasi Kepala BGN)';
+      if(deactModalSubtitle) deactModalSubtitle.textContent = 'Menonaktifkan data secara langsung dan mencatatnya ke arsip riwayat resmi.';
+      if(deactSubmitBtnText) deactSubmitBtnText.textContent = 'Nonaktifkan & Simpan ke Arsip';
+      deactForm.action = '/portal/kpm/preview/' + kpmId + '/pm/' + id + '/status';
+    } else {
+      if(deactModalTitle) deactModalTitle.textContent = 'Ajukan Penonaktifan ke Kepala BGN';
+      if(deactModalSubtitle) deactModalSubtitle.textContent = 'Data akan dicatat di riwayat dan menunggu keputusan resmi Kepala / Admin BGN.';
+      if(deactSubmitBtnText) deactSubmitBtnText.textContent = 'Kirim Permohonan ke Kepala BGN';
+      deactForm.action = '/portal/kpm/' + token + '/pm/' + id + '/status';
+    }
+
+    if(deactModal) deactModal.style.display = 'flex';
+  };
+
+  window.closeDeactivateModal = function(){
+    if(deactModal) deactModal.style.display = 'none';
+  };
+
+  if(deactReasonSelect){
+    deactReasonSelect.addEventListener('change', function(){
+      if(deactCustomField){
+        deactCustomField.style.display = (deactReasonSelect.value === 'Lainnya') ? 'block' : 'none';
+      }
+    });
+  }
+
+  if(deactForm){
+    deactForm.addEventListener('submit', function(e){
+      if(deactReasonSelect.value === 'Lainnya' && deactCustomNote && deactCustomNote.value.trim()){
+        deactReasonSelect.options[deactReasonSelect.selectedIndex].value = 'Lainnya: ' + deactCustomNote.value.trim();
+      }
+    });
+  }
+
+  // 3. Handler Modal Otorisasi BGN: Setujui
+  var approveModal = document.getElementById('bgnApproveModal');
+  var approveForm = document.getElementById('bgnApproveForm');
+  var approveTargetName = document.getElementById('approveTargetName');
+  var approveTargetReason = document.getElementById('approveTargetReason');
+
+  window.openBgnApproveModal = function(id, name, reason){
+    if(approveTargetName) approveTargetName.textContent = name || '-';
+    if(approveTargetReason) approveTargetReason.textContent = reason ? ('Alasan dari Kader: ' + reason) : 'Alasan dari Kader: Tidak dicantumkan';
+    if(approveForm) approveForm.action = '/portal/kpm/preview/' + kpmId + '/pm/' + id + '/status';
+    if(approveModal) approveModal.style.display = 'flex';
+  };
+
+  window.closeBgnApproveModal = function(){
+    if(approveModal) approveModal.style.display = 'none';
+  };
+
+  // 4. Handler Modal Otorisasi BGN: Batalkan / Tolak
+  var rejectModal = document.getElementById('bgnRejectModal');
+  var rejectForm = document.getElementById('bgnRejectForm');
+  var rejectTargetName = document.getElementById('rejectTargetName');
+  var rejectTargetReason = document.getElementById('rejectTargetReason');
+
+  window.openBgnRejectModal = function(id, name, reason){
+    if(rejectTargetName) rejectTargetName.textContent = name || '-';
+    if(rejectTargetReason) rejectTargetReason.textContent = reason ? ('Alasan pengajuan sebelumnya: ' + reason) : 'Alasan sebelumnya: Tidak dicantumkan';
+    if(rejectForm) rejectForm.action = '/portal/kpm/preview/' + kpmId + '/pm/' + id + '/status';
+    if(rejectModal) rejectModal.style.display = 'flex';
+  };
+
+  window.closeBgnRejectModal = function(){
+    if(rejectModal) rejectModal.style.display = 'none';
+  };
+
+  // 5. Handler Modal Reactivate / Pulihkan Data
+  var reactModal = document.getElementById('pmReactivateModal');
+  var reactForm = document.getElementById('pmReactivateForm');
+  var reactTargetName = document.getElementById('reactTargetName');
+  var reactTargetMeta = document.getElementById('reactTargetMeta');
+  var reactTargetPrevReason = document.getElementById('reactTargetPrevReason');
+
+  window.openReactivateModal = function(id, name, nik, prevReason){
+    if(reactTargetName) reactTargetName.textContent = name || '-';
+    if(reactTargetMeta) reactTargetMeta.textContent = 'NIK: ' + (nik || '-');
+    if(reactTargetPrevReason){
+      reactTargetPrevReason.textContent = prevReason ? ('Alasan nonaktif: ' + prevReason) : 'Alasan nonaktif sebelumnya: Tidak tercatat';
+    }
+
+    if(reactForm) reactForm.action = '/portal/kpm/preview/' + kpmId + '/pm/' + id + '/status';
+    if(reactModal) reactModal.style.display = 'flex';
+  };
+
+  window.closeReactivateModal = function(){
+    if(reactModal) reactModal.style.display = 'none';
+  };
+
+  // 6. Handler Modal History Rekam Jejak
+  var histModal = document.getElementById('pmHistoryModal');
+  var histProfileName = document.getElementById('histProfileName');
+  var histProfileNik = document.getElementById('histProfileNik');
+  var histProfileCat = document.getElementById('histProfileCat');
+  var histProfileStatus = document.getElementById('histProfileStatus');
+  var histLoading = document.getElementById('pmHistoryLoading');
+  var histTimeline = document.getElementById('pmHistoryTimeline');
+  var histEmpty = document.getElementById('pmHistoryEmpty');
+  var histFoot = document.getElementById('pmHistoryModalFoot');
+
+  window.openHistoryModal = function(id, name, nik, cat, isAct, approvalStatus){
+    if(histProfileName) histProfileName.textContent = name || '-';
+    if(histProfileNik) histProfileNik.textContent = 'NIK: ' + (nik || '-');
+    if(histProfileCat) histProfileCat.textContent = (cat || '').replace(/_/g, ' ');
+    if(histProfileStatus){
+      if(approvalStatus === 'MENUNGGU_VERIFIKASI_BGN'){
+        histProfileStatus.className = 'pm-badge-pending';
+        histProfileStatus.innerHTML = '<span class="pm-dot-amber"></span> Menunggu Otorisasi BGN';
+      } else if(isAct){
+        histProfileStatus.className = 'pm-badge-active';
+        histProfileStatus.innerHTML = '<span class="pm-dot-green"></span> Aktif';
+      } else {
+        histProfileStatus.className = 'pm-badge-inactive';
+        histProfileStatus.innerHTML = '<span class="pm-dot-gray"></span> Nonaktif (Arsip)';
+      }
+    }
+
+    if(histTimeline) { histTimeline.innerHTML = ''; histTimeline.style.display = 'none'; }
+    if(histEmpty) histEmpty.style.display = 'none';
+    if(histLoading) histLoading.style.display = 'flex';
+    if(histModal) histModal.style.display = 'flex';
+
+    // Bersihkan foot actions
+    if(histFoot){
+      histFoot.innerHTML = '<button type="button" class="pm-modal-btn primary" onclick="closeHistoryModal()">Tutup</button>';
+    }
+
+    // Endpoint terisolasi untuk KPM ini
+    var historyUrl = isPreview ? 
+      ('/portal/kpm/preview/' + kpmId + '/pm/' + id + '/history') : 
+      ('/portal/kpm/' + token + '/pm/' + id + '/history');
+
+    fetch(historyUrl)
+      .then(function(res){
+        if(!res.ok) throw new Error('Data tidak ditemukan pada ruang privat KPM ini.');
+        return res.json();
+      })
+      .then(function(data){
+        if(histLoading) histLoading.style.display = 'none';
+        var historyList = (data && data.history) ? data.history : [];
+        var pmData = data.pm || {};
+        var isBgnAdmin = !!data.isBgnAdmin;
+
+        var items = [];
+
+        // 1. Rekam jejak pendaftaran awal
+        if(pmData.created_at){
+          items.push({
+            action: 'CREATE',
+            date: new Date(pmData.created_at).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' }),
+            title: 'Pendaftaran Pertama (Master PM)',
+            desc: 'Penerima manfaat terdaftar pertama kali di ruang privat KPM ' + (pmData.kpm_name || '') + '.',
+            actor: 'Sistem Master PM'
+          });
+        }
+
+        // 2. Rekam jejak dari pm_change_history
+        historyList.forEach(function(h){
+          var actType = h.action || 'UPDATE';
+          var actTitle = actType === 'CREATE' ? 'Pendaftaran Pertama' :
+                         actType === 'DEACTIVATE' ? 'Penonaktifan / Pengajuan Hapus' :
+                         actType === 'REACTIVATE' ? 'Pengaktifan Kembali / Pemulihan Data' : 'Pembaruan Data Identitas';
+          var descText = h.reason ? h.reason : 'Perubahan data berhasil diverifikasi dan diterapkan ke Master PM.';
+          
+          items.push({
+            action: actType,
+            date: new Date(h.created_at || h.effective_from).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' }),
+            title: actTitle,
+            desc: descText,
+            actor: h.actor_name ? ('Oleh: ' + h.actor_name) : 'Oleh: Kader KPM'
+          });
+        });
+
+        // 3. Tambahan status saat ini jika menunggu verifikasi
+        if(pmData.approval_status === 'MENUNGGU_VERIFIKASI_BGN' && !items.some(function(x){ return x.desc && x.desc.indexOf('Menunggu Otorisasi') !== -1; })){
+          items.push({
+            action: 'DEACTIVATE',
+            date: pmData.deactivated_at ? new Date(pmData.deactivated_at).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' }) : 'Tercatat',
+            title: 'Permohonan Nonaktif dari Kader',
+            desc: 'Alasan: ' + (pmData.deactivation_reason || 'Diajukan') + ' · Menunggu Otorisasi Kepala BGN',
+            actor: 'Oleh: Kader KPM'
+          });
+        }
+
+        if(!items.length){
+          if(histEmpty) histEmpty.style.display = 'block';
+        } else {
+          var html = '';
+          items.forEach(function(it){
+            var cls = (it.action || 'update').toLowerCase();
+            html += '<div class="pm-timeline-item">' +
+                      '<div class="pm-timeline-dot ' + cls + '"></div>' +
+                      '<div class="pm-timeline-card">' +
+                        '<div class="pm-timeline-header">' +
+                          '<span class="pm-timeline-action ' + cls + '">' + it.title + '</span>' +
+                          '<span class="pm-timeline-date">' + it.date + '</span>' +
+                        '</div>' +
+                        '<p class="pm-timeline-desc">' + it.desc + '</p>' +
+                        (it.actor ? '<span class="pm-timeline-actor">' + it.actor + '</span>' : '') +
+                      '</div>' +
+                    '</div>';
+          });
+
+          if(histTimeline){
+            histTimeline.innerHTML = html;
+            histTimeline.style.display = 'flex';
+          }
+        }
+
+        // Quick Otorisasi Buttons di Footer Modal jika Admin/Kepala BGN
+        if(isBgnAdmin && histFoot){
+          var footHtml = '<div class="pm-history-bgn-actions">';
+          if(pmData.approval_status === 'MENUNGGU_VERIFIKASI_BGN'){
+            footHtml += '<button type="button" class="pm-modal-btn success" onclick="closeHistoryModal();openBgnApproveModal(' + pmData.id + ', \'' + (pmData.full_name || '').replace(/'/g, "\\'") + '\', \'' + (pmData.deactivation_reason || '').replace(/'/g, "\\'") + '\')">✔ Sahkan & Setujui</button>';
+            footHtml += '<button type="button" class="pm-modal-btn danger" onclick="closeHistoryModal();openBgnRejectModal(' + pmData.id + ', \'' + (pmData.full_name || '').replace(/'/g, "\\'") + '\', \'' + (pmData.deactivation_reason || '').replace(/'/g, "\\'") + '\')">✖ Batalkan Permohonan</button>';
+          } else if(!pmData.active){
+            footHtml += '<button type="button" class="pm-modal-btn success" onclick="closeHistoryModal();openReactivateModal(' + pmData.id + ', \'' + (pmData.full_name || '').replace(/'/g, "\\'") + '\', \'' + (pmData.nik || '') + '\', \'' + (pmData.deactivation_reason || '').replace(/'/g, "\\'") + '\')">↺ Pulihkan Data ke Aktif</button>';
+          }
+          footHtml += '</div>';
+          footHtml += '<button type="button" class="pm-modal-btn primary" onclick="closeHistoryModal()">Tutup</button>';
+          histFoot.innerHTML = footHtml;
+        }
+      })
+      .catch(function(err){
+        if(histLoading) histLoading.style.display = 'none';
+        if(histEmpty){
+          histEmpty.innerHTML = '<strong style="color:#b91c1c">Gagal memuat histori</strong><small style="color:#64748b">' + err.message + '</small>';
+          histEmpty.style.display = 'block';
+        }
+      });
+  };
+
+  window.closeHistoryModal = function(){
+    if(histModal) histModal.style.display = 'none';
+  };
+
+  // Close modals on Esc key or click backdrop
+  window.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){
+      closeDeactivateModal();
+      closeBgnApproveModal();
+      closeBgnRejectModal();
+      closeReactivateModal();
+      closeHistoryModal();
+    }
+  });
+
+  [deactModal, approveModal, rejectModal, reactModal, histModal].forEach(function(modal){
+    if(modal){
+      modal.addEventListener('click', function(e){
+        if(e.target === modal){
+          modal.style.display = 'none';
+        }
+      });
+    }
+  });
+})();
+</script>

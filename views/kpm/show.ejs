@@ -4,8 +4,135 @@
 <div class="card" style="margin-top:16px"><h3 style="margin-top:0">Status KPM</h3><form method="post" action="/kpm/<%= kpm.id %>/status"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><div class="form-grid"><div class="field"><label>Status *</label><select class="select" name="status" id="kpm-status"><option value="AKTIF" <%= (kpm.kpm_status||'AKTIF')==='AKTIF'?'selected':'' %>>Aktif</option><option value="NONAKTIF_SEMENTARA" <%= kpm.kpm_status==='NONAKTIF_SEMENTARA'?'selected':'' %>>Nonaktif Sementara</option><option value="NONAKTIF" <%= kpm.kpm_status==='NONAKTIF'?'selected':'' %>>Nonaktif</option></select></div><div class="field"><label>Mulai *</label><input class="input" type="date" name="start_date" value="<%= kpm.status_start||date %>" required></div><div class="field"><label>Selesai</label><input class="input" type="date" name="end_date" value="<%= kpm.status_end||'' %>"><div class="help">Untuk nonaktif sementara, isi jika sudah diketahui.</div></div><div class="field"><label>Alasan <span style="color:#b42318">*</span></label><select class="select" name="reason"><option value="">Pilih alasan</option><option <%= kpm.status_reason==='Libur'?'selected':'' %>>Libur</option><option <%= kpm.status_reason==='Hari Libur Nasional'?'selected':'' %>>Hari Libur Nasional</option><option <%= kpm.status_reason==='Kegiatan Sekolah'?'selected':'' %>>Kegiatan Sekolah</option><option <%= kpm.status_reason==='Posyandu Tidak Melaksanakan Kegiatan'?'selected':'' %>>Posyandu Tidak Melaksanakan Kegiatan</option><option <%= kpm.status_reason==='Penyesuaian Jadwal'?'selected':'' %>>Penyesuaian Jadwal</option><option <%= kpm.status_reason==='Kondisi Khusus'?'selected':'' %>>Kondisi Khusus</option><option <%= kpm.status_reason==='Lainnya'?'selected':'' %>>Lainnya</option></select></div><div class="field full"><label>Keterangan</label><textarea class="textarea" name="note" placeholder="Jelaskan alasan/status jika diperlukan"><%= kpm.status_note||'' %></textarea></div></div><div class="actions" style="margin-top:14px"><button class="btn" type="submit">Simpan Status & Rekam</button></div></form></div>
 <div class="card" style="margin-top:16px"><div class="kpm-form-head"><div><span class="kpm-type <%= kpm.type==='POSYANDU'?'posyandu':'school' %>"><%= kpm.type==='POSYANDU'?'Posyandu':'Satuan Pendidikan' %></span><h2 style="margin:8px 0 3px"><%= kpm.name %></h2><div class="kpm-code"><%= kpm.code %> · <%= kpm.education_level||'Posyandu' %></div></div><form method="get" action="/kpm/<%= kpm.id %>"><div class="field-inline"><label>Tanggal Data</label><input class="input" type="date" name="date" value="<%= date %>" onchange="this.form.submit()"></div></form></div></div>
 <div class="grid-2" style="margin-top:16px"><div class="card"><h3>Identitas KPM</h3><div class="rowline"><span>Alamat</span><strong><%= kpm.address %></strong></div><% if(kpm.type==='SATUAN_PENDIDIKAN'){ %><div class="rowline"><span>NPSN</span><strong><%= kpm.npsn||'-' %></strong></div><div class="rowline"><span>Kepala Satuan</span><strong><%= kpm.head_name||'-' %></strong></div><div class="rowline"><span>PIC MBG</span><strong><%= kpm.pic_name||'-' %></strong></div><% }else{ %><div class="rowline"><span>Kader Posyandu</span><strong><%= kpm.cadre_name||'-' %></strong></div><% } %><div class="rowline"><span>Koordinat</span><strong><%= kpm.latitude&&kpm.longitude?kpm.latitude+', '+kpm.longitude:'Belum ada' %></strong></div></div>
-<div class="card"><h3>Rekap PM · <%= date %></h3><% if(kpm.type==='POSYANDU'){ %><div class="rowline"><span>Balita</span><strong><%= totals.balita %> <small>(L <%= countData?.balita_male||0 %> · P <%= countData?.balita_female||0 %>)</small></strong></div><div class="rowline"><span>Bumil</span><strong><%= totals.bumil %> <small>(P)</small></strong></div><div class="rowline"><span>Busui</span><strong><%= totals.busui %> <small>(P)</small></strong></div><% }else{ %><div class="rowline"><span>Porsi Kecil</span><strong><%= totals.small %> <small>(L <%= countData?.small_male||0 %> · P <%= countData?.small_female||0 %>)</small></strong></div><div class="rowline"><span>Porsi Besar</span><strong><%= totals.large %></strong></div><div class="rowline"><span>Pendidik</span><strong><%= totals.teacher %> <small>(L <%= countData?.teacher_male||0 %> · P <%= countData?.teacher_female||0 %>)</small></strong></div><div class="rowline"><span>Tendik</span><strong><%= totals.staff %> <small>(L <%= countData?.staff_male||0 %> · P <%= countData?.staff_female||0 %>)</small></strong></div><% } %><div class="kpm-total" style="margin-top:12px"><span>Total PM</span><strong><%= totals.total %></strong></div></div></div>
+<div class="card"><h3>Rekap PM · <%= date %></h3>
+<% if(kpm.type==='POSYANDU'){ %>
+  <div class="rowline kpm-rekap-interactive" onclick="filterShowPm('BALITA')" title="Klik untuk mengelompokkan Balita" style="cursor:pointer">
+    <span>Balita <small style="color:#007a5e;font-weight:700">↗ Lihat Kelompok</small></span>
+    <strong><%= totals.balita %> <small>(L <%= countData?.balita_male||0 %> · P <%= countData?.balita_female||0 %>)</small></strong>
+  </div>
+  <div class="rowline kpm-rekap-interactive" onclick="filterShowPm('BUMIL')" title="Klik untuk mengelompokkan Bumil" style="cursor:pointer">
+    <span>Bumil <small style="color:#007a5e;font-weight:700">↗ Lihat Kelompok</small></span>
+    <strong><%= totals.bumil %> <small>(P · Porsi Besar)</small></strong>
+  </div>
+  <div class="rowline kpm-rekap-interactive" onclick="filterShowPm('BUSUI')" title="Klik untuk mengelompokkan Busui" style="cursor:pointer">
+    <span>Busui <small style="color:#007a5e;font-weight:700">↗ Lihat Kelompok</small></span>
+    <strong><%= totals.busui %> <small>(P · Porsi Besar)</small></strong>
+  </div>
+  <div class="rowline kpm-rekap-interactive" onclick="filterShowPm('ALL')" title="Klik untuk melihat seluruh PM" style="cursor:pointer">
+    <span>Total Porsi Besar</span>
+    <strong><%= totals.large %> <small>(Bumil + Busui)</small></strong>
+  </div>
+<% }else{ %>
+  <div class="rowline kpm-rekap-interactive" onclick="filterShowPm('PESERTA_DIDIK')" title="Klik untuk memfilter Peserta Didik" style="cursor:pointer">
+    <span>Porsi Kecil <small style="color:#007a5e;font-weight:700">↗ Filter</small></span>
+    <strong><%= totals.small %> <small>(L <%= countData?.small_male||0 %> · P <%= countData?.small_female||0 %>)</small></strong>
+  </div>
+  <div class="rowline kpm-rekap-interactive" onclick="filterShowPm('PESERTA_DIDIK')" title="Klik untuk memfilter Peserta Didik" style="cursor:pointer">
+    <span>Porsi Besar <small style="color:#007a5e;font-weight:700">↗ Filter</small></span>
+    <strong><%= totals.large %></strong>
+  </div>
+  <div class="rowline kpm-rekap-interactive" onclick="filterShowPm('PENDIDIK')" title="Klik untuk memfilter Pendidik" style="cursor:pointer">
+    <span>Pendidik <small style="color:#007a5e;font-weight:700">↗ Filter</small></span>
+    <strong><%= totals.teacher %> <small>(L <%= countData?.teacher_male||0 %> · P <%= countData?.teacher_female||0 %>)</small></strong>
+  </div>
+  <div class="rowline kpm-rekap-interactive" onclick="filterShowPm('TENAGA_KEPENDIDIKAN')" title="Klik untuk memfilter Tenaga Kependidikan" style="cursor:pointer">
+    <span>Tendik <small style="color:#007a5e;font-weight:700">↗ Filter</small></span>
+    <strong><%= totals.staff %> <small>(L <%= countData?.staff_male||0 %> · P <%= countData?.staff_female||0 %>)</small></strong>
+  </div>
+<% } %>
+  <div class="kpm-total" style="margin-top:12px"><span>Total PM</span><strong><%= totals.total %></strong></div>
+</div></div>
+
 <div class="card" style="margin-top:16px"><h3>Riwayat Status KPM</h3><p class="sub">Setiap perubahan status, alasan, periode, dan keterangan disimpan sebagai rekaman.</p><% if(statusHistory&&statusHistory.length){ %><div class="table-wrap"><table class="table"><tr><th>Periode</th><th>Status</th><th>Alasan</th><th>Keterangan</th><th>Oleh</th></tr><% statusHistory.forEach(h=>{ %><tr><td><%= new Date(h.start_date).toLocaleDateString('id-ID') %> – <%= h.end_date?new Date(h.end_date).toLocaleDateString('id-ID'):'Berjalan' %></td><td><%= h.status==='NONAKTIF_SEMENTARA'?'Nonaktif Sementara':h.status==='NONAKTIF'?'Nonaktif':'Aktif' %></td><td><%= h.reason||'-' %></td><td><%= h.note||'-' %></td><td><%= h.username||'-' %></td></tr><% }) %></table></div><% }else{ %><div class="empty">Belum ada riwayat status.</div><% } %></div>
 <div class="card" style="margin-top:16px"><h3>Riwayat Data PM</h3><p class="sub">Perubahan jumlah PM tidak menimpa data sebelumnya. Setiap pembaruan berlaku mulai tanggal yang dipilih.</p><% if(countData){ %><div class="rowline"><span>Data yang berlaku pada tanggal ini</span><strong>Mulai <%= new Date(countData.effective_from).toLocaleDateString('id-ID') %></strong></div><% }else{ %><div class="empty">Belum ada data PM untuk tanggal <%= date %>.</div><% } %></div>
-<% if(pm.length){ %><div class="section">PM Detail · <%= pm.length %></div><div class="table-wrap"><table class="table"><tr><th>Nama</th><th>NIK</th><th>NISN</th><th>Kategori</th><th>L/P</th><th>Kelas</th><th>Aksi</th></tr><% pm.forEach(p=>{ %><tr><td><%= p.full_name %></td><td><%= p.nik||'-' %></td><td><%= p.nisn||'-' %></td><td><%= p.category.replaceAll('_',' ') %></td><td><%= p.gender||'-' %></td><td><%= p.class_group||'-' %></td><td><a class="btn secondary" href="/pm/<%= p.id %>/edit">✏️ Edit</a></td></tr><% }) %></table></div><% } %>
+
+<% if(pm.length){ %>
+  <div class="section" id="pmDetailSection" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:24px">
+    <div>
+      <h3 style="margin:0">Daftar Penerima Manfaat</h3>
+      <p class="sub" style="margin:2px 0 0">Kelola dan lihat rincian pengelompokan <%= kpm.type==='POSYANDU' ? 'Posyandu (Balita, Bumil, Busui)' : 'Satuan Pendidikan' %>.</p>
+    </div>
+    <div style="display:inline-flex;gap:6px;flex-wrap:wrap">
+      <button type="button" class="btn primary show-pm-tab" data-showcat="ALL" onclick="filterShowPm('ALL')">Semua (<%= pm.length %>)</button>
+      <% if(kpm.type==='POSYANDU'){ %>
+        <button type="button" class="btn gray show-pm-tab" data-showcat="BALITA" onclick="filterShowPm('BALITA')">👶 Balita (<%= pm.filter(x=>x.category==='BALITA').length %>)</button>
+        <button type="button" class="btn gray show-pm-tab" data-showcat="BUMIL" onclick="filterShowPm('BUMIL')">🤰 Bumil (<%= pm.filter(x=>x.category==='BUMIL').length %>)</button>
+        <button type="button" class="btn gray show-pm-tab" data-showcat="BUSUI" onclick="filterShowPm('BUSUI')">🤱 Busui (<%= pm.filter(x=>x.category==='BUSUI').length %>)</button>
+      <% }else{ %>
+        <button type="button" class="btn gray show-pm-tab" data-showcat="PESERTA_DIDIK" onclick="filterShowPm('PESERTA_DIDIK')">🎓 Peserta Didik (<%= pm.filter(x=>x.category==='PESERTA_DIDIK').length %>)</button>
+        <button type="button" class="btn gray show-pm-tab" data-showcat="PENDIDIK" onclick="filterShowPm('PENDIDIK')">👨‍🏫 Pendidik (<%= pm.filter(x=>x.category==='PENDIDIK').length %>)</button>
+        <button type="button" class="btn gray show-pm-tab" data-showcat="TENAGA_KEPENDIDIKAN" onclick="filterShowPm('TENAGA_KEPENDIDIKAN')">💼 Tendik (<%= pm.filter(x=>x.category==='TENAGA_KEPENDIDIKAN').length %>)</button>
+      <% } %>
+    </div>
+  </div>
+
+  <% if(kpm.type==='POSYANDU'){ %>
+    <!-- Bar Sub-Kelompok Posyandu Interaktif -->
+    <div class="pm-show-cluster-bar" id="showClusterBar">
+      <div class="pm-show-cluster-head">
+        <div class="pm-show-cluster-title">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span id="showClusterTitle">Seluruh Penerima Manfaat Posyandu</span>
+        </div>
+        <div class="pm-show-cluster-metrics" id="showClusterMetrics">
+          <span class="pm-show-badge">Balita: <%= pm.filter(x=>x.category==='BALITA').length %> (Porsi Kecil)</span>
+          <span class="pm-show-badge amber">Bumil: <%= pm.filter(x=>x.category==='BUMIL').length %> (Porsi Besar)</span>
+          <span class="pm-show-badge blue">Busui: <%= pm.filter(x=>x.category==='BUSUI').length %> (Porsi Besar)</span>
+        </div>
+      </div>
+      <div class="pm-show-subnav" id="showClusterSubNav">
+        <!-- Sub-kategori chips diisi via JS -->
+      </div>
+    </div>
+  <% } %>
+
+  <div class="table-wrap">
+    <table class="table" id="showPmTable">
+      <thead>
+        <tr>
+          <th style="width:50px">No</th>
+          <th>Nama Penerima Manfaat</th>
+          <th>NIK</th>
+          <th>NISN / ID</th>
+          <th>Kategori</th>
+          <th>L/P</th>
+          <th id="showColSubgroup"><%= kpm.type==='POSYANDU' ? 'Sub-Kelompok' : 'Kelas / Jabatan' %></th>
+          <th>Standar Porsi</th>
+          <th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% pm.forEach((p, idx)=>{ 
+          const isBalita = p.category === 'BALITA';
+          const isBumil = p.category === 'BUMIL';
+          const isBusui = p.category === 'BUSUI';
+          const porsiText = isBalita ? 'Porsi Kecil' : ['BUMIL','BUSUI'].includes(p.category) ? 'Porsi Besar' : 'Porsi Standar';
+          const porsiClass = isBalita ? 'info' : ['BUMIL','BUSUI'].includes(p.category) ? 'warning' : 'muted';
+        %>
+          <tr class="show-pm-row" data-cat="<%= p.category %>" data-subcat="<%= (p.class_group||'').toLowerCase() %>" data-gender="<%= p.gender||'' %>">
+            <td class="show-row-no"><%= idx + 1 %></td>
+            <td><strong><%= p.full_name %></strong></td>
+            <td><%= p.nik||'-' %></td>
+            <td><%= p.nisn||p.identity_number||'-' %></td>
+            <td>
+              <span class="status <%= isBalita?'info':isBumil?'warning':isBusui?'success':'muted' %>">
+                <%= isBalita ? 'Balita' : isBumil ? 'Ibu Hamil' : isBusui ? 'Ibu Menyusui' : p.category.replaceAll('_',' ') %>
+              </span>
+            </td>
+            <td><strong><%= p.gender||'-' %></strong></td>
+            <td><strong style="color:#035388"><%= p.class_group||'-' %></strong></td>
+            <td><span class="status <%= porsiClass %>"><%= porsiText %></span></td>
+            <td><a class="btn secondary" href="/pm/<%= p.id %>/edit">✏️ Edit</a></td>
+          </tr>
+        <% }) %>
+        <tr id="showPmEmpty" style="display:none">
+          <td colspan="9" style="text-align:center;padding:28px;color:#64748b">
+            <p style="margin:0;font-weight:600">Tidak ada data penerima manfaat pada kelompok ini.</p>
+            <small>Silakan pilih kelompok lain atau klik tab "Semua".</small>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+<% } %>
 <%- include('../partials/footer') %>

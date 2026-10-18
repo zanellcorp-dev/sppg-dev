@@ -1,0 +1,120 @@
+<section class="kpm-section posyandu-card-section" aria-label="Keterangan Posyandu">
+  <div class="kpm-section-head">
+    <div>
+      <h2>Keterangan Posyandu</h2>
+      <p>Informasi operasional, kontak kader aktif, dan peta titik koordinat Posyandu.</p>
+    </div>
+  </div>
+  <hr class="posyandu-card-divider">
+
+  <div class="posyandu-card-body">
+    <!-- Kolom Kiri: Keterangan Informasi & Kontak -->
+    <div class="posyandu-card-info">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="posyandu-field">
+          <small>Kode KPM</small>
+          <strong style="color:#007a5e"><%= access.kpm_code || '-' %></strong>
+        </div>
+        <div class="posyandu-field">
+          <small>Jenis KPM</small>
+          <strong><%= access.kpm_type === 'POSYANDU' ? 'Posyandu' : (access.kpm_type || 'Posyandu') %></strong>
+        </div>
+      </div>
+
+      <div class="posyandu-field">
+        <small>Nama Posyandu</small>
+        <strong><%= access.kpm_name || '-' %></strong>
+      </div>
+
+      <div class="posyandu-field">
+        <small>Alamat Posyandu</small>
+        <strong><%= access.address || '-' %></strong>
+      </div>
+
+      <div class="posyandu-field">
+        <small>Nama Kader Posyandu</small>
+        <strong><%= access.cadre_name || '-' %></strong>
+      </div>
+
+      <div class="posyandu-field">
+        <small>No WhatsApp</small>
+        <% if(access.cadre_phone && String(access.cadre_phone).trim()){ 
+          const rawDigits = String(access.cadre_phone).replace(/\D/g, '');
+          const waNum = rawDigits.startsWith('0') ? ('62' + rawDigits.slice(1)) : (rawDigits.startsWith('62') ? rawDigits : ('62' + rawDigits));
+        %>
+          <div class="posyandu-phone-wrap">
+            <strong><%= access.cadre_phone %></strong>
+            <a class="posyandu-wa-pill" href="https://wa.me/<%= waNum %>" target="_blank" rel="noopener" title="Buka WhatsApp Kader">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2M12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.99 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67M9.11 6.84C8.94 6.84 8.67 6.91 8.44 7.15C8.21 7.4 7.56 8.01 7.56 9.24C7.56 10.47 8.46 11.66 8.58 11.83C8.71 12 10.36 14.54 12.87 15.63C13.47 15.89 13.93 16.04 14.3 16.16C14.9 16.35 15.44 16.32 15.88 16.26C16.36 16.19 17.37 15.65 17.58 15.06C17.79 14.47 17.79 13.96 17.72 13.86C17.66 13.75 17.5 13.69 17.26 13.57C17.02 13.45 15.84 12.87 15.62 12.79C15.4 12.71 15.24 12.67 15.08 12.91C14.91 13.15 14.44 13.71 14.3 13.87C14.16 14.03 14.02 14.05 13.78 13.93C13.54 13.81 12.76 13.55 11.84 12.73C11.12 12.09 10.63 11.3 10.49 11.06C10.35 10.82 10.48 10.69 10.6 10.57C10.71 10.46 10.84 10.28 10.96 10.14C11.08 10 11.12 9.9 11.2 9.74C11.28 9.58 11.24 9.44 11.18 9.32C11.12 9.2 10.65 8.05 10.45 7.58C10.26 7.12 10.07 7.18 9.93 7.17C9.79 7.16 9.63 7.16 9.46 7.16L9.11 6.84Z"/></svg>
+              <span>WhatsApp</span>
+            </a>
+          </div>
+        <% }else{ %>
+          <strong>-</strong>
+        <% } %>
+      </div>
+
+      <div class="posyandu-field">
+        <small>Email</small>
+        <strong><%= access.email || '-' %></strong>
+      </div>
+    </div>
+
+    <!-- Kolom Kanan: Peta Denah Lokasi & Titik Koordinat -->
+    <div class="posyandu-card-map-col">
+      <div class="posyandu-map-container">
+        <% if(access.latitude!==null && access.latitude!==undefined && access.longitude!==null && access.longitude!==undefined && String(access.latitude).trim()!=='' && String(access.longitude).trim()!==''){ %>
+          <div id="posyandu-mini-map" class="posyandu-live-map"></div>
+        <% } else { %>
+          <div class="posyandu-map-placeholder">
+            <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="#8fa0b5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+            <strong>Denah Peta Lokasi</strong>
+            <small>Koordinat belum ditentukan untuk Posyandu ini.</small>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="posyandu-coord-panel">
+        <div class="posyandu-coord-text">
+          <small>Titik Koordinat</small>
+          <strong><%= (access.latitude && access.longitude) ? (access.latitude + ', ' + access.longitude) : 'Belum tersedia' %></strong>
+        </div>
+        <% if(access.latitude && access.longitude){ %>
+          <a class="posyandu-maps-link" href="https://www.google.com/maps/search/?api=1&query=<%= access.latitude %>,<%= access.longitude %>" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            <span>Buka Google Maps</span>
+          </a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<% if(access.latitude && access.longitude){ %>
+<script>
+  (function(){
+    var initMap = function(){
+      var lat = parseFloat("<%= access.latitude %>");
+      var lng = parseFloat("<%= access.longitude %>");
+      if(isNaN(lat) || isNaN(lng) || !window.L) return;
+      var mapContainer = document.getElementById('posyandu-mini-map');
+      if(!mapContainer || mapContainer.dataset.initialized) return;
+      mapContainer.dataset.initialized = 'true';
+      var map = L.map(mapContainer, { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+      var posName = "<%= (access.kpm_name || 'Posyandu').replace(/"/g, '&quot;') %>";
+      var posAddr = "<%= (access.address || '').replace(/"/g, '&quot;') %>";
+      L.marker([lat, lng]).addTo(map).bindPopup('<strong>' + posName + '</strong><br><small>' + posAddr + '</small>').openPopup();
+      setTimeout(function(){ map.invalidateSize(); }, 350);
+    };
+    if(window.L){
+      initMap();
+    } else {
+      window.addEventListener('load', initMap);
+    }
+  })();
+</script>
+<% } %>

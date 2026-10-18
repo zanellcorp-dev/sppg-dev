@@ -4,13 +4,38 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><%= settings?.portal_dashboard_title || 'Pusat Data Penerima Manfaat' %> · <%= access.kpm_name %></title>
 <link rel="stylesheet" href="/public/style.css?v=1.8.36.4">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/public/pm-grouper.js"></script>
 <style>
 .kpm-portal{max-width:1180px;margin:0 auto;padding:28px 18px 48px}.kpm-header{background:#fff;border:1px solid #dfe7ee;border-radius:18px;overflow:hidden;box-shadow:0 8px 28px rgba(15,35,55,.07)}
 .kpm-banner{height:190px;background:linear-gradient(135deg,#e8f3ef,#dce9f3);background-size:cover;background-position:center;position:relative}.kpm-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.16))}
 .kpm-head-body{padding:0 28px 26px;position:relative}.kpm-brand{display:flex;align-items:flex-end;gap:18px;margin-top:-48px;position:relative;z-index:2}.kpm-logo{width:92px;height:92px;border-radius:16px;background:#fff;border:1px solid #dfe7ee;display:flex;align-items:center;justify-content:center;padding:10px;box-shadow:0 5px 18px rgba(15,35,55,.12);overflow:hidden}.kpm-logo img{max-width:100%;max-height:100%;object-fit:contain}.kpm-brand-copy{padding-bottom:5px}.kpm-brand-copy .eyebrow{margin-bottom:5px}.kpm-title{font-size:25px;line-height:1.2;margin:0;color:#12243a}.kpm-subtitle{margin:7px 0 0;color:#63778e}.kpm-preview{margin:18px 0 0}.kpm-identity{margin-top:22px;display:grid;grid-template-columns:1.35fr 1fr;gap:16px}.kpm-info{background:#f7fafc;border:1px solid #e2eaf1;border-radius:14px;padding:18px}.kpm-info h3{margin:0 0 12px}.kpm-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.kpm-meta-item small{display:block;color:#718398;font-size:12px;margin-bottom:3px}.kpm-meta-item strong{color:#1b2d42}.kpm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:20px 0}.kpm-stat{background:#fff;border:1px solid #dfe7ee;border-radius:15px;padding:18px 20px;box-shadow:0 5px 18px rgba(15,35,55,.045)}.kpm-stat small{display:block;color:#718398;text-transform:uppercase;letter-spacing:.04em;font-size:11px}.kpm-stat strong{display:block;font-size:30px;margin-top:4px;color:#12243a}.kpm-section{background:#fff;border:1px solid #dfe7ee;border-radius:16px;margin-top:18px;overflow:hidden;box-shadow:0 5px 18px rgba(15,35,55,.045)}.kpm-section-head{padding:20px 22px 14px;display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.kpm-section-head h2{font-size:18px;margin:0;color:#14283f}.kpm-section-head p{margin:5px 0 0;color:#6c7e92;font-size:13px}.kpm-table-wrap{overflow:auto}.kpm-table{width:100%;border-collapse:collapse;min-width:760px}.kpm-table th,.kpm-table td{padding:12px 14px;border-top:1px solid #e8eef3;text-align:left;vertical-align:middle;font-size:13px}.kpm-table th{background:#f7fafc;color:#63758a;font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}.kpm-table td{color:#25384e}.kpm-status{display:inline-flex;padding:5px 9px;border-radius:999px;background:#edf7f1;color:#18734a;font-weight:700;font-size:11px}.kpm-status.off{background:#f5eeee;color:#9a3e3e}.kpm-action{white-space:nowrap}.kpm-empty{padding:28px;text-align:center;color:#77899c}.kpm-note{margin:0 22px 20px}.kpm-submission{padding:18px 22px}.kpm-submission-item{border:1px solid #e1e8ee;border-radius:12px;padding:12px 14px;margin-bottom:10px}.kpm-submission-item:last-child{margin-bottom:0}.kpm-submission-item strong{font-size:13px}.kpm-submission-item small{color:#718398}.kpm-footer{text-align:center;color:#75869a;font-size:12px;margin-top:22px}.kpm-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:0 22px 22px}.kpm-form-grid .full{grid-column:1/-1}.kpm-actions{display:flex;justify-content:flex-end;gap:10px;padding:0 22px 22px}.kpm-action-btn{display:inline-flex;align-items:center;justify-content:center;padding:7px 11px;border:1px solid #d4dfe7;border-radius:8px;background:#fff;color:#1c4566;text-decoration:none;font-size:12px;font-weight:700}.kpm-action-btn:hover{background:#f5f8fa}
 .kpm-statement-body{padding:0 22px 22px}.kpm-statement-card{display:flex;align-items:center;justify-content:space-between;gap:18px;border:1px solid #dce6ed;border-radius:13px;padding:15px 16px;background:#f8fbfc}.kpm-statement-label{font-size:10px;font-weight:800;letter-spacing:.08em;color:#18734a;margin-bottom:5px}.kpm-statement-meta{font-size:12px;color:#718398;margin-top:5px}.kpm-statement-empty{display:flex;flex-direction:column;gap:4px;padding:16px;border:1px dashed #ccd9e2;border-radius:13px;color:#52677d;background:#fbfcfd}.kpm-statement-empty strong{color:#263b50}.kpm-statement-upload{display:grid;gap:8px;margin-top:12px;padding:15px;border:1px solid #e2e9ef;border-radius:13px;background:#fff}.kpm-statement-upload label{font-size:13px;font-weight:700;color:#24394e}.kpm-statement-upload input[type=file]{width:100%;font-size:13px}.kpm-statement-upload small{font-size:11px;color:#718398;line-height:1.5}.kpm-primary-btn{justify-self:start;border:0;border-radius:8px;padding:9px 13px;background:#007a5e;color:#fff;font-weight:700;cursor:pointer}.kpm-statement-upload-disabled{margin-top:12px;padding:11px 13px;border-radius:10px;background:#f3f6f8;color:#6b7e91;font-size:12px}.kpm-statement-section{margin-top:18px}
+.kpm-completion-body{padding:0 22px 22px}.kpm-alert{padding:14px 16px;border-radius:12px;display:flex;flex-direction:column;gap:4px;font-size:13px;line-height:1.5}.kpm-alert strong{display:block;font-size:13px}.kpm-alert span{display:block;font-size:12px}.kpm-alert-warning{background:#fffbeb;border:1px solid #fde68a;color:#92400e}.kpm-alert-warning strong{color:#78350f}.kpm-alert-warning span{color:#92400e}.kpm-alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}.kpm-alert-success strong{color:#14532d}.kpm-alert-success span{color:#166534}.kpm-alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}.kpm-alert-info strong{color:#1e3a8a}.kpm-alert-info span{color:#1e40af}.kpm-actions-row{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}.kpm-actions-row small{color:#64748b;font-size:12px}
 .kpm-identity-section{margin-top:18px}.kpm-identity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px;padding:4px 22px 22px}.kpm-identity-grid .kpm-meta-item{padding:13px 0;border-bottom:1px solid #e8eef3;min-width:0}.kpm-identity-grid .kpm-meta-item small{display:block;color:#718398;font-size:11px;margin-bottom:5px}.kpm-identity-grid .kpm-meta-item strong{display:block;color:#1b2d42;line-height:1.45;word-break:break-word}.kpm-meta-wide{grid-column:1/-1}.kpm-map-btn{display:inline-flex;margin-top:8px;align-items:center;justify-content:center;padding:7px 11px;border-radius:8px;background:#eef6ff;border:1px solid #d4e4f3;color:#24597e;text-decoration:none;font-size:12px;font-weight:700}.kpm-muted{display:block;color:#8393a3;font-size:11px;margin-top:4px}.kpm-disabled{opacity:.55;cursor:default}.kpm-portal .kpm-section{scroll-margin-top:16px}
-@media(max-width:720px){.kpm-portal{padding:14px 10px 32px}.kpm-banner{height:125px}.kpm-head-body{padding:0 16px 20px}.kpm-brand{align-items:flex-end;gap:12px;margin-top:-34px}.kpm-logo{width:68px;height:68px;border-radius:12px}.kpm-title{font-size:20px}.kpm-subtitle{font-size:12px}.kpm-identity{grid-template-columns:1fr}.kpm-meta{grid-template-columns:1fr}.kpm-identity-grid{grid-template-columns:1fr;padding:2px 16px 18px}.kpm-meta-wide{grid-column:auto}.kpm-stats{grid-template-columns:1fr 1fr}.kpm-stat:last-child{grid-column:1/-1}.kpm-section-head{padding:16px}.kpm-note{margin:0 16px 16px}.kpm-submission{padding:16px}.kpm-form-grid{grid-template-columns:1fr;padding:0 16px 18px}.kpm-statement-body{padding:0 16px 18px}.kpm-statement-card{align-items:flex-start;flex-direction:column}.kpm-form-grid .full{grid-column:auto}.kpm-actions{padding:0 16px 18px}}
+/* Posyandu Card styles */
+.posyandu-card-divider{border:0;border-top:1px solid #e5edf3;margin:0 22px 18px}
+.posyandu-card-body{display:grid;grid-template-columns:1.15fr 1fr;gap:24px;padding:0 22px 24px}
+.posyandu-card-info{display:flex;flex-direction:column;gap:11px}
+.posyandu-field{padding:10px 14px;border:1px solid #e5edf3;border-radius:11px;background:#f8fafc}
+.posyandu-field small{display:block;font-size:10.5px;font-weight:700;color:#607387;margin-bottom:3px;text-transform:uppercase;letter-spacing:.04em}
+.posyandu-field strong{display:block;font-size:13.5px;color:#102b55;line-height:1.4;word-break:break-word}
+.posyandu-phone-wrap{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.posyandu-wa-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#e8f7ef;color:#08734f;border:1px solid #bce6d3;font-size:11px;font-weight:700;text-decoration:none;transition:.15s}
+.posyandu-wa-pill:hover{background:#d5f2e2}
+.posyandu-card-map-col{display:flex;flex-direction:column;gap:12px}
+.posyandu-map-container{min-height:220px;flex:1;border:1px solid #dfe7ee;border-radius:13px;overflow:hidden;background:#f3f6f9;position:relative}
+.posyandu-live-map{width:100%;height:100%;min-height:220px}
+.posyandu-map-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:220px;text-align:center;padding:20px;color:#788b9e;gap:6px}
+.posyandu-map-placeholder strong{font-size:13px;color:#203b55}
+.posyandu-map-placeholder small{font-size:11px}
+.posyandu-coord-panel{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;border:1px solid #e1e9f0;border-radius:11px;background:#fbfcfd}
+.posyandu-coord-text small{display:block;font-size:10px;font-weight:700;color:#6b7e94;text-transform:uppercase;letter-spacing:.04em}
+.posyandu-coord-text strong{display:block;font-size:13px;color:#122a4d;margin-top:2px}
+.posyandu-maps-link{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:8px;background:#007a5e;color:#fff;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap}
+.posyandu-maps-link:hover{background:#00624b}
+@media(max-width:720px){.kpm-portal{padding:14px 10px 32px}.kpm-banner{height:125px}.kpm-head-body{padding:0 16px 20px}.kpm-brand{align-items:flex-end;gap:12px;margin-top:-34px}.kpm-logo{width:68px;height:68px;border-radius:12px}.kpm-title{font-size:20px}.kpm-subtitle{font-size:12px}.kpm-identity{grid-template-columns:1fr}.kpm-meta{grid-template-columns:1fr}.kpm-identity-grid{grid-template-columns:1fr;padding:2px 16px 18px}.kpm-meta-wide{grid-column:auto}.kpm-stats{grid-template-columns:1fr 1fr}.kpm-stat:last-child{grid-column:1/-1}.kpm-section-head{padding:16px}.kpm-note{margin:0 16px 16px}.kpm-submission{padding:16px}.kpm-form-grid{grid-template-columns:1fr;padding:0 16px 18px}.kpm-statement-body{padding:0 16px 18px}.kpm-completion-body{padding:0 16px 18px}.posyandu-card-divider{margin:0 16px 14px}.posyandu-card-body{grid-template-columns:1fr;padding:0 16px 18px;gap:16px}.posyandu-map-container{min-height:200px}.posyandu-live-map{min-height:200px}.kpm-statement-card{align-items:flex-start;flex-direction:column}.kpm-form-grid .full{grid-column:auto}.kpm-actions{padding:0 16px 18px}}
 @media(max-width:420px){.kpm-stats{grid-template-columns:1fr}.kpm-stat:last-child{grid-column:auto}}
 </style>
 </head>
@@ -21,7 +46,7 @@
     <div class="kpm-head-body">
       <div class="kpm-brand">
         <div class="kpm-logo">
-          <% if(settings?.logo_path){ %><img src="/branding/logo" alt="Logo SPPG"><% } else { %><span class="eyebrow">SPPG</span><% } %>
+          <img src="<%= settings?.logo_path ? '/branding/logo' : '/public/bgn-logo.png' %>" alt="Logo SPPG">
         </div>
         <div class="kpm-brand-copy">
           <div class="eyebrow">PUSAT DATA PENERIMA MANFAAT</div>
@@ -33,48 +58,29 @@
     </div>
   </section>
 
-  <section class="kpm-section kpm-identity-section">
-  <div class="kpm-section-head"><div><h2>Identitas KPM</h2><p>Informasi identitas dan kontak KPM yang tersimpan pada Master KPM.</p></div></div>
-  <div class="kpm-identity-grid">
-    <div class="kpm-meta-item"><small>1. Kode KPM</small><strong><%= access.kpm_code %></strong></div>
-    <div class="kpm-meta-item"><small>2. Jenis KPM</small><strong><%= access.kpm_type==='POSYANDU'?'Posyandu':'Satuan Pendidikan' %></strong></div>
-    <div class="kpm-meta-item"><small>3. Jenjang/Keterangan</small><strong><%= access.education_level||'-' %></strong></div>
-    <div class="kpm-meta-item"><small>4. Nama KPM</small><strong><%= access.kpm_name %></strong></div>
-    <% if(access.kpm_type==='SATUAN_PENDIDIKAN'){ %>
-      <div class="kpm-meta-item"><small>5. NPSN</small><strong><%= access.npsn||'-' %></strong></div>
-      <div class="kpm-meta-item"><small>6. Kepala Satuan Pendidikan</small><strong><%= access.head_name||'-' %></strong></div>
-      <div class="kpm-meta-item"><small>7. Kontak Kepala Satuan Pendidikan</small><strong><%= access.head_phone||'-' %></strong></div>
-      <div class="kpm-meta-item"><small>8. PIC MBG Satuan Pendidikan</small><strong><%= access.pic_name||'-' %></strong></div>
-      <div class="kpm-meta-item"><small>9. Kontak PIC MBG Satuan Pendidikan</small><strong><%= access.pic_phone||'-' %></strong></div>
-    <% }else{ %>
-      <div class="kpm-meta-item"><small>5. Kader Posyandu</small><strong><%= access.cadre_name||'-' %></strong></div>
-      <div class="kpm-meta-item"><small>6. Kontak Kader Posyandu</small><strong><%= access.cadre_phone||'-' %></strong></div>
-    <% } %>
-    <div class="kpm-meta-item kpm-meta-wide"><small><%= access.kpm_type==='SATUAN_PENDIDIKAN'?'10.':'7.' %> Alamat</small><strong><%= access.address||'-' %></strong></div>
-    <div class="kpm-meta-item kpm-meta-wide"><small><%= access.kpm_type==='SATUAN_PENDIDIKAN'?'11.':'8.' %> Titik Koordinat KPM</small>
-      <% if(access.latitude!==null && access.latitude!==undefined && access.longitude!==null && access.longitude!==undefined){ %>
-        <strong><%= access.latitude %>, <%= access.longitude %></strong>
-        <a class="kpm-map-btn" href="https://www.google.com/maps/search/?api=1&query=<%= access.latitude %>,<%= access.longitude %>" target="_blank" rel="noopener">View Maps</a>
-      <% }else{ %><strong>-</strong><span class="kpm-muted">Koordinat belum tersedia</span><% } %>
-    </div>
-  </div>
-</section>
+  <% if((access.kpm_type || access.type) === 'POSYANDU'){ %>
+  <%- include('posyandu-card', { access, previewMode, settings }) %>
+<% } else if((access.kpm_type || access.type) === 'SATUAN_PENDIDIKAN'){ %>
+  <%- include('education-card', { access, previewMode, settings }) %>
+<% } %>
 
 <section class="kpm-section kpm-data-completion">
   <div class="kpm-section-head"><div><h2>Status Kelengkapan Data</h2><p>Dashboard membaca data identitas langsung dari Master KPM. Jika ada data yang belum lengkap, KPM dapat mengajukan perbaikan dari dashboard.</p></div></div>
-  <% if(profileMissing && profileMissing.length){ %>
-    <div class="kpm-alert kpm-alert-warning"><strong>Data belum dilengkapi oleh KPM.</strong><span>Bagian yang perlu dilengkapi: <%= profileMissing.join(', ') %>.</span></div>
-  <% }else{ %>
-    <div class="kpm-alert kpm-alert-success"><strong>Data identitas KPM sudah lengkap.</strong><span>Seluruh data utama yang diperlukan sudah tersedia pada Master KPM.</span></div>
-  <% } %>
-  <% if(profilePending && ['DIAJUKAN','DITINJAU'].includes(profilePending.status)){ %>
-    <div class="kpm-alert kpm-alert-info"><strong>Perbaikan data sedang direview SPPG.</strong><span>Status: <%= profilePending.status %>. Master KPM belum berubah sampai pengajuan disetujui dan diterapkan.</span></div>
-  <% } %>
-  <% if(previewMode){ %>
-    <div class="kpm-actions-row"><span class="kpm-action-btn kpm-disabled">Perbaiki Data · Preview</span><small>Gunakan akses Dashboard KPM untuk mengajukan perubahan.</small></div>
-  <% }else{ %>
-    <div class="kpm-actions-row"><a class="kpm-primary-btn" href="/portal/kpm/<%= portalToken %>/profile/edit">Perbaiki Data KPM</a><small>Perubahan dikirim ke SPPG untuk diverifikasi dan tidak langsung mengubah Master KPM.</small></div>
-  <% } %>
+  <div class="kpm-completion-body">
+    <% if(profileMissing && profileMissing.length){ %>
+      <div class="kpm-alert kpm-alert-warning"><strong>Data belum dilengkapi oleh KPM.</strong><span>Bagian yang perlu dilengkapi: <%= profileMissing.join(', ') %>.</span></div>
+    <% }else{ %>
+      <div class="kpm-alert kpm-alert-success"><strong>Data identitas KPM sudah lengkap.</strong><span>Seluruh data utama yang diperlukan sudah tersedia pada Master KPM.</span></div>
+    <% } %>
+    <% if(profilePending && ['DIAJUKAN','DITINJAU'].includes(profilePending.status)){ %>
+      <div class="kpm-alert kpm-alert-info"><strong>Perbaikan data sedang direview SPPG.</strong><span>Status: <%= profilePending.status %>. Master KPM belum berubah sampai pengajuan disetujui dan diterapkan.</span></div>
+    <% } %>
+    <% if(previewMode){ %>
+      <div class="kpm-actions-row"><span class="kpm-action-btn kpm-disabled">Perbaiki Data · Preview</span><small>Gunakan akses Dashboard KPM untuk mengajukan perubahan.</small></div>
+    <% }else{ %>
+      <div class="kpm-actions-row"><a class="kpm-primary-btn" href="/portal/kpm/<%= portalToken %>/profile/edit">Perbaiki Data KPM</a><small>Perubahan dikirim ke SPPG untuk diverifikasi dan tidak langsung mengubah Master KPM.</small></div>
+    <% } %>
+  </div>
 </section>
 
 <section class="kpm-section kpm-statement-section">
@@ -103,27 +109,13 @@
   </section>
 
   <section class="kpm-stats">
-    <div class="kpm-stat"><small>Total PM</small><strong><%= portalStats?.total ?? 0 %></strong></div>
-    <div class="kpm-stat"><small>Porsi Kecil</small><strong><%= portalStats?.small ?? 0 %></strong></div>
-    <div class="kpm-stat"><small>Porsi Besar</small><strong><%= portalStats?.large ?? 0 %></strong></div>
+    <div class="kpm-stat" onclick="window.PMGrouper && window.PMGrouper.filter('ALL','ALL')" style="cursor:pointer" title="Klik untuk menampilkan seluruh penerima manfaat"><small>Total PM</small><strong><%= portalStats?.total ?? 0 %></strong></div>
+    <div class="kpm-stat" onclick="window.PMGrouper && window.PMGrouper.filter('<%= access.kpm_type==='POSYANDU' ? 'BALITA' : 'PESERTA_DIDIK' %>','ALL')" style="cursor:pointer" title="Klik untuk mengelompokkan <%= access.kpm_type==='POSYANDU' ? 'Balita (Porsi Kecil)' : 'Porsi Kecil' %>"><small><%= access.kpm_type==='POSYANDU' ? 'Balita (Porsi Kecil)' : 'Porsi Kecil' %></small><strong><%= portalStats?.small ?? 0 %></strong></div>
+    <div class="kpm-stat" onclick="window.PMGrouper && window.PMGrouper.filter('<%= access.kpm_type==='POSYANDU' ? 'BUMIL' : 'PESERTA_DIDIK' %>','ALL')" style="cursor:pointer" title="Klik untuk mengelompokkan <%= access.kpm_type==='POSYANDU' ? 'Ibu Hamil & Menyusui (Porsi Besar)' : 'Porsi Besar' %>"><small><%= access.kpm_type==='POSYANDU' ? 'Bumil & Busui (Porsi Besar)' : 'Porsi Besar' %></small><strong><%= portalStats?.large ?? 0 %></strong></div>
   </section>
 
-  <% const schoolGroups=[['PENDIDIK','Pendidik'],['TENAGA_KEPENDIDIKAN','Tenaga Kependidikan'],['PESERTA_DIDIK','Peserta Didik']]; const posyanduGroups=[['BALITA','Balita'],['BUMIL','Bumil'],['BUSUI','Busui']]; const groups=access.kpm_type==='POSYANDU'?posyanduGroups:schoolGroups; %>
-  <section class="kpm-section">
-    <div class="kpm-section-head"><div><h2>Manajemen Penerima Manfaat KPM - <%= access.kpm_name %></h2><p>Data operasional saat ini. Tombol Edit mengajukan perubahan untuk diverifikasi SPPG dan tidak langsung mengubah Master PM.</p></div></div>
-    <% groups.forEach(([cat,label])=>{ const rows=pm.filter(x=>x.category===cat); %>
-      <div class="kpm-section-head" style="padding-top:14px"><div><h2 style="font-size:16px"><%= label %></h2></div></div>
-      <div class="kpm-table-wrap">
-        <table class="kpm-table">
-          <thead><tr><th>No</th><th>Nama Lengkap</th><th>NIK</th><th>Jenis Kelamin</th><th>Kategori</th><% if(access.kpm_type!=='POSYANDU' && cat==='PESERTA_DIDIK'){ %><th>Kelas</th><% } %><th>Status</th><th>Aksi</th></tr></thead>
-          <tbody>
-          <% rows.forEach((x,i)=>{ %><tr><td><%= i+1 %></td><td><strong><%= x.full_name %></strong></td><td><%= x.nik||'-' %></td><td><%= x.gender||'-' %></td><td><%= x.category.replaceAll('_',' ') %></td><% if(access.kpm_type!=='POSYANDU' && cat==='PESERTA_DIDIK'){ %><td><%= x.class_group||'-' %></td><% } %><td><span class="kpm-status <%= x.active?'':'off' %>"><%= x.active?'AKTIF':'NONAKTIF' %></span></td><td class="kpm-action"><% if(previewMode){ %><span class="kpm-action-btn kpm-disabled">Edit · Preview</span><% }else{ %><a class="kpm-action-btn" href="/portal/kpm/<%= portalToken %>/pm/<%= x.id %>/edit">Edit</a><% } %></td></tr><% }) %>
-          <% if(!rows.length){ %><tr><td colspan="<%= access.kpm_type!=='POSYANDU' && cat==='PESERTA_DIDIK'?8:7 %>" class="kpm-empty">Belum ada data <%= label.toLowerCase() %>.</td></tr><% } %>
-          </tbody>
-        </table>
-      </div>
-    <% }) %>
-  </section>
+  <% const schoolGroups=[['PENDIDIK','Pendidik'],['TENAGA_KEPENDIDIKAN','Tenaga Kependidikan'],['PESERTA_DIDIK','Peserta Didik']]; const posyanduGroups=[['BALITA','Balita'],['BUMIL','Bumil'],['BUSUI','Busui']]; %>
+  <%- include('pm-management', { access, pm, previewMode, portalToken, schoolGroups, posyanduGroups, csrfToken: typeof csrfToken !== 'undefined' ? csrfToken : '' }) %>
 
   <section class="kpm-section">
     <div class="kpm-section-head"><div><h2>Status Pengajuan Perubahan</h2><p>Riwayat pengajuan data PM dari KPM.</p></div></div>

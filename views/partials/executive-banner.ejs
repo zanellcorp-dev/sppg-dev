@@ -1,0 +1,30 @@
+<% if(user && (['ADMIN','KASP','PENGAWAS_GIZI','PENGAWAS_KEUANGAN','ASLAP'].includes(user.role) || (user.permissions && user.permissions.includes('executive.view')))) { %>
+<section class="panel executive-adaptive-banner" style="margin-top:14px;border-left:5px solid #007a5e;background:linear-gradient(105deg,#ffffff 0%,#f4faf7 55%,#edf6f2 100%)">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">
+    <div>
+      <div style="display:inline-flex;align-items:center;gap:6px;background:#071e49;color:#fff;padding:4px 10px;border-radius:6px;font-size:10.5px;font-weight:700;letter-spacing:0.5px;margin-bottom:6px">
+        <i data-lucide="shield-check" style="width:13px;height:13px;color:#20c878"></i>
+        <span>OTORITAS EKSEKUTIF · <%= user.role || 'ADMIN' %></span>
+      </div>
+      <h3 style="margin:2px 0 4px;color:#0b2d61;font-size:18px;font-weight:800">Pusat Komando &amp; Tata Kelola Pimpinan</h3>
+      <p style="margin:0;color:#53687e;font-size:12.5px">
+        Akses kendali penuh: Otorisasi persetujuan perubahan data lapangan, penguncian harian (Daily Closing), dan pengawasan audit SPPG.
+      </p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <a href="/executive/approvals" class="outline-btn" style="height:36px;padding:0 13px;border-color:#f59e0b;color:#854d0e;background:#fffbeb;font-weight:700">
+        <i data-lucide="check-check" style="width:15px;height:15px;color:#d97706"></i>
+        <span>Persetujuan Data</span>
+      </a>
+      <a href="/executive/lock-control" class="outline-btn" style="height:36px;padding:0 13px;border-color:#0b3479;color:#0b3479;background:#f0f5fc;font-weight:700">
+        <i data-lucide="lock" style="width:15px;height:15px"></i>
+        <span>Penguncian Buku</span>
+      </a>
+      <a href="/executive" class="btn primary" style="min-height:36px;padding:0 15px;background:#007a5e;color:#fff;font-weight:800;gap:6px">
+        <i data-lucide="crown" style="width:16px;height:16px"></i>
+        <span>Masuk Pusat Komando</span>
+      </a>
+    </div>
+  </div>
+</section>
+<% } %>
