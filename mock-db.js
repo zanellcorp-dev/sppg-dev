@@ -217,30 +217,125 @@ function createMockPool(opts = {}) {
       { id: 5, kpm_id: 1, full_name: 'Slamet Riyadi', nik: '3213012010830005', nisn: null, category: 'TENAGA_KEPENDIDIKAN', gender: 'L', class_group: 'Tenaga Administrasi', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-10') },
 
       // KPM 2: Posyandu Melati 01 (Balita, Bumil, Busui)
-      { id: 6, kpm_id: 2, full_name: 'Kenzo Alfarizi', nik: '3213012201230004', nisn: null, category: 'BALITA', gender: 'L', class_group: '6-23 Bulan (Baduta)', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-12') },
-      { id: 7, kpm_id: 2, full_name: 'Aisyah Putri Azzahra', nik: '3213015503230007', nisn: null, category: 'BALITA', gender: 'P', class_group: '0-5 Bulan (Bayi)', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-12') },
-      { id: 8, kpm_id: 2, full_name: 'Rafka Aditya Ramadhan', nik: '3213011808220008', nisn: null, category: 'BALITA', gender: 'L', class_group: '24-59 Bulan (Balita)', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-12') },
-      { id: 9, kpm_id: 2, full_name: 'Muhammad Rayyan', nik: '3213010511220009', nisn: null, category: 'BALITA', gender: 'L', class_group: '6-23 Bulan (Baduta)', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-12') },
-      { id: 10, kpm_id: 2, full_name: 'Siti Zulaikha', nik: '3213016202230010', nisn: null, category: 'BALITA', gender: 'P', class_group: '24-59 Bulan (Balita)', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-12') },
-      { id: 11, kpm_id: 2, full_name: 'Ibu Ratna Dewi', nik: '3213014506980005', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 2 (13–27 Minggu)', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') },
-      { id: 12, kpm_id: 2, full_name: 'Ibu Siti Maryam', nik: '3213015208960012', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 3 (28–40 Minggu)', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') },
-      { id: 13, kpm_id: 2, full_name: 'Ibu Dewi Lestari', nik: '3213016511990013', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 1 (1–12 Minggu)', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') },
-      { id: 14, kpm_id: 2, full_name: 'Ibu Nur Halimah', nik: '3213014304950014', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 0–6 Bulan (ASI Eksklusif)', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') },
-      { id: 15, kpm_id: 2, full_name: 'Ibu Fitri Handayani', nik: '3213015907940015', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 7–12 Bulan', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') },
-      { id: 16, kpm_id: 2, full_name: 'Ibu Maya Anggraeni', nik: '3213016709970016', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 13–24 Bulan', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') },
+      { id: 6, kpm_id: 2, full_name: 'Kenzo Alfarizi', nik: '3213012201230004', nisn: null, category: 'BALITA', gender: 'L', class_group: '6-23 Bulan (Baduta)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-06-01'), updated_at: new Date('2026-10-16T11:00:00') },
+      { id: 7, kpm_id: 2, full_name: 'Aisyah Putri Azzahra', nik: '3213015503230007', nisn: null, category: 'BALITA', gender: 'P', class_group: '0-5 Bulan (Bayi)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-08-01'), updated_at: new Date('2026-08-01') },
+      { id: 8, kpm_id: 2, full_name: 'Rafka Aditya Ramadhan', nik: '3213011808220008', nisn: null, category: 'BALITA', gender: 'L', class_group: '24-59 Bulan (Balita)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-12') },
+      { id: 9, kpm_id: 2, full_name: 'Muhammad Rayyan', nik: '3213010511220009', nisn: null, category: 'BALITA', gender: 'L', class_group: '6-23 Bulan (Baduta)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-12') },
+      { id: 10, kpm_id: 2, full_name: 'Siti Zulaikha', nik: '3213016202230010', nisn: null, category: 'BALITA', gender: 'P', class_group: '24-59 Bulan (Balita)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-12') },
+      { id: 11, kpm_id: 2, full_name: 'Ibu Ratna Dewi', nik: '3213014506980005', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 2 (13–27 Minggu)', phone: '082199887766', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-07-10'), updated_at: new Date('2026-10-18T10:30:00') },
+      { id: 12, kpm_id: 2, full_name: 'Ibu Siti Maryam', nik: '3213015208960012', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 3 (28–40 Minggu)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 13, kpm_id: 2, full_name: 'Ibu Dewi Lestari', nik: '3213016511990013', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 1 (1–12 Minggu)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 14, kpm_id: 2, full_name: 'Ibu Nur Halimah', nik: '3213014304950014', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 7–12 Bulan', active: 0, approval_status: 'NONAKTIF_DISETUJUI', deactivation_reason: 'Sudah tidak lagi menerima manfaat karena anak telah genap usia 2 tahun (lulus masa menyusui)', deactivated_at: new Date('2026-10-19T09:00:00'), created_at: new Date('2026-05-15'), updated_at: new Date('2026-10-19T09:00:00') },
+      { id: 15, kpm_id: 2, full_name: 'Ibu Fitri Handayani', nik: '3213015907940015', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 7–12 Bulan', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 16, kpm_id: 2, full_name: 'Ibu Maya Anggraeni', nik: '3213016709970016', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 13–24 Bulan', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
       // Contoh PM nonaktif di Melati 01: satu menunggu verifikasi BGN, satu sudah disetujui BGN
-      { id: 17, kpm_id: 2, full_name: 'Arka Danendra Pratama', nik: '3213011402190017', nisn: null, category: 'BALITA', gender: 'L', class_group: 'Posyandu Melati 01', active: 0, approval_status: 'NONAKTIF_DISETUJUI', deactivation_reason: 'Melewati Batas Usia Balita (> 5 Tahun)', deactivated_at: new Date('2024-02-01'), created_at: new Date('2024-01-12') },
-      { id: 18, kpm_id: 2, full_name: 'Ibu Maya Safitri', nik: '3213016805950018', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 3', active: 0, approval_status: 'MENUNGGU_VERIFIKASI_BGN', deactivation_reason: 'Pindah Domisili ke Luar Wilayah', deactivated_at: new Date('2024-02-10'), created_at: new Date('2024-01-15') },
+      { id: 17, kpm_id: 2, full_name: 'Arka Danendra Pratama', nik: '3213011402190017', nisn: null, category: 'BALITA', gender: 'L', class_group: 'Posyandu Melati 01', active: 0, approval_status: 'NONAKTIF_DISETUJUI', deactivation_reason: 'Melewati Batas Usia Balita (> 5 Tahun)', deactivated_at: new Date('2026-02-01'), created_at: new Date('2026-01-12') },
+      { id: 18, kpm_id: 2, full_name: 'Ibu Maya Safitri', nik: '3213016805950018', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 3', active: 0, approval_status: 'MENUNGGU_VERIFIKASI_BGN', deactivation_reason: 'Pindah Domisili ke Luar Wilayah', deactivated_at: new Date('2026-02-10'), created_at: new Date('2026-01-15') },
 
       // KPM 3: Posyandu Melati 02 (Ruang Privat Terpisah)
-      { id: 19, kpm_id: 3, full_name: 'Bilal Al Habsyi', nik: '3213012903230019', nisn: null, category: 'BALITA', gender: 'L', class_group: 'Posyandu Melati 02', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') },
-      { id: 20, kpm_id: 3, full_name: 'Syifa Nuraini', nik: '3213015407230020', nisn: null, category: 'BALITA', gender: 'P', class_group: 'Posyandu Melati 02', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') },
-      { id: 21, kpm_id: 3, full_name: 'Ibu Rina Kurnia', nik: '3213014101960021', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 2', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') },
-      { id: 22, kpm_id: 3, full_name: 'Ibu Indah Puspita', nik: '3213016309930022', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 2 Bulan', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-15') }
+      { id: 19, kpm_id: 3, full_name: 'Bilal Al Habsyi', nik: '3213012903230019', nisn: null, category: 'BALITA', gender: 'L', class_group: 'Posyandu Melati 02', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 20, kpm_id: 3, full_name: 'Syifa Nuraini', nik: '3213015407230020', nisn: null, category: 'BALITA', gender: 'P', class_group: 'Posyandu Melati 02', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 21, kpm_id: 3, full_name: 'Ibu Rina Kurnia', nik: '3213014101960021', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 2', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 22, kpm_id: 3, full_name: 'Ibu Indah Puspita', nik: '3213016309930022', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 2 Bulan', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') }
     ],
     pm_change_history: [
-      { id: 1, pm_id: 17, effective_from: '2024-02-01', action: 'DEACTIVATE', before_data: JSON.stringify({ active: 1 }), after_data: JSON.stringify({ active: 0 }), reason: 'Melewati Batas Usia Balita (> 5 Tahun) · Disetujui Kepala BGN', actor_id: 1, created_at: new Date('2024-02-01') },
-      { id: 2, pm_id: 18, effective_from: '2024-02-10', action: 'DEACTIVATE', before_data: JSON.stringify({ active: 1 }), after_data: JSON.stringify({ active: 0 }), reason: 'Pindah Domisili ke Luar Wilayah (Diajukan oleh Kader, Menunggu Otorisasi Kepala BGN)', actor_id: null, created_at: new Date('2024-02-10') }
+      // PM 11: Ibu Ratna Dewi (BUMIL) - 3 Perubahan di Oktober 2026, 1 di September 2026, 0 di Agustus 2026 (Stabil)
+      {
+        id: 101,
+        pm_id: 11,
+        effective_from: '2026-10-18',
+        action: 'UPDATE',
+        before_data: JSON.stringify({ active: 1, note: 'Penerima aktif' }),
+        after_data: JSON.stringify({ active: 1, note: 'Izin sementara (keluar kota 2 pekan)' }),
+        reason: 'Catatan dispensasi distribusi: Sedang keluar kota mengikuti dinas keluarga selama 2 pekan (penyaluran paket dijeda sementara)',
+        actor_id: 1,
+        created_at: new Date('2026-10-18T10:30:00')
+      },
+      {
+        id: 102,
+        pm_id: 11,
+        effective_from: '2026-10-12',
+        action: 'UPDATE',
+        before_data: JSON.stringify({ class_group: 'Trimester 1 (1–12 Minggu)' }),
+        after_data: JSON.stringify({ class_group: 'Trimester 2 (13–27 Minggu)' }),
+        reason: 'Hasil pemeriksaan ANC berkala Posyandu; usia kehamilan resmi memasuki Trimester 2',
+        actor_id: 1,
+        created_at: new Date('2026-10-12T09:15:00')
+      },
+      {
+        id: 103,
+        pm_id: 11,
+        effective_from: '2026-10-05',
+        action: 'UPDATE',
+        before_data: JSON.stringify({ phone: '081234567891' }),
+        after_data: JSON.stringify({ phone: '082199887766' }),
+        reason: 'Pembaruan nomor WhatsApp aktif penerima manfaat untuk koordinasi distribusi paket gizi Posyandu',
+        actor_id: 1,
+        created_at: new Date('2026-10-05T14:20:00')
+      },
+      {
+        id: 104,
+        pm_id: 11,
+        effective_from: '2026-09-14',
+        action: 'UPDATE',
+        before_data: JSON.stringify({ full_name: 'Ratna Dwi' }),
+        after_data: JSON.stringify({ full_name: 'Ibu Ratna Dewi' }),
+        reason: 'Perbaikan ejaan nama dan verifikasi NIK disesuaikan dengan e-KTP terbaru',
+        actor_id: 1,
+        created_at: new Date('2026-09-14T11:00:00')
+      },
+
+      // PM 6: Kenzo Alfarizi (BALITA) - 1 di Oktober 2026, 0 di September 2026 (Stabil), 1 di Agustus 2026
+      {
+        id: 105,
+        pm_id: 6,
+        effective_from: '2026-10-16',
+        action: 'UPDATE',
+        before_data: JSON.stringify({ note: 'Alamat RT 01/RW 02' }),
+        after_data: JSON.stringify({ note: 'Alamat RT 03/RW 02' }),
+        reason: 'Pembaruan catatan domisili pengantaran paket PMT posyandu karena pindah rumah dalam desa',
+        actor_id: 1,
+        created_at: new Date('2026-10-16T11:00:00')
+      },
+      {
+        id: 106,
+        pm_id: 6,
+        effective_from: '2026-08-10',
+        action: 'UPDATE',
+        before_data: JSON.stringify({ class_group: '0-5 Bulan (Bayi)' }),
+        after_data: JSON.stringify({ class_group: '6-23 Bulan (Baduta)' }),
+        reason: 'Kenaikan usia balita (genap 6 bulan) & penyesuaian porsi MP-ASI Posyandu',
+        actor_id: 1,
+        created_at: new Date('2026-08-10T08:30:00')
+      },
+
+      // PM 14: Ibu Nur Halimah (BUSUI) - 1 di Oktober 2026 (Deaktivasi Lulus), 1 di September 2026
+      {
+        id: 107,
+        pm_id: 14,
+        effective_from: '2026-10-19',
+        action: 'DEACTIVATE',
+        before_data: JSON.stringify({ active: 1, approval_status: 'AKTIF' }),
+        after_data: JSON.stringify({ active: 0, approval_status: 'NONAKTIF_DISETUJUI' }),
+        reason: 'Sudah tidak lagi menerima manfaat karena anak telah genap usia 2 tahun (lulus masa menyusui BGN) · Disetujui Kepala BGN',
+        actor_id: 1,
+        created_at: new Date('2026-10-19T09:00:00')
+      },
+      {
+        id: 108,
+        pm_id: 14,
+        effective_from: '2026-09-20',
+        action: 'UPDATE',
+        before_data: JSON.stringify({ class_group: 'Bayi 0–6 Bulan (ASI Eksklusif)' }),
+        after_data: JSON.stringify({ class_group: 'Bayi 7–12 Bulan' }),
+        reason: 'Bayi lulus program ASI Eksklusif 6 bulan dan mulai menerima PMT pendamping ASI',
+        actor_id: 1,
+        created_at: new Date('2026-09-20T10:15:00')
+      },
+
+      // PM 17 & 18: Arsip / Otorisasi BGN
+      { id: 1, pm_id: 17, effective_from: '2026-02-01', action: 'DEACTIVATE', before_data: JSON.stringify({ active: 1 }), after_data: JSON.stringify({ active: 0 }), reason: 'Melewati Batas Usia Balita (> 5 Tahun) · Disetujui Kepala BGN', actor_id: 1, created_at: new Date('2026-02-01') },
+      { id: 2, pm_id: 18, effective_from: '2026-02-10', action: 'DEACTIVATE', before_data: JSON.stringify({ active: 1 }), after_data: JSON.stringify({ active: 0 }), reason: 'Pindah Domisili ke Luar Wilayah (Diajukan oleh Kader, Menunggu Otorisasi Kepala BGN)', actor_id: null, created_at: new Date('2026-02-10') }
     ],
     kpm_portal_tokens: [],
     kpm_portal_statements: [],

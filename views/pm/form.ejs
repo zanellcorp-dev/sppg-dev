@@ -82,6 +82,20 @@
         <label>No. HP / WhatsApp</label>
         <input class="input" name="phone" value="<%= pm?.phone || '' %>" placeholder="08xxxxxxxxxx">
       </div>
+
+      <% if(pm){ %>
+        <div class="field">
+          <label>Tanggal Efektif Perubahan <span style="color:#d92d20">*</span></label>
+          <input type="date" class="input" name="effective_from" value="<%= new Date().toISOString().slice(0, 10) %>" required>
+          <div class="help">Tanggal berlakunya perubahan ini (tersimpan di riwayat rekam jejak BGN).</div>
+        </div>
+
+        <div class="field full">
+          <label>Alasan / Keterangan Perubahan (Opsional)</label>
+          <input class="input" name="change_reason" placeholder="Contoh: Bertambah usia, sedang keluar kota, sudah tidak lagi menerima manfaat, dsb.">
+          <div class="help">Catatan alasan ini disimpan ke arsip riwayat audit dan tidak dapat dihapus pengguna umum.</div>
+        </div>
+      <% } %>
     </div>
   </div>
 

@@ -122,7 +122,12 @@
             <td><strong><%= p.gender||'-' %></strong></td>
             <td><strong style="color:#035388"><%= p.class_group||'-' %></strong></td>
             <td><span class="status <%= porsiClass %>"><%= porsiText %></span></td>
-            <td><a class="btn secondary" href="/pm/<%= p.id %>/edit">✏️ Edit</a></td>
+            <td>
+              <div style="display:inline-flex;gap:4px">
+                <a class="btn secondary" href="/pm/<%= p.id %>/edit" onclick="event.stopPropagation()">✏️ Edit</a>
+                <a class="btn gray" href="/portal/kpm/preview/<%= kpm.id %>#pm-management-section" onclick="event.stopPropagation()" title="Lihat Riwayat & Rekam Jejak">🕐 Riwayat</a>
+              </div>
+            </td>
           </tr>
         <% }) %>
         <tr id="showPmEmpty" style="display:none">

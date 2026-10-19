@@ -153,12 +153,12 @@
               <div class="pm-action-group">
                 <!-- 1. Tombol Edit -->
                 <% if(previewMode){ %>
-                  <a class="pm-btn pm-btn-edit" href="/pm/<%= x.id %>/edit" target="_blank" rel="noopener" title="Edit Data Master PM">
+                  <a class="pm-btn pm-btn-edit" href="/pm/<%= x.id %>/edit" onclick="event.stopPropagation()" title="Edit Data Master PM">
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     <span>Edit</span>
                   </a>
                 <% } else if(isAct && !isPending){ %>
-                  <a class="pm-btn pm-btn-edit" href="/portal/kpm/<%= portalToken %>/pm/<%= x.id %>/edit" title="Ajukan Perubahan Data PM">
+                  <a class="pm-btn pm-btn-edit" href="/portal/kpm/<%= portalToken %>/pm/<%= x.id %>/edit" onclick="event.stopPropagation()" title="Ajukan Perubahan Data PM">
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     <span>Edit</span>
                   </a>
@@ -169,27 +169,27 @@
                   <!-- AKSI OTORISASI INTERNAL KEPALA / ADMIN BGN -->
                   <% if(isPending){ %>
                     <button type="button" class="pm-btn pm-btn-approve" 
-                            onclick="openBgnApproveModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
+                            onclick="event.stopPropagation(); openBgnApproveModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
                             title="Setujui Penonaktifan (Otorisasi Kepala BGN)">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                       <span>Setujui</span>
                     </button>
                     <button type="button" class="pm-btn pm-btn-reject" 
-                            onclick="openBgnRejectModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
+                            onclick="event.stopPropagation(); openBgnRejectModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
                             title="Tolak / Batalkan Permohonan Hapus (Tetap Aktif)">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                       <span>Batalkan</span>
                     </button>
                   <% } else if(isAct){ %>
                     <button type="button" class="pm-btn pm-btn-delete" 
-                            onclick="openDeactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', true)" 
+                            onclick="event.stopPropagation(); openDeactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', true)" 
                             title="Nonaktifkan PM langsung ke arsip riwayat">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                       <span>Hapus</span>
                     </button>
                   <% } else { %>
                     <button type="button" class="pm-btn pm-btn-reactivate" 
-                            onclick="openReactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
+                            onclick="event.stopPropagation(); openReactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
                             title="Pulihkan / Kembalikan Data ke Aktif (Otorisasi Kepala BGN)">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                       <span>Pulihkan</span>
@@ -204,7 +204,7 @@
                     </span>
                   <% } else if(isAct){ %>
                     <button type="button" class="pm-btn pm-btn-delete" 
-                            onclick="openDeactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', false)" 
+                            onclick="event.stopPropagation(); openDeactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', false)" 
                             title="Ajukan Penonaktifan PM ke Arsip Riwayat">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                       <span>Hapus</span>
@@ -219,7 +219,7 @@
 
                 <!-- 3. Tombol Riwayat Rekam Jejak (Tersambung ke Riwayat BGN) -->
                 <button type="button" class="pm-btn pm-btn-history" 
-                        onclick="openHistoryModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', <%= isAct ? 1 : 0 %>, '<%= x.approval_status || (isAct ? 'AKTIF' : 'NONAKTIF_DISETUJUI') %>')" 
+                        onclick="event.stopPropagation(); openHistoryModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', <%= isAct ? 1 : 0 %>, '<%= x.approval_status || (isAct ? 'AKTIF' : 'NONAKTIF_DISETUJUI') %>', '<%= (x.class_group || '').replace(/'/g, "\\'") %>')" 
                         title="Lihat Riwayat & Rekam Jejak Otorisasi BGN">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                   <span>Riwayat</span>
@@ -276,10 +276,18 @@
         </div>
 
         <div class="pm-form-field">
+          <label for="deactEffectiveFrom">Tanggal Efektif Perubahan <span style="color:#d92d20">*</span></label>
+          <input type="date" id="deactEffectiveFrom" name="effective_from" class="pm-modal-input" value="<%= new Date().toISOString().slice(0,10) %>" required>
+          <small style="color:#64748b;font-size:11.5px;margin-top:3px;display:block">Tanggal mulai berlakunya perubahan status ini ke dalam arsip riwayat resmi.</small>
+        </div>
+
+        <div class="pm-form-field">
           <label for="deactReasonSelect">Pilih Alasan Penonaktifan <span style="color:#d92d20">*</span></label>
           <select id="deactReasonSelect" name="reason" class="pm-modal-select" required>
             <option value="">— Pilih Alasan Resmi —</option>
             <% if(isPosyandu){ %>
+              <option value="Sudah tidak lagi menerima manfaat (Bukan lagi kategori penerima manfaat)">Sudah tidak lagi menerima manfaat (Bukan lagi kategori penerima manfaat)</option>
+              <option value="Sedang keluar kota / sementara tidak mengambil manfaat">Sedang keluar kota / sementara tidak mengambil manfaat</option>
               <option value="Melewati Batas Usia Balita (> 2 Tahun / > 5 Tahun)">Melewati Batas Usia Balita (> 2 Tahun / > 5 Tahun)</option>
               <option value="Ibu Sudah Melahirkan / Selesai Masa Menyusui">Ibu Sudah Melahirkan / Selesai Masa Menyusui</option>
               <option value="Pindah Domisili / Pindah Alamat">Pindah Domisili / Pindah Alamat</option>
@@ -287,6 +295,8 @@
               <option value="Koreksi / Data Duplikat">Koreksi / Data Duplikat</option>
               <option value="Lainnya">Lainnya</option>
             <% } else { %>
+              <option value="Sudah tidak lagi menerima manfaat (Bukan lagi kategori penerima manfaat)">Sudah tidak lagi menerima manfaat (Bukan lagi kategori penerima manfaat)</option>
+              <option value="Sedang keluar kota / sementara tidak mengambil manfaat">Sedang keluar kota / sementara tidak mengambil manfaat</option>
               <option value="Lulus Sekolah">Lulus Sekolah</option>
               <option value="Pindah Sekolah / Mutasi">Pindah Sekolah / Mutasi</option>
               <option value="Mengundurkan Diri">Mengundurkan Diri</option>
@@ -298,9 +308,9 @@
           </select>
         </div>
 
-        <div class="pm-form-field" id="deactCustomField" style="display:none">
-          <label for="deactCustomNote">Keterangan Tambahan</label>
-          <input type="text" id="deactCustomNote" class="pm-modal-input" placeholder="Tuliskan keterangan detail alasan...">
+        <div class="pm-form-field">
+          <label for="deactCustomNote">Keterangan / Catatan Tambahan Petugas (Opsional)</label>
+          <input type="text" id="deactCustomNote" name="custom_note" class="pm-modal-input" placeholder="Contoh: Sedang ke luar kota selama beberapa hari, atau keterangan lainnya...">
         </div>
       </div>
 
@@ -455,22 +465,28 @@
     <div class="pm-modal-body">
       <!-- Ringkasan Identitas PM & Status Otorisasi -->
       <div class="pm-history-profile-card">
-        <div>
-          <strong id="histProfileName" class="pm-hist-name">-</strong>
-          <div class="pm-hist-tags">
-            <span id="histProfileNik" class="pm-hist-nik">NIK: -</span>
-            <span id="histProfileCat" class="pm-cat-pill">-</span>
-            <span id="histProfileStatus" class="pm-badge-active">Aktif</span>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <strong id="histProfileName" class="pm-hist-name">-</strong>
+            <div class="pm-hist-tags">
+              <span id="histProfileNik" class="pm-hist-nik">NIK: -</span>
+              <span id="histProfileCat" class="pm-cat-pill">-</span>
+              <span id="histProfileSubgroup" class="pm-cat-pill" style="background:#e0f2fe;color:#0369a1;border-color:#bae6fd">-</span>
+              <span id="histProfileStatus" class="pm-badge-active">Aktif</span>
+            </div>
+          </div>
+          <div>
+            <span id="histLastUpdateBadge" class="pm-last-update-tag">📅 Update Terakhir: -</span>
           </div>
         </div>
       </div>
 
-      <!-- Banner Governance Note -->
-      <div class="pm-governance-banner">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#007a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <div>
-          <strong>Tata Kelola Terpadu Badan Gizi Nasional:</strong>
-          <span>Seluruh persetujuan, pembatalan, dan pemulihan data diawasi oleh Kepala / Admin BGN guna menjamin akuntabilitas penyaluran porsi.</span>
+      <!-- Banner Governance Note & Hak Akses Kepala BGN vs Pengguna Umum -->
+      <div id="histGovernanceBanner" class="pm-governance-banner">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#007a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <div id="histGovernanceContent">
+          <strong>Tata Kelola & Keamanan Data Terpadu BGN:</strong>
+          <span>Seluruh riwayat perubahan dilindungi oleh sistem audit BGN dan tidak dapat dihapus oleh pengguna umum.</span>
         </div>
       </div>
 
@@ -668,6 +684,30 @@
 .pm-timeline-date{font-size:11px;color:#64748b}
 .pm-timeline-desc{font-size:12.5px;color:#334155;line-height:1.45;margin:0}
 .pm-timeline-actor{font-size:11px;color:#94a3b8;margin-top:5px;display:block}
+.pm-last-update-tag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:#f1f5f9;border:1px solid #cbd5e1;font-size:11.5px;font-weight:700;color:#1e293b}
+.pm-period-status-box{padding:10px 12px;border-radius:9px;margin-top:8px;font-size:12px;line-height:1.45}
+.pm-period-status-box.success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534}
+.pm-period-status-box.info{background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1}
+.pm-period-status-box strong{display:block;font-size:12px;margin-bottom:2px}
+.pm-diff-toggle-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:6px;background:#f8fafc;border:1px solid #cbd5e1;color:#2563eb;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:8px;transition:.15s}
+.pm-diff-toggle-btn:hover{background:#eff6ff;border-color:#93c5fd}
+.pm-diff-box{margin-top:8px;padding:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11.5px}
+.pm-diff-table{width:100%;border-collapse:collapse;margin-top:4px}
+.pm-diff-table th{text-align:left;padding:5px 8px;font-size:10.5px;font-weight:800;color:#64748b;text-transform:uppercase;border-bottom:1px solid #e2e8f0;background:#f1f5f9}
+.pm-diff-table td{padding:5px 8px;border-bottom:1px solid #f1f5f9;font-size:11.5px;vertical-align:middle}
+.pm-diff-table td.val-old{color:#dc2626;text-decoration:line-through}
+.pm-diff-table td.val-new{color:#15803d;font-weight:700}
+
+/* Monthly Grouping for Audit History Timeline */
+.pm-month-card{margin-bottom:14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.03)}
+.pm-month-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.pm-month-title{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;color:#0f172a}
+.pm-month-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px}
+.pm-month-badge.has-changes{background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd}
+.pm-month-badge.stable{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.pm-month-badge.register{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.pm-month-body{padding:12px 14px;display:flex;flex-direction:column;gap:12px}
+.pm-month-empty-text{font-size:12px;color:#166534;line-height:1.45}
 
 /* Quick BGN Action Panel inside Modal */
 .pm-history-bgn-actions{display:flex;align-items:center;gap:8px;margin-right:auto}
@@ -1065,16 +1105,50 @@
   var histProfileName = document.getElementById('histProfileName');
   var histProfileNik = document.getElementById('histProfileNik');
   var histProfileCat = document.getElementById('histProfileCat');
+  var histProfileSubgroup = document.getElementById('histProfileSubgroup');
   var histProfileStatus = document.getElementById('histProfileStatus');
+  var histLastUpdateBadge = document.getElementById('histLastUpdateBadge');
+  var histGovernanceBanner = document.getElementById('histGovernanceBanner');
   var histLoading = document.getElementById('pmHistoryLoading');
   var histTimeline = document.getElementById('pmHistoryTimeline');
   var histEmpty = document.getElementById('pmHistoryEmpty');
   var histFoot = document.getElementById('pmHistoryModalFoot');
 
-  window.openHistoryModal = function(id, name, nik, cat, isAct, approvalStatus){
+  function fmtIdDate(dtStr){
+    if(!dtStr) return '-';
+    var d = new Date(dtStr);
+    if(isNaN(d.getTime())) return dtStr;
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function fmtShortDate(dtStr){
+    if(!dtStr) return '-';
+    var d = new Date(dtStr);
+    if(isNaN(d.getTime())) return dtStr;
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function getDayBefore(dtStr){
+    if(!dtStr) return '';
+    var d = new Date(dtStr);
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  window.togglePmDiff = function(diffId){
+    var el = document.getElementById(diffId);
+    if(el){
+      el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+
+  window.openHistoryModal = function(id, name, nik, cat, isAct, approvalStatus, subGroup){
     if(histProfileName) histProfileName.textContent = name || '-';
     if(histProfileNik) histProfileNik.textContent = 'NIK: ' + (nik || '-');
     if(histProfileCat) histProfileCat.textContent = (cat || '').replace(/_/g, ' ');
+    if(histProfileSubgroup) histProfileSubgroup.textContent = subGroup || '-';
+    if(histLastUpdateBadge) histLastUpdateBadge.textContent = '📅 Memuat update terakhir...';
+    
     if(histProfileStatus){
       if(approvalStatus === 'MENUNGGU_VERIFIKASI_BGN'){
         histProfileStatus.className = 'pm-badge-pending';
@@ -1093,12 +1167,10 @@
     if(histLoading) histLoading.style.display = 'flex';
     if(histModal) histModal.style.display = 'flex';
 
-    // Bersihkan foot actions
     if(histFoot){
       histFoot.innerHTML = '<button type="button" class="pm-modal-btn primary" onclick="closeHistoryModal()">Tutup</button>';
     }
 
-    // Endpoint terisolasi untuk KPM ini
     var historyUrl = isPreview ? 
       ('/portal/kpm/preview/' + kpmId + '/pm/' + id + '/history') : 
       ('/portal/kpm/' + token + '/pm/' + id + '/history');
@@ -1114,70 +1186,296 @@
         var pmData = data.pm || {};
         var isBgnAdmin = !!data.isBgnAdmin;
 
-        var items = [];
-
-        // 1. Rekam jejak pendaftaran awal
-        if(pmData.created_at){
-          items.push({
-            action: 'CREATE',
-            date: new Date(pmData.created_at).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' }),
-            title: 'Pendaftaran Pertama (Master PM)',
-            desc: 'Penerima manfaat terdaftar pertama kali di ruang privat KPM ' + (pmData.kpm_name || '') + '.',
-            actor: 'Sistem Master PM'
-          });
+        if(pmData.class_group && histProfileSubgroup){
+          histProfileSubgroup.textContent = pmData.class_group;
         }
 
-        // 2. Rekam jejak dari pm_change_history
-        historyList.forEach(function(h){
-          var actType = h.action || 'UPDATE';
-          var actTitle = actType === 'CREATE' ? 'Pendaftaran Pertama' :
-                         actType === 'DEACTIVATE' ? 'Penonaktifan / Pengajuan Hapus' :
-                         actType === 'REACTIVATE' ? 'Pengaktifan Kembali / Pemulihan Data' : 'Pembaruan Data Identitas';
-          var descText = h.reason ? h.reason : 'Perubahan data berhasil diverifikasi dan diterapkan ke Master PM.';
-          
-          items.push({
-            action: actType,
-            date: new Date(h.created_at || h.effective_from).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' }),
-            title: actTitle,
-            desc: descText,
-            actor: h.actor_name ? ('Oleh: ' + h.actor_name) : 'Oleh: Kader KPM'
-          });
+        // Tentukan Tanggal Update Terakhir
+        var latestUpdate = pmData.updated_at || pmData.created_at;
+        if(historyList.length){
+          var newestHist = historyList[0];
+          latestUpdate = newestHist.effective_from || newestHist.created_at || latestUpdate;
+        }
+        if(histLastUpdateBadge){
+          histLastUpdateBadge.textContent = '📅 Update Terakhir: ' + fmtIdDate(latestUpdate);
+        }
+
+        // Banner Hak Akses & Integritas Rekam Jejak
+        if(histGovernanceBanner){
+          if(isBgnAdmin){
+            histGovernanceBanner.style.background = '#f0fdf4';
+            histGovernanceBanner.style.borderColor = '#86efac';
+            histGovernanceBanner.innerHTML = 
+              '<span style="font-size:18px">👑</span>' +
+              '<div>' +
+                '<strong style="color:#15803d;font-size:12.5px">Kendali Penuh Kepala / Admin BGN</strong>' +
+                '<span style="display:block;color:#166534;font-size:11.5px;margin-top:2px;line-height:1.45">' +
+                  'Anda memiliki hak wewenang penuh atas riwayat ini (pengesahan permohonan, pembatalan, pemulihan data). Data riwayat dilindungi oleh sistem audit BGN dan tidak dapat dimanipulasi.' +
+                '</span>' +
+              '</div>';
+          } else {
+            histGovernanceBanner.style.background = '#fffbeb';
+            histGovernanceBanner.style.borderColor = '#fde68a';
+            histGovernanceBanner.innerHTML = 
+              '<span style="font-size:18px">🔒</span>' +
+              '<div>' +
+                '<strong style="color:#92400e;font-size:12.5px">Catatan Dilindungi · Tidak Dapat Dihapus oleh Pengguna Umum</strong>' +
+                '<span style="display:block;color:#b45309;font-size:11.5px;margin-top:2px;line-height:1.45">' +
+                  'Riwayat perubahan data ini tersimpan permanen dan <strong>tidak dapat dihapus</strong> oleh pengguna umum / kader. Seluruh kendali pengesahan dan pemulihan berada di bawah otoritas <strong>Kepala BGN</strong>.' +
+                '</span>' +
+              '</div>';
+          }
+        }
+
+        // 1. Helper Format Bulan & Tanggal
+        function getYM(dateStr){
+          if(!dateStr) return '';
+          var d = new Date(dateStr);
+          if(isNaN(d.getTime())) return '';
+          var y = d.getFullYear();
+          var m = String(d.getMonth() + 1).padStart(2, '0');
+          return y + '-' + m;
+        }
+
+        function getMonthName(ym){
+          if(!ym) return '-';
+          var parts = ym.split('-');
+          var y = parseInt(parts[0], 10);
+          var m = parseInt(parts[1], 10) - 1;
+          var d = new Date(y, m, 1);
+          return d.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+        }
+
+        var regDate = pmData.created_at ? new Date(pmData.created_at).toISOString().slice(0, 10) : '';
+        var regYM = getYM(regDate);
+
+        // Kumpulkan semua record perubahan dan urutkan dari terbaru ke terlama
+        var allEvents = historyList.slice().sort(function(a,b){
+          var da = new Date(a.effective_from || a.created_at || 0).getTime();
+          var db = new Date(b.effective_from || b.created_at || 0).getTime();
+          return db - da;
         });
 
-        // 3. Tambahan status saat ini jika menunggu verifikasi
-        if(pmData.approval_status === 'MENUNGGU_VERIFIKASI_BGN' && !items.some(function(x){ return x.desc && x.desc.indexOf('Menunggu Otorisasi') !== -1; })){
-          items.push({
-            action: 'DEACTIVATE',
-            date: pmData.deactivated_at ? new Date(pmData.deactivated_at).toLocaleString('id-ID', { dateStyle:'medium', timeStyle:'short' }) : 'Tercatat',
-            title: 'Permohonan Nonaktif dari Kader',
-            desc: 'Alasan: ' + (pmData.deactivation_reason || 'Diajukan') + ' · Menunggu Otorisasi Kepala BGN',
-            actor: 'Oleh: Kader KPM'
+        // Tentukan batas atas bulan (bulan saat ini atau bulan update terakhir)
+        var latestDateStr = new Date().toISOString().slice(0, 10);
+        if(allEvents.length){
+          var newestEventDate = allEvents[0].effective_from || allEvents[0].created_at;
+          if(newestEventDate && String(newestEventDate).slice(0, 10) > latestDateStr){
+            latestDateStr = String(newestEventDate).slice(0, 10);
+          }
+        }
+        var topYM = getYM(latestDateStr);
+
+        // Bangun rentang bulan dari bulan terkini mundur ke bulan pendaftaran
+        var monthsList = [];
+        if(topYM){
+          var curY = parseInt(topYM.split('-')[0], 10);
+          var curM = parseInt(topYM.split('-')[1], 10) - 1;
+          
+          var targetY = curY;
+          var targetM = curM;
+          if(regYM){
+            targetY = parseInt(regYM.split('-')[0], 10);
+            targetM = parseInt(regYM.split('-')[1], 10) - 1;
+          } else {
+            targetM = curM - 3;
+            if(targetM < 0){ targetM += 12; targetY--; }
+          }
+
+          var countSafety = 0;
+          while(countSafety < 12){
+            countSafety++;
+            var ymStr = curY + '-' + String(curM + 1).padStart(2, '0');
+            monthsList.push(ymStr);
+            if(curY === targetY && curM === targetM) break;
+            if(curY < targetY || (curY === targetY && curM < targetM)) break;
+            curM--;
+            if(curM < 0){ curM = 11; curY--; }
+          }
+        }
+
+        // Kelompokkan event ke dalam bulan masing-masing
+        var eventsByMonth = {};
+        allEvents.forEach(function(ev){
+          var evYM = getYM(ev.effective_from || ev.created_at);
+          if(!eventsByMonth[evYM]) eventsByMonth[evYM] = [];
+          eventsByMonth[evYM].push(ev);
+          if(monthsList.indexOf(evYM) === -1){
+            monthsList.push(evYM);
+          }
+        });
+
+        // Urutkan daftar bulan dari terbaru ke terlama
+        monthsList.sort(function(a,b){ return b.localeCompare(a); });
+
+        var html = '';
+
+        // Kasus Khusus: Jika sedang menunggu otorisasi penonaktifan dari BGN
+        if(pmData.approval_status === 'MENUNGGU_VERIFIKASI_BGN'){
+          html += '<div class="pm-month-card" style="border:1.5px solid #f59e0b;background:#fffdfa">' +
+                    '<div class="pm-month-header" style="background:#fef3c7;border-bottom:1px solid #fde68a">' +
+                      '<div class="pm-month-title" style="color:#92400e">' +
+                        '<span style="font-size:16px">⏳</span>' +
+                        '<span>Permohonan Penonaktifan Sedang Menunggu Otorisasi BGN</span>' +
+                      '</div>' +
+                      '<span class="pm-month-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a">Menunggu Otorisasi BGN</span>' +
+                    '</div>' +
+                    '<div class="pm-month-body">' +
+                      '<div class="pm-period-status-box" style="background:#fffbeb;border:1px solid #fde68a;color:#92400e">' +
+                        '<strong>Diajukan oleh Kader pada: ' + fmtIdDate(pmData.deactivated_at || new Date()) + '</strong>' +
+                        '<span><strong>Alasan yang diajukan:</strong> ' + (pmData.deactivation_reason || 'Diajukan penonaktifan.') + '</span>' +
+                        '<span style="display:block;margin-top:4px;font-size:11.5px;color:#b45309">Catatan ini memerlukan pengesahan resmi dari Kepala BGN sebelum data resmi dinonaktifkan.</span>' +
+                      '</div>' +
+                    '</div>' +
+                  '</div>';
+        }
+
+        // Kasus jika belum ada catatan perubahan sejak pendaftaran pertama (Data Stabil Murni)
+        if(!allEvents.length && pmData.approval_status !== 'MENUNGGU_VERIFIKASI_BGN'){
+          html += '<div class="pm-month-card" style="border:1px solid #86efac">' +
+                    '<div class="pm-month-header" style="background:#f0fdf4;border-bottom:1px solid #bbf7d0">' +
+                      '<div class="pm-month-title" style="color:#166534">' +
+                        '<span style="font-size:16px">📂</span>' +
+                        '<span>Bulan ' + getMonthName(topYM) + ' (Status Berjalan)</span>' +
+                      '</div>' +
+                      '<span class="pm-month-badge stable">✅ Data Stabil (0 Perubahan)</span>' +
+                    '</div>' +
+                    '<div class="pm-month-body">' +
+                      '<div class="pm-period-status-box success">' +
+                        '<strong>✅ Sejak tanggal pendaftaran (' + fmtIdDate(regDate) + ') hingga saat ini, tidak ada perubahan data apa pun.</strong>' +
+                        '<span>Penerima manfaat aktif menerima paket pemenuhan gizi secara normal sesuai data pendaftaran awal tanpa pernah ada mutasi atau kendala.</span>' +
+                      '</div>' +
+                      '<span class="pm-timeline-actor">Dicatat oleh Sistem Master PM · Ruang ' + (pmData.kpm_name || 'KPM') + '</span>' +
+                    '</div>' +
+                  '</div>';
+        } else {
+          // Render setiap bulan secara terstruktur
+          monthsList.forEach(function(ym){
+            var monthName = getMonthName(ym);
+            var mEvents = eventsByMonth[ym] || [];
+            var count = mEvents.length;
+            var isRegMonth = (ym === regYM);
+
+            html += '<div class="pm-month-card">' +
+                      '<div class="pm-month-header">' +
+                        '<div class="pm-month-title">' +
+                          '<span style="font-size:16px">📂</span>' +
+                          '<span>Bulan ' + monthName + '</span>' +
+                        '</div>';
+
+            if(count > 0){
+              html += '<span class="pm-month-badge has-changes">⚡ ' + count + ' Perubahan Tercatat</span>';
+            } else if(isRegMonth){
+              html += '<span class="pm-month-badge register">Pendaftaran Pertama</span>';
+            } else {
+              html += '<span class="pm-month-badge stable">✅ Data Stabil (0 Perubahan)</span>';
+            }
+
+            html +=   '</div>' +
+                      '<div class="pm-month-body">';
+
+            if(count > 0){
+              // Tampilkan setiap perubahan pada bulan ini berurutan per tanggal
+              mEvents.forEach(function(h, idx){
+                var curEff = h.effective_from ? String(h.effective_from).slice(0, 10) : String(h.created_at).slice(0, 10);
+                var actType = h.action || 'UPDATE';
+                var actTitle = actType === 'CREATE' ? 'Pendaftaran Pertama' :
+                               actType === 'DEACTIVATE' ? 'Penonaktifan Data' :
+                               actType === 'REACTIVATE' ? 'Pemulihan Data (Aktif Kembali)' : 'Pembaruan Data PM';
+                var dotCls = actType.toLowerCase();
+
+                // Perbandingan data sebelum vs sesudah
+                var bData = {};
+                var aData = {};
+                try{ if(h.before_data) bData = typeof h.before_data === 'string' ? JSON.parse(h.before_data) : h.before_data; }catch(e){}
+                try{ if(h.after_data) aData = typeof h.after_data === 'string' ? JSON.parse(h.after_data) : h.after_data; }catch(e){}
+
+                var diffRows = [];
+                if(bData.full_name && aData.full_name && bData.full_name !== aData.full_name){
+                  diffRows.push({ label: 'Nama Lengkap', oldVal: bData.full_name, newVal: aData.full_name });
+                }
+                if(bData.category && aData.category && bData.category !== aData.category){
+                  diffRows.push({ label: 'Kategori PM', oldVal: (bData.category||'').replace(/_/g, ' '), newVal: (aData.category||'').replace(/_/g, ' ') });
+                }
+                if(bData.class_group && aData.class_group && bData.class_group !== aData.class_group){
+                  diffRows.push({ label: 'Sub-Kelompok', oldVal: bData.class_group, newVal: aData.class_group });
+                }
+                if(bData.phone && aData.phone && bData.phone !== aData.phone){
+                  diffRows.push({ label: 'No. HP / WA', oldVal: bData.phone, newVal: aData.phone });
+                }
+                if(bData.active !== undefined && aData.active !== undefined && bData.active !== aData.active){
+                  diffRows.push({ label: 'Status Distribusi', oldVal: bData.active ? 'Aktif' : 'Nonaktif', newVal: aData.active ? 'Aktif' : 'Nonaktif' });
+                }
+
+                var diffId = 'pmDiffBox_' + (h.id || (ym + '_' + idx));
+
+                html += '<div class="pm-timeline-item">' +
+                          '<div class="pm-timeline-dot ' + dotCls + '"></div>' +
+                          '<div class="pm-timeline-card">' +
+                            '<div class="pm-timeline-header">' +
+                              '<span class="pm-timeline-action ' + dotCls + '">' + actTitle + '</span>' +
+                              '<span class="pm-timeline-date">📅 ' + fmtIdDate(curEff) + '</span>' +
+                            '</div>' +
+                            '<div class="pm-period-status-box info" style="margin-top:6px;margin-bottom:6px">' +
+                              '<strong>Tanggal Perubahan: ' + fmtIdDate(curEff) + '</strong>' +
+                              '<span><strong>Alasan Petugas:</strong> ' + (h.reason || 'Perubahan data diterapkan ke sistem.') + '</span>' +
+                            '</div>' +
+                            (h.actor_name ? '<span class="pm-timeline-actor">Dicatat oleh: ' + h.actor_name + '</span>' : '<span class="pm-timeline-actor">Dicatat oleh: Petugas KPM</span>');
+
+                if(diffRows.length){
+                  html += '<button type="button" class="pm-diff-toggle-btn" onclick="togglePmDiff(\'' + diffId + '\')">' +
+                            '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+                            '<span>Lihat Detail Perubahan (' + diffRows.length + ' Atribut)</span>' +
+                          '</button>' +
+                          '<div id="' + diffId + '" class="pm-diff-box" style="display:none">' +
+                            '<table class="pm-diff-table">' +
+                              '<thead><tr><th>Atribut</th><th>Sebelumnya</th><th>Diperbarui Menjadi</th></tr></thead>' +
+                              '<tbody>';
+                  diffRows.forEach(function(dr){
+                    html += '<tr>' +
+                              '<td><strong>' + dr.label + '</strong></td>' +
+                              '<td class="val-old">' + dr.oldVal + '</td>' +
+                              '<td class="val-new">' + dr.newVal + '</td>' +
+                            '</tr>';
+                  });
+                  html +=     '</tbody>' +
+                            '</table>' +
+                          '</div>';
+                }
+
+                html +=   '</div>' +
+                        '</div>';
+              });
+            } else {
+              // 0 perubahan di bulan ini
+              html += '<div class="pm-period-status-box success">' +
+                        '<strong>✅ Sepanjang bulan ini tidak ada perubahan data apa pun.</strong>' +
+                        '<span>Penerima manfaat aktif menerima paket gizi secara konsisten dan data berjalan stabil tanpa ada mutasi.</span>' +
+                      '</div>';
+            }
+
+            // Jika ini bulan pendaftaran awal, tampilkan event pendaftaran di bawahnya
+            if(isRegMonth && regDate){
+              html += '<div class="pm-timeline-item" style="margin-top:4px">' +
+                        '<div class="pm-timeline-dot create"></div>' +
+                        '<div class="pm-timeline-card" style="background:#f8fafc;border-color:#cbd5e1">' +
+                          '<div class="pm-timeline-header">' +
+                            '<span class="pm-timeline-action create">Pendaftaran Awal</span>' +
+                            '<span class="pm-timeline-date">📅 ' + fmtIdDate(regDate) + '</span>' +
+                          '</div>' +
+                          '<p class="pm-timeline-desc">Terdaftar pertama kali di Master KPM: <strong>' + (pmData.kpm_name || 'Posyandu Melati 01') + '</strong></p>' +
+                        '</div>' +
+                      '</div>';
+            }
+
+            html +=   '</div>' +
+                    '</div>'; // end pm-month-card
           });
         }
 
-        if(!items.length){
-          if(histEmpty) histEmpty.style.display = 'block';
-        } else {
-          var html = '';
-          items.forEach(function(it){
-            var cls = (it.action || 'update').toLowerCase();
-            html += '<div class="pm-timeline-item">' +
-                      '<div class="pm-timeline-dot ' + cls + '"></div>' +
-                      '<div class="pm-timeline-card">' +
-                        '<div class="pm-timeline-header">' +
-                          '<span class="pm-timeline-action ' + cls + '">' + it.title + '</span>' +
-                          '<span class="pm-timeline-date">' + it.date + '</span>' +
-                        '</div>' +
-                        '<p class="pm-timeline-desc">' + it.desc + '</p>' +
-                        (it.actor ? '<span class="pm-timeline-actor">' + it.actor + '</span>' : '') +
-                      '</div>' +
-                    '</div>';
-          });
-
-          if(histTimeline){
-            histTimeline.innerHTML = html;
-            histTimeline.style.display = 'flex';
-          }
+        if(histTimeline){
+          histTimeline.innerHTML = html;
+          histTimeline.style.display = 'flex';
         }
 
         // Quick Otorisasi Buttons di Footer Modal jika Admin/Kepala BGN

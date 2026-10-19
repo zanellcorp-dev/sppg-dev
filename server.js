@@ -494,6 +494,8 @@ async function migrate(){
     await pool.query("UPDATE pm SET class_group='Bayi 0–6 Bulan (ASI Eksklusif)' WHERE category='BUSUI' AND (class_group LIKE 'Bayi%' OR class_group LIKE 'Posyandu%' OR class_group IS NULL OR class_group='')");
   }catch(e){}
   await pool.query(`CREATE TABLE IF NOT EXISTS pm_change_history (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,pm_id INT UNSIGNED NOT NULL,effective_from DATE NOT NULL,action ENUM('CREATE','UPDATE','DEACTIVATE','REACTIVATE') NOT NULL,before_data JSON NULL,after_data JSON NULL,reason VARCHAR(255) NULL,actor_id INT UNSIGNED NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX idx_pm_hist(pm_id,effective_from,created_at),CONSTRAINT fk_pm_hist_pm FOREIGN KEY(pm_id) REFERENCES pm(id) ON DELETE RESTRICT,CONSTRAINT fk_pm_hist_user FOREIGN KEY(actor_id) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB`);
+  await ensureColumn('pm','updated_at','TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+  await ensureColumn('pm_change_history','reason','VARCHAR(500) NULL');
   await pool.query(`CREATE TABLE IF NOT EXISTS kpm_portal_tokens (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,kpm_id INT UNSIGNED NOT NULL,token_hash CHAR(64) NOT NULL UNIQUE,expires_at DATETIME NULL,active TINYINT(1) NOT NULL DEFAULT 1,last_used_at DATETIME NULL,created_by INT UNSIGNED NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX idx_kpm_portal_token_kpm(kpm_id,active),CONSTRAINT fk_kpm_portal_kpm FOREIGN KEY(kpm_id) REFERENCES kpm(id) ON DELETE CASCADE,CONSTRAINT fk_kpm_portal_user FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB`);
   await pool.query(`CREATE TABLE IF NOT EXISTS kpm_portal_statements (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,kpm_id INT UNSIGNED NOT NULL,statement_type VARCHAR(50) NOT NULL DEFAULT 'SURAT_PERNYATAAN',file_path VARCHAR(500) NOT NULL,original_name VARCHAR(255) NOT NULL,mime_type VARCHAR(100) NOT NULL,file_size BIGINT UNSIGNED NOT NULL DEFAULT 0,uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,uploaded_by_user INT UNSIGNED NULL,portal_token_id BIGINT UNSIGNED NULL,is_current TINYINT(1) NOT NULL DEFAULT 1,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX idx_kpm_statement_kpm(kpm_id,is_current,uploaded_at),CONSTRAINT fk_kpm_statement_kpm FOREIGN KEY(kpm_id) REFERENCES kpm(id) ON DELETE RESTRICT,CONSTRAINT fk_kpm_statement_user FOREIGN KEY(uploaded_by_user) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB`);
   await pool.query(`CREATE TABLE IF NOT EXISTS kpm_portal_profile_submissions (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,kpm_id INT UNSIGNED NOT NULL,status ENUM('DIAJUKAN','DITINJAU','DISETUJUI','DITOLAK','DITERAPKAN') NOT NULL DEFAULT 'DIAJUKAN',before_data LONGTEXT NULL,after_data LONGTEXT NOT NULL,submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,reviewed_by INT UNSIGNED NULL,reviewed_at DATETIME NULL,review_note TEXT NULL,applied_by INT UNSIGNED NULL,applied_at DATETIME NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,INDEX idx_kpm_profile_sub_kpm(kpm_id,status,created_at),CONSTRAINT fk_kpm_profile_sub_kpm FOREIGN KEY(kpm_id) REFERENCES kpm(id) ON DELETE RESTRICT,CONSTRAINT fk_kpm_profile_sub_reviewer FOREIGN KEY(reviewed_by) REFERENCES users(id) ON DELETE SET NULL,CONSTRAINT fk_kpm_profile_sub_applier FOREIGN KEY(applied_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB`);
@@ -1366,31 +1368,36 @@ app.post('/portal/kpm/preview/:kpmId([0-9]+)/pm/:id([0-9]+)/status',auth,require
   const decision=clean(req.body.decision)||clean(req.body.action_type);
   const [[old]]=await pool.query('SELECT * FROM pm WHERE id=? AND kpm_id=?',[pmId,kpmId]);
   if(!old)return res.sendStatus(404);
-  const reason=clean(req.body.reason)||old.deactivation_reason||'Otorisasi Kepala BGN';
+
+  const effectiveFrom=clean(req.body.effective_from)||new Date().toISOString().slice(0,10);
+  let reason=clean(req.body.reason)||old.deactivation_reason||'Otorisasi Kepala BGN';
+  if(req.body.custom_note && clean(req.body.custom_note)){
+    reason = reason + (reason ? ' — ' : '') + clean(req.body.custom_note);
+  }
 
   if(decision==='APPROVE_DEACTIVATE'||decision==='APPROVE'){
     // Kepala BGN mengesahkan penonaktifan
-    await pool.query('UPDATE pm SET active=0,deactivated_at=?,deactivation_reason=?,approval_status=? WHERE id=?',[old.deactivated_at||new Date(),reason,'NONAKTIF_DISETUJUI',pmId]);
-    try{await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,new Date().toISOString().slice(0,10),'DEACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:0,approval_status:'NONAKTIF_DISETUJUI'}),'Penonaktifan disetujui & disahkan oleh Kepala BGN: '+reason,req.session.user.id]);}catch(e){console.error('[PM HIST ERROR]',e.message);}
-    await log(req,'Setujui Nonaktif PM','PM',pmId,reason,old,{active:0,approval_status:'NONAKTIF_DISETUJUI'});
+    await pool.query('UPDATE pm SET active=0,deactivated_at=?,deactivation_reason=?,approval_status=?,updated_at=NOW() WHERE id=?',[old.deactivated_at||new Date(),reason,'NONAKTIF_DISETUJUI',pmId]);
+    try{await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,effectiveFrom,'DEACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:0,approval_status:'NONAKTIF_DISETUJUI'}),'Penonaktifan disetujui & disahkan oleh Kepala BGN: '+reason,req.session.user.id]);}catch(e){console.error('[PM HIST ERROR]',e.message);}
+    await log(req,'Setujui Nonaktif PM','PM',pmId,reason,old,{active:0,approval_status:'NONAKTIF_DISETUJUI',effective_from:effectiveFrom});
     flash(req,'success','Penonaktifan penerima manfaat berhasil disahkan oleh Kepala BGN.');
   } else if(decision==='REJECT_DEACTIVATE'||decision==='REJECT'||decision==='CANCEL'){
     // Kepala BGN menolak / membatalkan permohonan penonaktifan
-    await pool.query('UPDATE pm SET active=1,deactivated_at=NULL,deactivation_reason=NULL,approval_status=? WHERE id=?',['AKTIF',pmId]);
-    try{await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,new Date().toISOString().slice(0,10),'REACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:1,approval_status:'AKTIF'}),'Permohonan nonaktif dibatalkan/ditolak oleh Kepala BGN. Data tetap aktif.',req.session.user.id]);}catch(e){console.error('[PM HIST ERROR]',e.message);}
-    await log(req,'Tolak Permohonan Nonaktif PM','PM',pmId,reason,old,{active:1,approval_status:'AKTIF'});
+    await pool.query('UPDATE pm SET active=1,deactivated_at=NULL,deactivation_reason=NULL,approval_status=?,updated_at=NOW() WHERE id=?',['AKTIF',pmId]);
+    try{await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,effectiveFrom,'REACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:1,approval_status:'AKTIF'}),'Permohonan nonaktif dibatalkan/ditolak oleh Kepala BGN. Data tetap aktif: '+reason,req.session.user.id]);}catch(e){console.error('[PM HIST ERROR]',e.message);}
+    await log(req,'Tolak Permohonan Nonaktif PM','PM',pmId,reason,old,{active:1,approval_status:'AKTIF',effective_from:effectiveFrom});
     flash(req,'success','Permohonan nonaktif dibatalkan oleh Kepala BGN. Penerima manfaat tetap aktif.');
   } else if(String(req.body.active)==='1'||decision==='RESTORE'){
     // Kepala BGN memulihkan kembali data yang nonaktif
-    await pool.query('UPDATE pm SET active=1,deactivated_at=NULL,deactivation_reason=NULL,approval_status=? WHERE id=?',['AKTIF',pmId]);
-    try{await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,new Date().toISOString().slice(0,10),'REACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:1,approval_status:'AKTIF'}),'Data penerima manfaat dipulihkan kembali oleh Kepala BGN: '+reason,req.session.user.id]);}catch(e){console.error('[PM HIST ERROR]',e.message);}
-    await log(req,'Pulihkan PM','PM',pmId,reason,old,{active:1,approval_status:'AKTIF'});
+    await pool.query('UPDATE pm SET active=1,deactivated_at=NULL,deactivation_reason=NULL,approval_status=?,updated_at=NOW() WHERE id=?',['AKTIF',pmId]);
+    try{await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,effectiveFrom,'REACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:1,approval_status:'AKTIF'}),'Data penerima manfaat dipulihkan kembali oleh Kepala BGN: '+reason,req.session.user.id]);}catch(e){console.error('[PM HIST ERROR]',e.message);}
+    await log(req,'Pulihkan PM','PM',pmId,reason,old,{active:1,approval_status:'AKTIF',effective_from:effectiveFrom});
     flash(req,'success','Penerima manfaat berhasil dipulihkan kembali menjadi Aktif oleh Kepala BGN.');
   } else {
     // Kepala BGN langsung menonaktifkan
-    await pool.query('UPDATE pm SET active=0,deactivated_at=?,deactivation_reason=?,approval_status=? WHERE id=?',[new Date(),reason,'NONAKTIF_DISETUJUI',pmId]);
-    try{await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,new Date().toISOString().slice(0,10),'DEACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:0,approval_status:'NONAKTIF_DISETUJUI'}),'Dinonaktifkan langsung oleh Kepala BGN: '+reason,req.session.user.id]);}catch(e){console.error('[PM HIST ERROR]',e.message);}
-    await log(req,'Nonaktifkan PM','PM',pmId,reason,old,{active:0,approval_status:'NONAKTIF_DISETUJUI'});
+    await pool.query('UPDATE pm SET active=0,deactivated_at=?,deactivation_reason=?,approval_status=?,updated_at=NOW() WHERE id=?',[new Date(),reason,'NONAKTIF_DISETUJUI',pmId]);
+    try{await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,effectiveFrom,'DEACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:0,approval_status:'NONAKTIF_DISETUJUI'}),'Dinonaktifkan langsung oleh Kepala BGN: '+reason,req.session.user.id]);}catch(e){console.error('[PM HIST ERROR]',e.message);}
+    await log(req,'Nonaktifkan PM','PM',pmId,reason,old,{active:0,approval_status:'NONAKTIF_DISETUJUI',effective_from:effectiveFrom});
     flash(req,'success','Penerima manfaat berhasil dinonaktifkan dan tersimpan ke arsip riwayat.');
   }
   res.redirect(`/portal/kpm/preview/${kpmId}#pm-management-section`);
@@ -1409,13 +1416,18 @@ app.post('/portal/kpm/:token/pm/:id([0-9]+)/status',ar(async(req,res)=>{
     return res.status(403).send('Pengaktifan kembali data dari arsip hanya dapat disahkan oleh Kepala / Admin BGN.');
   }
 
-  const reason=clean(req.body.reason)||'Dinonaktifkan oleh Kader KPM';
+  const effectiveFrom=clean(req.body.effective_from)||new Date().toISOString().slice(0,10);
+  let reason=clean(req.body.reason)||'Dinonaktifkan oleh Kader KPM';
+  if(req.body.custom_note && clean(req.body.custom_note)){
+    reason = reason + (reason ? ' — ' : '') + clean(req.body.custom_note);
+  }
+
   // Simpan permohonan penonaktifan dengan status MENUNGGU_VERIFIKASI_BGN
-  await pool.query('UPDATE pm SET active=0,deactivated_at=?,deactivation_reason=?,approval_status=? WHERE id=?',[new Date(),reason,'MENUNGGU_VERIFIKASI_BGN',pmId]);
+  await pool.query('UPDATE pm SET active=0,deactivated_at=?,deactivation_reason=?,approval_status=?,updated_at=NOW() WHERE id=?',[new Date(),reason,'MENUNGGU_VERIFIKASI_BGN',pmId]);
   try{
-    await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,new Date().toISOString().slice(0,10),'DEACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:0,approval_status:'MENUNGGU_VERIFIKASI_BGN',deactivation_reason:reason}),reason+' (Diajukan oleh Kader KPM, Menunggu Otorisasi Kepala BGN)',null]);
+    await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,effectiveFrom,'DEACTIVATE',JSON.stringify(old),JSON.stringify({...old,active:0,approval_status:'MENUNGGU_VERIFIKASI_BGN',deactivation_reason:reason}),reason+' (Diajukan oleh Kader KPM, Menunggu Otorisasi Kepala BGN)',null]);
   }catch(e){console.error('[PM CHANGE HIST ERROR]',e.message);}
-  await logPortal(req,access,'Ajukan Nonaktif PM','PM',pmId,`Kader KPM mengajukan penonaktifan PM #${pmId}`,{reason});
+  await logPortal(req,access,'Ajukan Nonaktif PM','PM',pmId,`Kader KPM mengajukan penonaktifan PM #${pmId}`,{reason,effective_from:effectiveFrom});
   flash(req,'success','Permohonan penonaktifan berhasil diajukan dan dicatat di riwayat. Menunggu otorisasi Kepala BGN.');
   res.redirect(`/portal/kpm/${raw}#pm-management-section`);
 }));
@@ -1499,8 +1511,31 @@ app.get('/api/pm/:id([0-9]+)/history',ar(async(req,res)=>{
     submissions
   });
 }));
-app.post('/pm/:id',auth,requirePermission('kpm.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const b=req.body;const [[old]]=await pool.query('SELECT p.*,k.* FROM pm p JOIN kpm k ON k.id=p.kpm_id WHERE p.id=?',[req.params.id]);if(!old)return res.sendStatus(404);const v=validatePm(b,old);if(v.errors.length){flash(req,'error',v.errors[0]);return res.redirect('/pm/'+req.params.id+'/edit')}let cls=v.class_group;if(['SPS','PAUD','TK','RA','SMP','MTs','SMA','SMK','MA'].includes(old.education_level)&&b.category==='PESERTA_DIDIK')cls='Peserta Didik';await pool.query(`UPDATE pm SET full_name=?,nik=?,nisn=?,identity_number=?,category=?,gender=?,class_group=?,birth_date=?,phone=? WHERE id=?`,[clean(b.full_name),clean(b.nik)||null,clean(b.nisn)||null,clean(b.identity_number)||null,b.category,b.gender||null,cls,b.birth_date||null,clean(b.phone)||null,req.params.id]);await log(req,'Edit','PM',req.params.id,b.full_name,old,{...b,class_group:cls});flash(req,'success','Data PM diperbarui.');res.redirect('/kpm/'+old.kpm_id)}));
-app.put('/pm/:id',auth,requirePermission('kpm.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const b=req.body;const [[old]]=await pool.query('SELECT p.*,k.* FROM pm p JOIN kpm k ON k.id=p.kpm_id WHERE p.id=?',[req.params.id]);if(!old)return res.sendStatus(404);const v=validatePm(b,old);if(v.errors.length){flash(req,'error',v.errors[0]);return res.redirect('/pm/'+req.params.id+'/edit')}let cls=v.class_group;if(['SPS','PAUD','TK','RA','SMP','MTs','SMA','SMK','MA'].includes(old.education_level)&&b.category==='PESERTA_DIDIK')cls='Peserta Didik';await pool.query(`UPDATE pm SET full_name=?,nik=?,nisn=?,identity_number=?,category=?,gender=?,class_group=?,birth_date=?,phone=? WHERE id=?`,[clean(b.full_name),clean(b.nik)||null,clean(b.nisn)||null,clean(b.identity_number)||null,b.category,b.gender||null,cls,b.birth_date||null,clean(b.phone)||null,req.params.id]);await log(req,'Edit','PM',req.params.id,b.full_name,old,{...b,class_group:cls});flash(req,'success','Data PM diperbarui.');res.redirect('/kpm/'+old.kpm_id)}));
+const handleUpdatePm = async (req,res)=>{
+  if(!requireCsrf(req,res))return;
+  const b=req.body;
+  const [[old]]=await pool.query('SELECT p.*,k.name kpm_name,k.education_level,k.type FROM pm p JOIN kpm k ON k.id=p.kpm_id WHERE p.id=?',[req.params.id]);
+  if(!old)return res.sendStatus(404);
+  const v=validatePm(b,old);
+  if(v.errors.length){flash(req,'error',v.errors[0]);return res.redirect('/pm/'+req.params.id+'/edit')}
+  let cls=v.class_group;
+  if(['SPS','PAUD','TK','RA','SMP','MTs','SMA','SMK','MA'].includes(old.education_level)&&b.category==='PESERTA_DIDIK')cls='Peserta Didik';
+  const effectiveFrom=clean(b.effective_from)||new Date().toISOString().slice(0,10);
+  let changeReason=clean(b.change_reason)||clean(b.reason)||'Pembaruan data identitas penerima manfaat';
+  if(b.custom_note && clean(b.custom_note)){
+    changeReason = changeReason + ' — ' + clean(b.custom_note);
+  }
+  await pool.query(`UPDATE pm SET full_name=?,nik=?,nisn=?,identity_number=?,category=?,gender=?,class_group=?,birth_date=?,phone=?,updated_at=NOW() WHERE id=?`,[clean(b.full_name),clean(b.nik)||null,clean(b.nisn)||null,clean(b.identity_number)||null,b.category,b.gender||null,cls,b.birth_date||null,clean(b.phone)||null,req.params.id]);
+  const after={full_name:clean(b.full_name),nik:clean(b.nik)||null,nisn:clean(b.nisn)||null,category:b.category,gender:b.gender||null,class_group:cls,birth_date:b.birth_date||null,phone:clean(b.phone)||null,active:old.active};
+  try{
+    await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[req.params.id,effectiveFrom,'UPDATE',JSON.stringify(old),JSON.stringify(after),changeReason,req.session.user.id]);
+  }catch(e){console.error('[PM CHANGE HIST ERROR]',e.message);}
+  await log(req,'Edit','PM',req.params.id,b.full_name,old,{...after,change_reason:changeReason,effective_from:effectiveFrom});
+  flash(req,'success','Data PM diperbarui dan rekam jejak riwayat tanggal berhasil disimpan.');
+  res.redirect('/kpm/'+old.kpm_id);
+};
+app.post('/pm/:id',auth,requirePermission('kpm.manage'),ar(handleUpdatePm));
+app.put('/pm/:id',auth,requirePermission('kpm.manage'),ar(handleUpdatePm));
 
 app.post('/distribution/snapshot',auth,requirePermission('distribution.manage'),ar(async(req,res)=>{
   if(!requireCsrf(req,res))return;

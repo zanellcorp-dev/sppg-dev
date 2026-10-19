@@ -324,13 +324,18 @@
         }
       } catch (e) {}
 
-      // 2. Hubungkan delegasi klik universal untuk semua tombol kategori
+      // 2. Hubungkan delegasi klik universal HANYA untuk tombol tab/filter kategori resmi
       document.addEventListener('click', function(e) {
-        var btn = e.target.closest('[data-showcat], [data-cat], [data-pm-cat], .kpm-rekap-interactive, .show-pm-tab, .pm-tab-btn');
+        // Jangan tangkap jika klik terjadi di dalam kolom aksi, tombol aksi, modal, form, atau sel tabel
+        if (e.target.closest('.pm-action-group, .pm-btn, .pm-modal-card, .pm-modal-backdrop, td, th, form')) {
+          return;
+        }
+
+        var btn = e.target.closest('.show-pm-tab, .pm-tab-btn, .kpm-rekap-interactive, button[data-showcat], button[data-pm-cat]');
         if (!btn) return;
 
-        // Jangan tangkap jika ini adalah sub-filter pill atau tool cetak
-        if (btn.matches('.pm-show-subbtn, .pm-subcat-btn, [data-sub], .pm-tool-btn')) {
+        // Jangan tangkap jika ini adalah baris tabel (TR), sub-filter pill, atau tool cetak
+        if (btn.tagName === 'TR' || btn.matches('.pm-show-subbtn, .pm-subcat-btn, [data-sub], .pm-tool-btn')) {
           return;
         }
 
