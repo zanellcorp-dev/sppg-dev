@@ -831,7 +831,7 @@ function createMockPool(opts = {}) {
     }
 
     // KPM
-    if (lowerSql.includes('from kpm')) {
+    if (lowerSql.match(/\bfrom kpm\b/) && !lowerSql.includes('kpm_pm_') && !lowerSql.includes('kpm_portal_') && !lowerSql.includes('kpm_daily_') && !lowerSql.includes('kpm_status_')) {
       if (lowerSql.includes('where id=?')) {
         const id = Number(params[0]);
         return [tables.kpm.filter(k => k.id === id).map(k => ({
@@ -925,24 +925,118 @@ function createMockPool(opts = {}) {
       }
       return [tables.pm, []];
     }
-    if (lowerSql.startsWith('update pm set')) {
+    // PM updates
+    if (lowerSql.startsWith('update pm set') || lowerSql.startsWith('update pm\nset')) {
       const pmId = Number(params[params.length - 1]);
       const p = tables.pm.find(x => x.id === pmId);
       if (p) {
-        if (lowerSql.includes('approval_status=?')) {
-          const actIdx = lowerSql.indexOf('active=?');
-          if (actIdx !== -1) p.active = Number(params[0]);
-          p.deactivated_at = params[1] || null;
-          p.deactivation_reason = params[2] || null;
-          p.approval_status = params[3] || 'AKTIF';
-        } else if (lowerSql.includes('active=?')) {
-          p.active = Number(params[0]);
-          p.deactivated_at = params[1] || null;
-          p.deactivation_reason = params[2] || null;
-          p.approval_status = p.active ? 'AKTIF' : (p.approval_status || 'NONAKTIF_DISETUJUI');
+        if (lowerSql.includes('active=0') || lowerSql.includes('active = 0')) {
+          p.active = 0;
+          p.deactivated_at = params[0] instanceof Date ? params[0] : new Date();
+          p.deactivation_reason = params[1] || params[0] || 'Dinonaktifkan';
+          p.approval_status = params[2] || 'NONAKTIF_DISETUJUI';
+        } else if (lowerSql.includes('active=1') || lowerSql.includes('active = 1')) {
+          p.active = 1;
+          p.approval_status = 'AKTIF';
         }
+
+        if (lowerSql.includes('category=?') || lowerSql.includes('category = ?')) {
+          p.category = params[0];
+          p.class_group = params[1] || p.class_group;
+        }
+
+        if (lowerSql.includes('full_name=?') || lowerSql.includes('full_name = ?')) {
+          p.full_name = params[0];
+          p.nik = params[1] || p.nik;
+          p.gender = params[2] || p.gender;
+          p.class_group = params[3] || p.class_group;
+          p.category = params[4] || p.category;
+        }
+
+        p.updated_at = new Date();
       }
       return [{ affectedRows: 1 }, []];
+    }
+
+    // PM insert
+    if (lowerSql.startsWith('insert into pm ') || lowerSql.startsWith('insert into pm(')) {
+      const newId = ++autoId;
+      const kpm_id = Number(params[0]);
+      const full_name = params[1];
+      const nik = params[2] || null;
+      const nisn = params[3] || null;
+      const gender = params[4] || null;
+      const class_group = params[5] || null;
+      const category = params[6] || 'BALITA';
+      const active = 1;
+      const approval_status = params[7] || 'AKTIF';
+
+      const newPm = {
+        id: newId,
+        kpm_id,
+        full_name,
+        nik,
+        nisn,
+        gender,
+        class_group,
+        category,
+        active,
+        approval_status,
+        created_at: new Date(),
+        updated_at: new Date()
+      };
+      tables.pm.push(newPm);
+      return [{ insertId: newId, affectedRows: 1 }, []];
+    }
+
+    // kpm_daily_data
+    if (lowerSql.includes('from kpm_daily_data')) {
+      if (lowerSql.includes('where kpm_id=? and effective_from=?') || lowerSql.includes('where kpm_id=? and effective_from<=')) {
+        const kpmId = Number(params[0]);
+        const found = tables.kpm_daily_data.filter(d => d.kpm_id === kpmId);
+        return [found, []];
+      }
+      return [tables.kpm_daily_data, []];
+    }
+    if (lowerSql.startsWith('update kpm_daily_data')) {
+      const rowId = Number(params[params.length - 1]);
+      const row = tables.kpm_daily_data.find(x => x.id === rowId);
+      if (row) {
+        row.balita_male = Number(params[0] ?? row.balita_male);
+        row.balita_female = Number(params[1] ?? row.balita_female);
+        row.bumil = Number(params[2] ?? row.bumil);
+        row.busui = Number(params[3] ?? row.busui);
+        row.small_male = Number(params[4] ?? row.small_male);
+        row.small_female = Number(params[5] ?? row.small_female);
+        row.teacher_male = Number(params[6] ?? row.teacher_male);
+        row.teacher_female = Number(params[7] ?? row.teacher_female);
+        row.staff_male = Number(params[8] ?? row.staff_male);
+        row.staff_female = Number(params[9] ?? row.staff_female);
+        row.large_male = Number(params[10] ?? row.large_male);
+        row.large_female = Number(params[11] ?? row.large_female);
+      }
+      return [{ affectedRows: 1 }, []];
+    }
+    if (lowerSql.startsWith('insert into kpm_daily_data')) {
+      const newId = ++autoId;
+      tables.kpm_daily_data.push({
+        id: newId,
+        kpm_id: Number(params[0]),
+        effective_from: params[1],
+        balita_male: Number(params[2] || 0),
+        balita_female: Number(params[3] || 0),
+        bumil: Number(params[4] || 0),
+        busui: Number(params[5] || 0),
+        small_male: Number(params[6] || 0),
+        small_female: Number(params[7] || 0),
+        teacher_male: Number(params[8] || 0),
+        teacher_female: Number(params[9] || 0),
+        staff_male: Number(params[10] || 0),
+        staff_female: Number(params[11] || 0),
+        large_male: Number(params[12] || 0),
+        large_female: Number(params[13] || 0)
+      });
+      return [{ insertId: newId, affectedRows: 1 }, []];
     }
 
     // Menus
@@ -1020,8 +1114,54 @@ function createMockPool(opts = {}) {
     }
 
     // Submissions: kpm_pm_submissions
+    if (lowerSql.startsWith('insert into kpm_pm_submissions')) {
+      const newId = ++autoId;
+      const kpm_id = Number(params[0]);
+      const submission_type = params[1] || 'MANUAL';
+      const effective_from = params[2] || new Date().toISOString().slice(0, 10);
+      const status = params[3] || 'DRAFT';
+      const submitted_by = params[4] || null;
+      const review_note = params[5] || null;
+      tables.kpm_pm_submissions.unshift({
+        id: newId,
+        kpm_id,
+        submission_type,
+        effective_from,
+        status,
+        submitted_by,
+        reviewed_by: null,
+        reviewed_at: null,
+        review_note,
+        applied_at: null,
+        applied_by: null,
+        source_filename: null,
+        created_at: new Date()
+      });
+      return [{ insertId: newId, affectedRows: 1 }, []];
+    }
+
+    if (lowerSql.startsWith('update kpm_pm_submissions')) {
+      const subId = Number(params[params.length - 1]);
+      const s = tables.kpm_pm_submissions.find(x => x.id === subId);
+      if (s) {
+        if (lowerSql.includes('status=?')) {
+          s.status = params[0];
+          if (lowerSql.includes('reviewed_by=?')) {
+            s.reviewed_by = params[1];
+            s.reviewed_at = new Date();
+            s.review_note = params[2] || null;
+            if (params[3]) {
+              s.applied_by = params[3];
+              s.applied_at = new Date();
+            }
+          }
+        }
+      }
+      return [{ affectedRows: 1 }, []];
+    }
+
     if (lowerSql.includes('from kpm_pm_submissions')) {
-      if (lowerSql.includes('where id = ?') || lowerSql.includes('where id=?')) {
+      if (lowerSql.includes('where id = ?') || lowerSql.includes('where id=?') || lowerSql.includes('where s.id=?')) {
         const id = Number(params[0]);
         return [tables.kpm_pm_submissions.filter(s => s.id === id), []];
       }
@@ -1038,7 +1178,11 @@ function createMockPool(opts = {}) {
           reviewer_name: r ? r.name : null
         };
       });
-      if (lowerSql.includes('where s.status = ?')) {
+      if (lowerSql.includes('where kpm_id=?') || lowerSql.includes('where s.kpm_id=?')) {
+        const targetKpmId = Number(params[0]);
+        list = list.filter(s => Number(s.kpm_id) === targetKpmId);
+      }
+      if (lowerSql.includes('where s.status = ?') || lowerSql.includes('where status = ?')) {
         const st = String(params[0]);
         list = list.filter(s => s.status === st);
       }
@@ -1046,6 +1190,46 @@ function createMockPool(opts = {}) {
     }
 
     // Submissions rows: kpm_pm_submission_rows
+    if (lowerSql.startsWith('insert into kpm_pm_submission_rows')) {
+      const newId = ++autoId;
+      const submission_id = Number(params[0]);
+      const row_no = Number(params[1]);
+      const pm_id = params[2] ? Number(params[2]) : null;
+      const full_name = params[3];
+      const nik = params[4] || null;
+      const nisn = params[5] || null;
+      const gender = params[6] || null;
+      const class_group = params[7] || null;
+      const category = params[8] || null;
+      const status = params[9] || 'VALID';
+      const validation_note = params[10] || null;
+      tables.kpm_pm_submission_rows.push({
+        id: newId,
+        submission_id,
+        row_no,
+        pm_id,
+        full_name,
+        nik,
+        nisn,
+        gender,
+        class_group,
+        category,
+        status,
+        validation_note,
+        created_at: new Date()
+      });
+      return [{ insertId: newId, affectedRows: 1 }, []];
+    }
+
+    if (lowerSql.startsWith('update kpm_pm_submission_rows')) {
+      const rowId = Number(params[params.length - 1]);
+      const r = tables.kpm_pm_submission_rows.find(x => x.id === rowId);
+      if (r && lowerSql.includes('pm_id=?')) {
+        r.pm_id = Number(params[0]);
+      }
+      return [{ affectedRows: 1 }, []];
+    }
+
     if (lowerSql.includes('from kpm_pm_submission_rows')) {
       if (lowerSql.includes('where submission_id = ?') || lowerSql.includes('where submission_id=?')) {
         const subId = Number(params[0]);

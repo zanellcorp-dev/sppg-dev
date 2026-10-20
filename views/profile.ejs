@@ -55,8 +55,7 @@
                     </strong></div>
                 <div><span>SKEP Penempatan</span><strong>
                         <%= profile.kasp_skep_number||'-' %>
-                            <%= profile.kasp_skep_date?'· '+new Date(profile.kasp_skep_date).toLocaleDateString('
-                                id-ID'):'' %>
+                            <%= profile.kasp_skep_date ? '· ' + new Date(profile.kasp_skep_date).toLocaleDateString('id-ID') : '' %>
                     </strong></div>
             </div>
         </section>

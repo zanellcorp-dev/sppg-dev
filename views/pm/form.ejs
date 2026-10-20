@@ -9,6 +9,7 @@
 <form method="post" action="<%= pm ? '/pm/' + pm.id : '/kpm/' + kpm.id + '/pm' %>" id="pmForm">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <% if(pm){ %><input type="hidden" name="_method" value="PUT"><% } %>
+  <input type="hidden" name="redirect" value="<%= typeof redirect !== 'undefined' ? redirect : '' %>">
   
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap">
@@ -101,7 +102,7 @@
 
   <div class="actions" style="margin-top:16px">
     <button class="btn" type="submit">💾 Simpan Data PM</button>
-    <a class="btn gray" href="/kpm/<%= kpm.id %>">Batal</a>
+    <a class="btn gray" href="<%= (typeof redirect !== 'undefined' && redirect === 'preview') ? ('/portal/kpm/preview/' + kpm.id + '#pm-management-section') : ('/kpm/' + kpm.id) %>">Batal</a>
   </div>
 </form>
 

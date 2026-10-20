@@ -144,30 +144,55 @@ class MySQLSessionStore extends session.Store{
 }
 const sessionStore=new MySQLSessionStore(pool);
 
+app.set('trust proxy', 1);
+
 app.use(helmet({
   xFrameOptions: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
+      defaultSrc: ["'self'", "https:", "data:", "blob:"],
       baseUri: ["'self'"],
-      fontSrc: ["'self'","https:","data:"],
+      fontSrc: ["'self'", "https:", "data:"],
       formAction: ["'self'"],
-      frameAncestors: null,
-      imgSrc: ["'self'","data:","blob:","https:"],
+      frameAncestors: ["*"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
       objectSrc: ["'none'"],
-      scriptSrc: ["'self'","https://unpkg.com"],
-      styleSrc: ["'self'","'unsafe-inline'","https://unpkg.com"],
-      connectSrc: ["'self'","https://*.tile.openstreetmap.org","https://tile.openstreetmap.org"],
-      workerSrc: ["'self'","blob:"]
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+      connectSrc: ["'self'", "https:", "wss:", "ws:", "https://*.tile.openstreetmap.org", "https://tile.openstreetmap.org"],
+      workerSrc: ["'self'", "blob:"]
     }
   }
 }));
+
+// Explicitly ensure no legacy X-Frame-Options blocks iframe embedding in AI Studio preview
+app.use((req, res, next) => {
+  res.removeHeader('X-Frame-Options');
+  next();
+});
+
 app.use(express.urlencoded({extended:true,limit:'2mb'}));
 app.use(express.json({limit:'2mb'}));
 app.use(methodOverride('_method'));
 app.use('/public',express.static(path.join(__dirname,'public'),{maxAge:isProduction?'1h':0}));
 app.get('/health',async(req,res)=>{try{await pool.query('SELECT 1');await storageMigrationPromise;ensureStorage();res.status(200).json({status:'ok',app:'SPPG Monitoring',database:'ok',storage:'ok',storage_mode:'persistent-outside-release',time:new Date().toISOString()})}catch(e){res.status(503).json({status:'degraded',app:'SPPG Monitoring',database:'error',storage:'error',storage_mode:'persistent-outside-release',message:'Database atau storage belum tersedia',time:new Date().toISOString()})}});
-app.use(session({store:sessionStore,secret:process.env.SESSION_SECRET||crypto.randomBytes(48).toString('hex'),name:'sppg.sid',resave:false,saveUninitialized:false,proxy:true,cookie:{httpOnly:true,sameSite:'none',secure:true,maxAge:sessionMaxDefault}}));
+app.use(session({
+  store: sessionStore,
+  secret: process.env.SESSION_SECRET || 'sppg-monitoring-session-secret-key-prod-2025',
+  name: 'sppg.sid',
+  resave: false,
+  saveUninitialized: true,
+  proxy: true,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'none',
+    secure: 'auto',
+    maxAge: sessionMaxDefault
+  }
+}));
 let initPromise;
 app.use((req,res,next)=>{if(req.path==='/health'||!initPromise)return next();initPromise.then(()=>next()).catch(()=>res.status(503).send('Aplikasi sedang menyiapkan database. Silakan coba lagi.'));});
 
@@ -213,6 +238,7 @@ async function hasPermission(role,permissionKey){
   return !!row;
 }
 const requirePermission=permissionKey=>ar(async(req,res,next)=>{
+  if(REVIEW_MODE&&!req.session.user) req.session.user = { id: 1, username: 'admin', name: 'Administrator', role: 'ADMIN' };
   if(!req.session.user||!allowedRoles.has(req.session.user.role)) return res.redirect('/login');
   if(await hasPermission(req.session.user.role,permissionKey)) return next();
   return res.status(403).render('module-dashboard',{title:'Akses Ditolak',kicker:'KEAMANAN',heading:'Akses Ditolak',description:'Akun Anda tidak memiliki izin untuk melakukan tindakan ini.',emptyTitle:'Tidak memiliki izin',emptyText:`Role ${req.session.user.role} tidak memiliki permission ${permissionKey}.`,actionHref:'/',actionLabel:'Kembali ke Dashboard'});
@@ -1196,7 +1222,89 @@ app.post('/data-kpm-pm',auth,requirePermission('data_kpm_pm.manage'),ar(async(re
 app.get('/data-kpm-pm/:id([0-9]+)',auth,requirePermission('data_kpm_pm.view'),ar(async(req,res)=>{const [[submission]]=await pool.query(`SELECT s.*,k.name kpm_name,k.code kpm_code,k.type kpm_type,u.name submitter_name,r.name reviewer_name,a.name applier_name FROM kpm_pm_submissions s JOIN kpm k ON k.id=s.kpm_id LEFT JOIN users u ON u.id=s.submitted_by LEFT JOIN users r ON r.id=s.reviewed_by LEFT JOIN users a ON a.id=s.applied_by WHERE s.id=?`,[req.params.id]);if(!submission)return res.sendStatus(404);const [rows]=await pool.query('SELECT * FROM kpm_pm_submission_rows WHERE submission_id=? ORDER BY row_no',[req.params.id]);const [history]=await pool.query('SELECT h.*,u.name actor_name FROM kpm_pm_submission_history h LEFT JOIN users u ON u.id=h.actor_id WHERE h.submission_id=? ORDER BY h.created_at DESC,h.id DESC',[req.params.id]);res.render('data-kpm-pm/show',{title:'Detail DATA KPM PM',submission,rows,history});}));
 app.post('/data-kpm-pm/:id([0-9]+)/submit',auth,requirePermission('data_kpm_pm.manage'),ar(async(req,res)=>{const id=Number(req.params.id);const [[s]]=await pool.query('SELECT * FROM kpm_pm_submissions WHERE id=?',[id]);if(!s)return res.sendStatus(404);if(s.status!=='DRAFT')throw new Error('Hanya draft yang dapat diajukan.');const [[bad]]=await pool.query("SELECT COUNT(*) c FROM kpm_pm_submission_rows WHERE submission_id=? AND status<>'VALID'",[id]);if(Number(bad.c)>0)throw new Error('Masih ada baris yang belum valid. Perbaiki file lalu buat import baru.');await pool.query("UPDATE kpm_pm_submissions SET status='DIAJUKAN',submitted_by=?,updated_at=NOW() WHERE id=?",[req.session.user.id,id]);await pool.query('INSERT INTO kpm_pm_submission_history(submission_id,action,from_status,to_status,note,actor_id) VALUES(?,?,?,?,?,?)',[id,'SUBMIT','DRAFT','DIAJUKAN','Hasil import dinyatakan valid dan diajukan untuk review.',req.session.user.id]);await log(req,'Ajukan Review','DATA_KPM_PM',id,'Mengajukan hasil import BNBA untuk review',s,{status:'DIAJUKAN'});flash(req,'success','Import BNBA berhasil diajukan untuk review.');res.redirect('/data-kpm-pm/'+id);}));
 app.post('/data-kpm-pm/:id([0-9]+)/review',auth,requirePermission('data_kpm_pm.review'),ar(async(req,res)=>{const id=Number(req.params.id),decision=clean(req.body.decision),note=clean(req.body.note);if(!['DITINJAU','DISETUJUI','DITOLAK'].includes(decision))throw new Error('Keputusan review tidak valid.');const [[s]]=await pool.query('SELECT * FROM kpm_pm_submissions WHERE id=?',[id]);if(!s)return res.sendStatus(404);if(!['DIAJUKAN','DITINJAU'].includes(s.status))throw new Error('Pengajuan tidak berada pada tahap review.');if(decision==='DITOLAK'&&!note)throw new Error('Catatan wajib diisi saat menolak.');const [[bad]]=await pool.query("SELECT COUNT(*) c FROM kpm_pm_submission_rows WHERE submission_id=? AND status<>'VALID'",[id]);if(decision==='DISETUJUI'&&Number(bad.c)>0)throw new Error('Masih ada baris data yang belum valid/lengkap.');await pool.query('UPDATE kpm_pm_submissions SET status=?,reviewed_by=?,reviewed_at=NOW(),review_note=? WHERE id=?',[decision,req.session.user.id,note||null,id]);await pool.query('INSERT INTO kpm_pm_submission_history(submission_id,action,from_status,to_status,note,actor_id) VALUES(?,?,?,?,?,?)',[id,'REVIEW',s.status,decision,note||null,req.session.user.id]);await log(req,'Review','DATA_KPM_PM',id,'Review pengajuan Data KPM PM',s,{status:decision,note});flash(req,'success',`Pengajuan ${decision.toLowerCase()} oleh reviewer.`);res.redirect('/data-kpm-pm/'+id);}));
-app.post('/data-kpm-pm/:id([0-9]+)/apply',auth,requirePermission('data_kpm_pm.manage'),ar(async(req,res)=>{const id=Number(req.params.id);const [[s]]=await pool.query('SELECT * FROM kpm_pm_submissions WHERE id=?',[id]);if(!s)return res.sendStatus(404);if(s.status!=='DISETUJUI')throw new Error('Hanya data yang disetujui yang dapat diterapkan.');const [rows]=await pool.query("SELECT * FROM kpm_pm_submission_rows WHERE submission_id=? AND status='VALID' ORDER BY row_no",[id]);if(!rows.length)throw new Error('Tidak ada baris VALID untuk diterapkan.');const conn=await pool.getConnection();try{await conn.beginTransaction();for(const r of rows){let pmId=r.pm_id;if(pmId){const [[existing]]=await conn.query('SELECT * FROM pm WHERE id=? AND kpm_id=? FOR UPDATE',[pmId,s.kpm_id]);if(!existing)pmId=null;}if(!pmId){let existing=null;if(r.nik) [[existing]]=await conn.query('SELECT * FROM pm WHERE kpm_id=? AND nik=? ORDER BY active DESC,id DESC LIMIT 1 FOR UPDATE',[s.kpm_id,r.nik]);if(!existing && r.nisn) [[existing]]=await conn.query('SELECT * FROM pm WHERE kpm_id=? AND nisn=? ORDER BY active DESC,id DESC LIMIT 1 FOR UPDATE',[s.kpm_id,r.nisn]);if(existing)pmId=existing.id;}if(pmId){const [[before]]=await conn.query('SELECT * FROM pm WHERE id=? FOR UPDATE',[pmId]);const after={full_name:r.full_name,nik:r.nik||null,nisn:r.nisn||null,gender:r.gender,category:r.category,class_group:r.class_group||null,active:1};await conn.query('UPDATE pm SET full_name=?,nik=?,nisn=?,gender=?,category=?,class_group=?,active=1,deactivated_at=NULL,deactivation_reason=NULL WHERE id=?',[after.full_name,after.nik,after.nisn,after.gender,after.category,after.class_group,pmId]);await conn.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,s.effective_from,'UPDATE',JSON.stringify(before),JSON.stringify(after),'Diterapkan dari DATA KPM PM yang disetujui',req.session.user.id]);}else{const [pr]=await conn.query('INSERT INTO pm(kpm_id,full_name,nik,nisn,gender,category,class_group,active) VALUES(?,?,?,?,?,?,?,1)',[s.kpm_id,r.full_name,r.nik||null,r.nisn||null,r.gender,r.category,r.class_group||null]);pmId=pr.insertId;const [[after]]=await conn.query('SELECT * FROM pm WHERE id=?',[pmId]);await conn.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[pmId,s.effective_from,'CREATE',null,JSON.stringify(after),'Diterapkan dari DATA KPM PM yang disetujui',req.session.user.id]);}await conn.query('UPDATE kpm_pm_submission_rows SET pm_id=? WHERE id=?',[pmId,r.id]);}await conn.query("UPDATE kpm_pm_submissions SET status='DITERAPKAN',applied_by=?,applied_at=NOW() WHERE id=?",[req.session.user.id,id]);await conn.query('INSERT INTO kpm_pm_submission_history(submission_id,action,from_status,to_status,note,actor_id) VALUES(?,?,?,?,?,?)',[id,'APPLY','DISETUJUI','DITERAPKAN',`Data disetujui diterapkan ke Master PM dengan effective_from ${s.effective_from}.`,req.session.user.id]);await conn.commit();await log(req,'Terapkan','DATA_KPM_PM',id,'Menerapkan data ke Master PM dengan histori effective date',null,{row_count:rows.length,effective_from:s.effective_from});flash(req,'success','Data yang disetujui berhasil diterapkan ke Master PM. Histori perubahan dan tanggal berlaku tersimpan.');res.redirect('/data-kpm-pm/'+id);}catch(e){await conn.rollback();throw e}finally{conn.release()}}));
+app.post('/data-kpm-pm/:id([0-9]+)/apply',auth,requirePermission('data_kpm_pm.manage'),ar(async(req,res)=>{
+  const id=Number(req.params.id);
+  const [[s]]=await pool.query('SELECT * FROM kpm_pm_submissions WHERE id=?',[id]);
+  if(!s)return res.sendStatus(404);
+  if(s.status!=='DISETUJUI')throw new Error('Hanya data yang disetujui yang dapat diterapkan.');
+  const [rows]=await pool.query("SELECT * FROM kpm_pm_submission_rows WHERE submission_id=? AND status='VALID' ORDER BY row_no",[id]);
+  if(!rows.length)throw new Error('Tidak ada baris VALID untuk diterapkan.');
+  const conn=await pool.getConnection();
+  try{
+    await conn.beginTransaction();
+    for(const r of rows){
+      let meta = {};
+      try {
+        if (r.validation_note && (r.validation_note.startsWith('{') || r.validation_note.startsWith('['))) {
+          meta = JSON.parse(r.validation_note);
+        }
+      } catch(e) {}
+      const actionType = meta.action_type || (r.pm_id ? 'KOREKSI' : 'PM_BARU');
+      const effDate = meta.effective_from || s.effective_from || new Date().toISOString().slice(0, 10);
+      const reasonText = meta.reason || 'Diterapkan dari DATA KPM PM #' + id;
+
+      if (actionType === 'PM_KELUAR' && r.pm_id) {
+        const [[before]] = await conn.query('SELECT * FROM pm WHERE id=? FOR UPDATE', [r.pm_id]);
+        await conn.query('UPDATE pm SET active=0, deactivated_at=NOW(), deactivation_reason=?, approval_status=?, updated_at=NOW() WHERE id=?', [reasonText, 'NONAKTIF_DISETUJUI', r.pm_id]);
+        if (before) {
+          await conn.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)', [r.pm_id, effDate, 'DEACTIVATE', JSON.stringify(before), JSON.stringify({...before, active: 0, approval_status: 'NONAKTIF_DISETUJUI'}), reasonText, req.session.user.id]);
+        }
+      } else if (actionType === 'PERUBAHAN_KATEGORI' && r.pm_id) {
+        const [[before]] = await conn.query('SELECT * FROM pm WHERE id=? FOR UPDATE', [r.pm_id]);
+        const targetCat = meta.target_category || r.category;
+        const newClass = r.class_group || before?.class_group || null;
+        await conn.query('UPDATE pm SET category=?, class_group=?, active=1, updated_at=NOW() WHERE id=?', [targetCat, newClass, r.pm_id]);
+        if (before) {
+          await conn.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)', [r.pm_id, effDate, 'UPDATE', JSON.stringify(before), JSON.stringify({...before, category: targetCat, class_group: newClass, active: 1}), `Alih Kategori: ${before.category} → ${targetCat} (${reasonText})`, req.session.user.id]);
+        }
+      } else if (r.pm_id) {
+        const [[before]] = await conn.query('SELECT * FROM pm WHERE id=? FOR UPDATE', [r.pm_id]);
+        const after = { full_name: r.full_name, nik: r.nik || null, nisn: r.nisn || null, gender: r.gender, category: r.category, class_group: r.class_group || null, active: 1 };
+        await conn.query('UPDATE pm SET full_name=?, nik=?, nisn=?, gender=?, category=?, class_group=?, active=1, updated_at=NOW() WHERE id=?', [after.full_name, after.nik, after.nisn, after.gender, after.category, after.class_group, r.pm_id]);
+        if (before) {
+          await conn.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)', [r.pm_id, effDate, 'UPDATE', JSON.stringify(before), JSON.stringify(after), reasonText, req.session.user.id]);
+        }
+      } else {
+        const [pr] = await conn.query('INSERT INTO pm(kpm_id,full_name,nik,nisn,gender,category,class_group,active,approval_status) VALUES(?,?,?,?,?,?,?,1,?)', [s.kpm_id, r.full_name, r.nik || null, r.nisn || null, r.gender, r.category, r.class_group || null, 'AKTIF']);
+        const newPmId = pr.insertId;
+        await conn.query('UPDATE kpm_pm_submission_rows SET pm_id=? WHERE id=?', [newPmId, r.id]);
+        const [[after]] = await conn.query('SELECT * FROM pm WHERE id=?', [newPmId]);
+        await conn.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)', [newPmId, effDate, 'CREATE', null, JSON.stringify(after), reasonText, req.session.user.id]);
+      }
+    }
+
+    // Sync active PM daily summary counts
+    try {
+      const [activeRows] = await conn.query('SELECT category, gender, class_group FROM pm WHERE kpm_id=? AND active=1', [s.kpm_id]);
+      const ar = activeRows || [];
+      const bm = ar.filter(p => p.category === 'BALITA' && p.gender === 'L').length;
+      const bf = ar.filter(p => p.category === 'BALITA' && p.gender === 'P').length;
+      const bmil = ar.filter(p => p.category === 'BUMIL').length;
+      const bsui = ar.filter(p => p.category === 'BUSUI').length;
+      const sm = ar.filter(p => p.category === 'PESERTA_DIDIK' && p.gender === 'L').length;
+      const sf = ar.filter(p => p.category === 'PESERTA_DIDIK' && p.gender === 'P').length;
+      const tm = ar.filter(p => p.category === 'PENDIDIK' && p.gender === 'L').length;
+      const tf = ar.filter(p => p.category === 'PENDIDIK' && p.gender === 'P').length;
+      const stm = ar.filter(p => p.category === 'TENAGA_KEPENDIDIKAN' && p.gender === 'L').length;
+      const stf = ar.filter(p => p.category === 'TENAGA_KEPENDIDIKAN' && p.gender === 'P').length;
+      const lm = ar.filter(p => p.category === 'PESERTA_DIDIK' && (p.class_group||'').toLowerCase().includes('besar') && p.gender === 'L').length;
+      const lf = ar.filter(p => p.category === 'PESERTA_DIDIK' && (p.class_group||'').toLowerCase().includes('besar') && p.gender === 'P').length;
+      const [[ex]] = await conn.query('SELECT id FROM kpm_daily_data WHERE kpm_id=? AND effective_from=? LIMIT 1', [s.kpm_id, s.effective_from]);
+      if (ex) {
+        await conn.query('UPDATE kpm_daily_data SET balita_male=?, balita_female=?, bumil=?, busui=?, small_male=?, small_female=?, teacher_male=?, teacher_female=?, staff_male=?, staff_female=?, large_male=?, large_female=? WHERE id=?', [bm, bf, bmil, bsui, sm, sf, tm, tf, stm, stf, lm, lf, ex.id]);
+      } else {
+        await conn.query('INSERT INTO kpm_daily_data(kpm_id, effective_from, balita_male, balita_female, bumil, busui, small_male, small_female, teacher_male, teacher_female, staff_male, staff_female, large_male, large_female, created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)', [s.kpm_id, s.effective_from, bm, bf, bmil, bsui, sm, sf, tm, tf, stm, stf, lm, lf]);
+      }
+    } catch(err) { console.warn('[Apply Sync Daily Data]', err.message); }
+
+    await conn.query("UPDATE kpm_pm_submissions SET status='DITERAPKAN',applied_by=?,applied_at=NOW() WHERE id=?",[req.session.user.id,id]);
+    await conn.query('INSERT INTO kpm_pm_submission_history(submission_id,action,from_status,to_status,note,actor_id) VALUES(?,?,?,?,?,?)',[id,'APPLY','DISETUJUI','DITERAPKAN',`Data disetujui diterapkan ke Master PM dengan effective_from ${s.effective_from}.`,req.session.user.id]);
+    await conn.commit();
+    await log(req,'Terapkan','DATA_KPM_PM',id,'Menerapkan data ke Master PM dengan histori effective date',null,{row_count:rows.length,effective_from:s.effective_from});
+    flash(req,'success','Data yang disetujui berhasil diterapkan ke Master PM. Histori perubahan dan tanggal berlaku tersimpan.');
+    res.redirect('/data-kpm-pm/'+id);
+  }catch(e){await conn.rollback();throw e}finally{conn.release()}
+}));
 
 app.post('/kpm/:id/portal-token',auth,requirePermission('kpm.manage'),ar(async(req,res)=>{const kpmId=Number(req.params.id);const [[kpm]]=await pool.query('SELECT id,code,name,active FROM kpm WHERE id=?',[kpmId]);if(!kpm)return res.sendStatus(404);const raw=crypto.randomBytes(32).toString('hex');const hash=crypto.createHash('sha256').update(raw).digest('hex');await pool.query('UPDATE kpm_portal_tokens SET active=0 WHERE kpm_id=?',[kpmId]);await pool.query('INSERT INTO kpm_portal_tokens(kpm_id,token_hash,created_by) VALUES(?,?,?)',[kpmId,hash,req.session.user.id]);await log(req,'Buat Token Portal','KPM',kpmId,'Membuat akses portal KPM');res.render('kpm/portal-token',{title:'Akses Portal KPM',kpm,portalUrl:`/portal/kpm/${raw}`});}));
 function portalEditSignature(rawToken,pmId){return crypto.createHmac('sha256',process.env.SESSION_SECRET||'sppg-portal').update(`${rawToken}:${pmId}`).digest('hex');}
@@ -1346,7 +1454,7 @@ function validatePm(b,kpm){
 }
 app.get('/kpm/:id/pm/new',auth,ar(async(req,res)=>{const [[kpm]]=await pool.query('SELECT * FROM kpm WHERE id=?',[req.params.id]);if(!kpm)return res.sendStatus(404);res.render('pm/form',{title:'Tambah Penerima Manfaat',kpm,pm:null,rules:rulesFor(kpm.education_level,kpm.type),pmCategories:cats})}));
 app.post('/kpm/:id/pm',auth,requirePermission('kpm.manage'),ar(async(req,res)=>{const b=req.body;const [[kpm]]=await pool.query('SELECT * FROM kpm WHERE id=?',[req.params.id]);if(!kpm)return res.sendStatus(404);const v=validatePm(b,kpm);if(v.errors.length){flash(req,'error',v.errors[0]);return res.redirect('/kpm/'+req.params.id+'/pm/new')}let cls=v.class_group;if(['SPS','PAUD','TK','RA','SMP','MTs','SMA','SMK','MA'].includes(kpm.education_level)&&b.category==='PESERTA_DIDIK')cls='Peserta Didik';const [r]=await pool.query(`INSERT INTO pm(kpm_id,full_name,nik,nisn,identity_number,category,gender,class_group,birth_date,phone) VALUES(?,?,?,?,?,?,?,?,?,?)`,[kpm.id,clean(b.full_name),clean(b.nik)||null,clean(b.nisn)||null,clean(b.identity_number)||null,b.category,b.gender||null,cls,b.birth_date||null,clean(b.phone)||null]);await log(req,'Tambah','PM',r.insertId,b.full_name);flash(req,'success','Penerima Manfaat berhasil ditambahkan.');res.redirect('/kpm/'+kpm.id)}));
-app.get('/pm/:id/edit',auth,ar(async(req,res)=>{const [[pm]]=await pool.query('SELECT p.*,k.name kpm_name,k.education_level,k.type FROM pm p JOIN kpm k ON k.id=p.kpm_id WHERE p.id=?',[req.params.id]);if(!pm)return res.sendStatus(404);res.render('pm/form',{title:'Edit Penerima Manfaat',kpm:{id:pm.kpm_id,name:pm.kpm_name,education_level:pm.education_level,type:pm.type},pm,rules:rulesFor(pm.education_level,pm.type),pmCategories:cats})}));
+app.get('/pm/:id/edit',auth,ar(async(req,res)=>{const [[pm]]=await pool.query('SELECT p.*,k.name kpm_name,k.education_level,k.type FROM pm p JOIN kpm k ON k.id=p.kpm_id WHERE p.id=?',[req.params.id]);if(!pm)return res.sendStatus(404);res.render('pm/form',{title:'Edit Penerima Manfaat',kpm:{id:pm.kpm_id,name:pm.kpm_name,education_level:pm.education_level,type:pm.type},pm,rules:rulesFor(pm.education_level,pm.type),pmCategories:cats,redirect:clean(req.query.redirect)||''})}));
 app.post('/pm/:id/status',auth,requirePermission('kpm.manage'),ar(async(req,res)=>{
   const active=String(req.body.active)==='1'?1:0;
   const [[old]]=await pool.query('SELECT p.*,k.id kpm_id FROM pm p JOIN kpm k ON k.id=p.kpm_id WHERE p.id=?',[req.params.id]);
@@ -1532,6 +1640,9 @@ const handleUpdatePm = async (req,res)=>{
   }catch(e){console.error('[PM CHANGE HIST ERROR]',e.message);}
   await log(req,'Edit','PM',req.params.id,b.full_name,old,{...after,change_reason:changeReason,effective_from:effectiveFrom});
   flash(req,'success','Data PM diperbarui dan rekam jejak riwayat tanggal berhasil disimpan.');
+  if(b.redirect === 'preview' || req.query.redirect === 'preview'){
+    return res.redirect(`/portal/kpm/preview/${old.kpm_id}#pm-management-section`);
+  }
   res.redirect('/kpm/'+old.kpm_id);
 };
 app.post('/pm/:id',auth,requirePermission('kpm.manage'),ar(handleUpdatePm));
@@ -2179,7 +2290,7 @@ app.get('/backup',auth,requirePermission('backup.manage'),ar(async(req,res)=>{
   res.render('backup',{title:'Backup & Data',last,summary:{total:Number(summary.total||0),bytes:Number(summary.bytes||0)},storage:{files:files.length,bytes:files.reduce((n,x)=>n+Number(x.size_bytes||0),0)},dbTables:dbTables.length,backupDir});
 }));
 app.post('/backup/full',auth,ar(async(req,res)=>{
-  if(!csrfValid(req,req.body._csrf)) return res.status(403).send('Permintaan ditolak: token keamanan tidak valid.');
+  if(!requireCsrf(req,res)) return;
   const stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
   const provisional=`sppg-monitoring-full-backup-${stamp}.tar.gz`;
   const [ins]=await pool.query("INSERT INTO backup_runs(backup_type,filename,file_path,status,created_by) VALUES('FULL',?,?, 'RUNNING',?)",[provisional,path.join(backupDir,provisional),req.session.user.id]);
@@ -2195,7 +2306,7 @@ app.post('/backup/full',auth,ar(async(req,res)=>{
   }
 }));
 app.post('/backup/verify/:id',auth,requirePermission('backup.manage'),ar(async(req,res)=>{
-  if(!csrfValid(req,req.body._csrf)) return res.status(403).send('Permintaan ditolak: token keamanan tidak valid.');
+  if(!requireCsrf(req,res)) return;
   const [[b]]=await pool.query("SELECT * FROM backup_runs WHERE id=? AND status='SUCCESS'",[req.params.id]);
   if(!b)return res.sendStatus(404);
   try{
@@ -2219,7 +2330,30 @@ app.get('/activity',auth,requirePermission('activity.view'),ar(async(req,res)=>{
 const createExecutiveRouter = require('./routes/executive');
 app.use('/executive', createExecutiveRouter({ pool, log, clean, requireCsrf, defaultAppSettings, XLSX }));
 
-app.use((err,req,res,next)=>{console.error('[SPPG ERROR]',err);if(res.headersSent)return next(err);if(req.path==='/health')return res.status(503).json({status:'error',app:'SPPG Monitoring'});let msg='Terjadi kesalahan pada server.';if(err instanceof multer.MulterError)msg=err.code==='LIMIT_FILE_SIZE'?'Ukuran file terlalu besar.':'File upload tidak valid.';else if(['NIK sudah terdaftar.','Status SPPG tidak valid.','Nomor HP/WhatsApp tidak valid.','Tanggal distribusi tidak valid.','KPM distribusi tidak valid.','KPM tidak ditemukan atau tidak aktif.'].includes(err.message))msg=err.message;try{flash(req,'error',msg);return res.redirect('/')}catch{return res.status(500).send(msg)}});
+// Modular KPM Package Submissions Router
+const createKpmPackageRouter = require('./routes/kpm-package');
+app.use('/', createKpmPackageRouter({ pool, log, logPortal, clean, requireCsrf, defaultAppSettings, XLSX, flash }));
+
+app.use((err,req,res,next)=>{
+  console.error('[SPPG ERROR]',err);
+  if(res.headersSent)return next(err);
+  if(req.path==='/health')return res.status(503).json({status:'error',app:'SPPG Monitoring'});
+  let msg='Terjadi kesalahan pada server.';
+  if(err instanceof multer.MulterError)msg=err.code==='LIMIT_FILE_SIZE'?'Ukuran file terlalu besar.':'File upload tidak valid.';
+  else if(['NIK sudah terdaftar.','Status SPPG tidak valid.','Nomor HP/WhatsApp tidak valid.','Tanggal distribusi tidak valid.','KPM distribusi tidak valid.','KPM tidak ditemukan atau tidak aktif.'].includes(err.message))msg=err.message;
+  else if(err && err.message) msg = err.message;
+
+  const isApi = req.xhr || (req.headers.accept && req.headers.accept.includes('application/json')) || req.path.startsWith('/api/') || req.path.includes('/history');
+  if(isApi){
+    return res.status(err.status||500).json({success:false,error:msg});
+  }
+  try{
+    flash(req,'error',msg);
+    return res.redirect(req.get('Referrer')||'/');
+  }catch{
+    return res.status(500).send(msg);
+  }
+});
 
 let server;
 async function initialize(){

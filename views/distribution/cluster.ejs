@@ -48,8 +48,7 @@
             <div class="dist-menu"><span>
                     <%= cluster.kpm_type==='POSYANDU' ?'Posyandu':'Satuan Pendidikan' %>
                 </span><strong>
-                    <%= cluster.kpm_type==='POSYANDU' ?(schedule.menu_pos_name||'Belum
-                        ditentukan'):(schedule.menu_sp_name||'Belum ditentukan') %>
+                    <%= cluster.kpm_type==='POSYANDU' ? (schedule.menu_pos_name || 'Belum ditentukan') : (schedule.menu_sp_name || 'Belum ditentukan') %>
                 </strong></div>
             <div class="dist-menu"><span>Kurir Distribusi</span><strong>
                     <%= cluster.driver_name||'Belum dipilih' %>

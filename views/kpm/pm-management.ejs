@@ -153,12 +153,18 @@
               <div class="pm-action-group">
                 <!-- 1. Tombol Edit -->
                 <% if(previewMode){ %>
-                  <a class="pm-btn pm-btn-edit" href="/pm/<%= x.id %>/edit" onclick="event.stopPropagation()" title="Edit Data Master PM">
+                  <a class="pm-btn pm-btn-edit" 
+                     href="/pm/<%= x.id %>/edit?redirect=preview" 
+                     onclick="event.stopPropagation()" 
+                     title="Edit Data Master PM">
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     <span>Edit</span>
                   </a>
                 <% } else if(isAct && !isPending){ %>
-                  <a class="pm-btn pm-btn-edit" href="/portal/kpm/<%= portalToken %>/pm/<%= x.id %>/edit" onclick="event.stopPropagation()" title="Ajukan Perubahan Data PM">
+                  <a class="pm-btn pm-btn-edit" 
+                     href="/portal/kpm/<%= portalToken %>/pm/<%= x.id %>/edit" 
+                     onclick="event.stopPropagation()" 
+                     title="Ajukan Perubahan Data PM">
                     <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     <span>Edit</span>
                   </a>
@@ -169,27 +175,46 @@
                   <!-- AKSI OTORISASI INTERNAL KEPALA / ADMIN BGN -->
                   <% if(isPending){ %>
                     <button type="button" class="pm-btn pm-btn-approve" 
-                            onclick="event.stopPropagation(); openBgnApproveModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
+                            data-action="bgn-approve"
+                            data-pm-id="<%= x.id %>"
+                            data-pm-name="<%= (x.full_name || '').replace(/"/g, '&quot;') %>"
+                            data-pm-reason="<%= (x.deactivation_reason || '').replace(/"/g, '&quot;') %>"
+                            onclick="window.handlePmAction(this, event)"
                             title="Setujui Penonaktifan (Otorisasi Kepala BGN)">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                       <span>Setujui</span>
                     </button>
                     <button type="button" class="pm-btn pm-btn-reject" 
-                            onclick="event.stopPropagation(); openBgnRejectModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
+                            data-action="bgn-reject"
+                            data-pm-id="<%= x.id %>"
+                            data-pm-name="<%= (x.full_name || '').replace(/"/g, '&quot;') %>"
+                            data-pm-reason="<%= (x.deactivation_reason || '').replace(/"/g, '&quot;') %>"
+                            onclick="window.handlePmAction(this, event)"
                             title="Tolak / Batalkan Permohonan Hapus (Tetap Aktif)">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                       <span>Batalkan</span>
                     </button>
                   <% } else if(isAct){ %>
                     <button type="button" class="pm-btn pm-btn-delete" 
-                            onclick="event.stopPropagation(); openDeactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', true)" 
+                            data-action="deactivate"
+                            data-pm-id="<%= x.id %>"
+                            data-pm-name="<%= (x.full_name || '').replace(/"/g, '&quot;') %>"
+                            data-pm-nik="<%= (x.nik || '-').replace(/"/g, '&quot;') %>"
+                            data-pm-cat="<%= x.category %>"
+                            data-is-admin="true"
+                            onclick="window.handlePmAction(this, event)"
                             title="Nonaktifkan PM langsung ke arsip riwayat">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                       <span>Hapus</span>
                     </button>
                   <% } else { %>
                     <button type="button" class="pm-btn pm-btn-reactivate" 
-                            onclick="event.stopPropagation(); openReactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= (x.deactivation_reason || '').replace(/'/g, "\\'") %>')" 
+                            data-action="reactivate"
+                            data-pm-id="<%= x.id %>"
+                            data-pm-name="<%= (x.full_name || '').replace(/"/g, '&quot;') %>"
+                            data-pm-nik="<%= (x.nik || '-').replace(/"/g, '&quot;') %>"
+                            data-pm-reason="<%= (x.deactivation_reason || '').replace(/"/g, '&quot;') %>"
+                            onclick="window.handlePmAction(this, event)"
                             title="Pulihkan / Kembalikan Data ke Aktif (Otorisasi Kepala BGN)">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
                       <span>Pulihkan</span>
@@ -204,7 +229,13 @@
                     </span>
                   <% } else if(isAct){ %>
                     <button type="button" class="pm-btn pm-btn-delete" 
-                            onclick="event.stopPropagation(); openDeactivateModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', false)" 
+                            data-action="deactivate"
+                            data-pm-id="<%= x.id %>"
+                            data-pm-name="<%= (x.full_name || '').replace(/"/g, '&quot;') %>"
+                            data-pm-nik="<%= (x.nik || '-').replace(/"/g, '&quot;') %>"
+                            data-pm-cat="<%= x.category %>"
+                            data-is-admin="false"
+                            onclick="window.handlePmAction(this, event)"
                             title="Ajukan Penonaktifan PM ke Arsip Riwayat">
                       <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                       <span>Hapus</span>
@@ -219,7 +250,15 @@
 
                 <!-- 3. Tombol Riwayat Rekam Jejak (Tersambung ke Riwayat BGN) -->
                 <button type="button" class="pm-btn pm-btn-history" 
-                        onclick="event.stopPropagation(); openHistoryModal(<%= x.id %>, '<%= (x.full_name || '').replace(/'/g, "\\'") %>', '<%= x.nik || '-' %>', '<%= x.category %>', <%= isAct ? 1 : 0 %>, '<%= x.approval_status || (isAct ? 'AKTIF' : 'NONAKTIF_DISETUJUI') %>', '<%= (x.class_group || '').replace(/'/g, "\\'") %>')" 
+                        data-action="history"
+                        data-pm-id="<%= x.id %>"
+                        data-pm-name="<%= (x.full_name || '').replace(/"/g, '&quot;') %>"
+                        data-pm-nik="<%= (x.nik || '-').replace(/"/g, '&quot;') %>"
+                        data-pm-cat="<%= x.category %>"
+                        data-pm-act="<%= isAct ? 1 : 0 %>"
+                        data-pm-status="<%= x.approval_status || (isAct ? 'AKTIF' : 'NONAKTIF_DISETUJUI') %>"
+                        data-pm-subgroup="<%= (x.class_group || '').replace(/"/g, '&quot;') %>"
+                        onclick="window.handlePmAction(this, event)"
                         title="Lihat Riwayat & Rekam Jejak Otorisasi BGN">
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                   <span>Riwayat</span>
@@ -595,8 +634,9 @@
 .pm-dot-gray{width:6px;height:6px;border-radius:50%;background:#94a3b8}
 
 /* Action Group */
-.pm-action-group{display:inline-flex;align-items:center;gap:5px;justify-content:center}
-.pm-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:7px;font-size:11px;font-weight:700;text-decoration:none;cursor:pointer;border:1px solid transparent;transition:.15s;line-height:1}
+.pm-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:7px;font-size:11px;font-weight:700;text-decoration:none;cursor:pointer;border:1px solid transparent;transition:all .15s ease;line-height:1;user-select:none;-webkit-user-select:none}
+.pm-btn *{pointer-events:none}
+.pm-btn:active{transform:scale(0.96)}
 .pm-btn svg{flex-shrink:0}
 .pm-btn-edit{background:#eef6ff;color:#1e40af;border-color:#bfdbfe}
 .pm-btn-edit:hover{background:#dbeafe;color:#1d4ed8}
@@ -1142,6 +1182,45 @@
     }
   };
 
+  // Centralized action handler for all PM table buttons (Anti-Bentrok)
+  window.handlePmAction = function(btn, event){
+    if(event){
+      if(typeof event.stopPropagation === 'function') event.stopPropagation();
+    }
+    if(!btn) return;
+
+    var action = btn.getAttribute('data-action');
+    var id = btn.getAttribute('data-pm-id');
+    var name = btn.getAttribute('data-pm-name') || '';
+    var nik = btn.getAttribute('data-pm-nik') || '-';
+    var cat = btn.getAttribute('data-pm-cat') || '';
+    var reason = btn.getAttribute('data-pm-reason') || '';
+    var isAdmin = btn.getAttribute('data-is-admin') === 'true';
+    var isAct = btn.getAttribute('data-pm-act') === '1';
+    var status = btn.getAttribute('data-pm-status') || '';
+    var subgroup = btn.getAttribute('data-pm-subgroup') || '';
+
+    if(action === 'history'){
+      openHistoryModal(id, name, nik, cat, isAct, status, subgroup);
+    } else if(action === 'deactivate'){
+      openDeactivateModal(id, name, nik, cat, isAdmin);
+    } else if(action === 'reactivate'){
+      openReactivateModal(id, name, nik, reason);
+    } else if(action === 'bgn-approve'){
+      openBgnApproveModal(id, name, reason);
+    } else if(action === 'bgn-reject'){
+      openBgnRejectModal(id, name, reason);
+    }
+  };
+
+  // Delegated click listener on document for maximum resilience
+  document.addEventListener('click', function(e){
+    var btn = e.target && e.target.closest ? e.target.closest('.pm-btn[data-action]') : null;
+    if(btn){
+      window.handlePmAction(btn, e);
+    }
+  });
+
   window.openHistoryModal = function(id, name, nik, cat, isAct, approvalStatus, subGroup){
     if(histProfileName) histProfileName.textContent = name || '-';
     if(histProfileNik) histProfileNik.textContent = 'NIK: ' + (nik || '-');
@@ -1171,7 +1250,7 @@
       histFoot.innerHTML = '<button type="button" class="pm-modal-btn primary" onclick="closeHistoryModal()">Tutup</button>';
     }
 
-    var historyUrl = isPreview ? 
+    var historyUrl = (isPreview || !token) ? 
       ('/portal/kpm/preview/' + kpmId + '/pm/' + id + '/history') : 
       ('/portal/kpm/' + token + '/pm/' + id + '/history');
 
@@ -1495,7 +1574,13 @@
       .catch(function(err){
         if(histLoading) histLoading.style.display = 'none';
         if(histEmpty){
-          histEmpty.innerHTML = '<strong style="color:#b91c1c">Gagal memuat histori</strong><small style="color:#64748b">' + err.message + '</small>';
+          histEmpty.innerHTML = 
+            '<div style="text-align:center;padding:24px 16px">' +
+              '<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+              '<strong style="display:block;color:#b91c1c;font-size:13.5px;margin-bottom:4px">Gagal Memuat Riwayat</strong>' +
+              '<span style="display:block;color:#64748b;font-size:12px;margin-bottom:14px;max-width:380px;margin-left:auto;margin-right:auto">' + (err.message || 'Koneksi ke server terputus atau data tidak ditemukan.') + '</span>' +
+              '<button type="button" class="pm-modal-btn secondary" style="display:inline-flex;margin:0 auto" onclick="openHistoryModal(' + id + ', \'' + (name||'').replace(/'/g, "\\'") + '\', \'' + (nik||'').replace(/'/g, "\\'") + '\', \'' + (cat||'') + '\', ' + (isAct?1:0) + ', \'' + (approvalStatus||'') + '\', \'' + (subGroup||'').replace(/'/g, "\\'") + '\')">🔄 Coba Lagi</button>' +
+            '</div>';
           histEmpty.style.display = 'block';
         }
       });

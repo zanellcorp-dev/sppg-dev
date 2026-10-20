@@ -70,13 +70,26 @@
                         <td>
                             <%= r.category %>
                         </td>
-                        <td><span class="status <%= r.status==='VALID'?'success':'error' %>">
-                                <%= r.status %>
+                        <td>
+                            <% 
+                              let meta = {};
+                              try {
+                                if (r.validation_note && (r.validation_note.startsWith('{') || r.validation_note.startsWith('['))) {
+                                  meta = JSON.parse(r.validation_note);
+                                }
+                              } catch(e) {}
+                              const act = meta.action_type || (r.pm_id ? 'KOREKSI' : (r.status === 'VALID' ? 'PM_BARU' : ''));
+                              let actLabel = act ? (act === 'PM_BARU' ? '👶 PM Baru' : act === 'PM_KELUAR' ? '🚪 PM Keluar' : act === 'KOREKSI' ? '✏️ Koreksi' : act === 'PERUBAHAN_KATEGORI' ? '🔄 Alih Kategori' : act) : '';
+                            %>
+                            <span class="status <%= r.status==='VALID'?'success':'error' %>">
+                                <%= actLabel ? actLabel + ' · ' : '' %><%= r.status %>
                             </span>
-                            <% if(r.validation_note){ %><br><small>
-                                    <%= r.validation_note %>
-                                </small>
-                                <% } %>
+                            <% if(meta.reason || (!meta.action_type && r.validation_note)){ %>
+                              <br><small><%= meta.reason || r.validation_note %></small>
+                            <% } %>
+                            <% if(meta.target_category){ %>
+                              <br><small style="color:#007a5e;font-weight:700">Tujuan: <%= meta.target_category %></small>
+                            <% } %>
                         </td>
                     </tr>
                     <% }) %>

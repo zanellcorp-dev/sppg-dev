@@ -36,6 +36,42 @@ module.exports = function createExecutiveRouter(deps) {
     }
   }
 
+  // Helper to synchronize active PM count into kpm_daily_data
+  async function syncKpmDailyData(conn, kpmId, effectiveDate) {
+    try {
+      const [activeRows] = await conn.query('SELECT category, gender, class_group FROM pm WHERE kpm_id=? AND active=1', [kpmId]);
+      const rows = activeRows || [];
+      const balita_male = rows.filter(p => p.category === 'BALITA' && p.gender === 'L').length;
+      const balita_female = rows.filter(p => p.category === 'BALITA' && p.gender === 'P').length;
+      const bumil = rows.filter(p => p.category === 'BUMIL').length;
+      const busui = rows.filter(p => p.category === 'BUSUI').length;
+      const small_male = rows.filter(p => p.category === 'PESERTA_DIDIK' && p.gender === 'L').length;
+      const small_female = rows.filter(p => p.category === 'PESERTA_DIDIK' && p.gender === 'P').length;
+      const teacher_male = rows.filter(p => p.category === 'PENDIDIK' && p.gender === 'L').length;
+      const teacher_female = rows.filter(p => p.category === 'PENDIDIK' && p.gender === 'P').length;
+      const staff_male = rows.filter(p => p.category === 'TENAGA_KEPENDIDIKAN' && p.gender === 'L').length;
+      const staff_female = rows.filter(p => p.category === 'TENAGA_KEPENDIDIKAN' && p.gender === 'P').length;
+      const large_female = rows.filter(p => p.category === 'PESERTA_DIDIK' && (p.class_group || '').toLowerCase().includes('besar') && p.gender === 'P').length;
+      const large_male = rows.filter(p => p.category === 'PESERTA_DIDIK' && (p.class_group || '').toLowerCase().includes('besar') && p.gender === 'L').length;
+
+      const eff = effectiveDate || new Date().toISOString().slice(0, 10);
+      const [[existing]] = await conn.query('SELECT id FROM kpm_daily_data WHERE kpm_id=? AND effective_from=? LIMIT 1', [kpmId, eff]);
+      if (existing) {
+        await conn.query(
+          'UPDATE kpm_daily_data SET balita_male=?, balita_female=?, bumil=?, busui=?, small_male=?, small_female=?, teacher_male=?, teacher_female=?, staff_male=?, staff_female=?, large_male=?, large_female=? WHERE id=?',
+          [balita_male, balita_female, bumil, busui, small_male, small_female, teacher_male, teacher_female, staff_male, staff_female, large_male, large_female, existing.id]
+        );
+      } else {
+        await conn.query(
+          'INSERT INTO kpm_daily_data(kpm_id, effective_from, balita_male, balita_female, bumil, busui, small_male, small_female, teacher_male, teacher_female, staff_male, staff_female, large_male, large_female, created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)',
+          [kpmId, eff, balita_male, balita_female, bumil, busui, small_male, small_female, teacher_male, teacher_female, staff_male, staff_female, large_male, large_female]
+        );
+      }
+    } catch (err) {
+      console.warn('[Sync KPM Daily Data]', err.message);
+    }
+  }
+
   // API: Get pending approval count for real-time notification badge
   router.get('/pending-count', ar(async (req, res) => {
     let pendingCount = 0;
@@ -148,8 +184,25 @@ module.exports = function createExecutiveRouter(deps) {
     // Attach row items to submissions for diff display
     for (const sub of submissions) {
       try {
-        const [subRows] = await pool.query('SELECT * FROM kpm_pm_submission_rows WHERE submission_id = ?', [sub.id]);
-        sub.items = subRows || [];
+        const [subRows] = await pool.query('SELECT * FROM kpm_pm_submission_rows WHERE submission_id = ? ORDER BY row_no', [sub.id]);
+        sub.items = (subRows || []).map(r => {
+          let meta = {};
+          try {
+            if (r.validation_note && (r.validation_note.startsWith('{') || r.validation_note.startsWith('['))) {
+              meta = JSON.parse(r.validation_note);
+            } else {
+              meta = { reason: r.validation_note };
+            }
+          } catch {
+            meta = { reason: r.validation_note };
+          }
+          return {
+            ...r,
+            meta,
+            action_type: meta.action_type || (r.pm_id ? 'KOREKSI' : 'PM_BARU'),
+            action_reason: meta.reason || r.validation_note || '-'
+          };
+        });
       } catch {
         sub.items = [];
       }
@@ -190,7 +243,7 @@ module.exports = function createExecutiveRouter(deps) {
       `, [
         decision === 'DISETUJUI' ? 'DISETUJUI' : 'DITOLAK',
         req.session.user.id,
-        note || 'Disetujui oleh Pimpinan/Administrator SPPG',
+        note || (decision === 'DISETUJUI' ? 'Disetujui dan disahkan oleh Pimpinan/Ka. SPPG' : 'Perlu perbaikan data'),
         decision === 'DISETUJUI' ? req.session.user.id : null,
         decision === 'DISETUJUI' ? new Date() : null,
         id
@@ -200,22 +253,120 @@ module.exports = function createExecutiveRouter(deps) {
       if (decision === 'DISETUJUI') {
         const [rows] = await conn.query('SELECT * FROM kpm_pm_submission_rows WHERE submission_id = ?', [id]);
         for (const item of rows) {
-          if (item.pm_id) {
-            // Update existing PM
+          let meta = {};
+          try {
+            if (item.validation_note && (item.validation_note.startsWith('{') || item.validation_note.startsWith('['))) {
+              meta = JSON.parse(item.validation_note);
+            }
+          } catch {}
+
+          const actionType = meta.action_type || (item.pm_id ? 'KOREKSI' : 'PM_BARU');
+          const effDate = meta.effective_from || sub.effective_from || new Date().toISOString().slice(0, 10);
+          const reasonText = meta.reason || item.validation_note || 'Diterapkan dari persetujuan pimpinan paket #' + id;
+
+          if (actionType === 'PM_KELUAR' && item.pm_id) {
+            // 1. Nonaktifkan PM dari distribusi operasional
+            const [[beforePm]] = await conn.query('SELECT * FROM pm WHERE id=? AND kpm_id=?', [item.pm_id, sub.kpm_id]);
             await conn.query(`
               UPDATE pm
-              SET full_name = ?, nik = ?, nisn = ?, gender = ?, class_group = ?, category = ?, active = 1
+              SET active = 0, deactivated_at = NOW(), deactivation_reason = ?, approval_status = 'NONAKTIF_DISETUJUI', updated_at = NOW()
               WHERE id = ? AND kpm_id = ?
-            `, [item.full_name, item.nik, item.nisn, item.gender, item.class_group, item.category, item.pm_id, sub.kpm_id]);
-          } else if (item.full_name) {
-            // Insert new PM
+            `, [reasonText, item.pm_id, sub.kpm_id]);
+
+            if (beforePm) {
+              await conn.query(
+                'INSERT INTO pm_change_history(pm_id, effective_from, action, before_data, after_data, reason, actor_id) VALUES(?,?,?,?,?,?,?)',
+                [
+                  item.pm_id,
+                  effDate,
+                  'DEACTIVATE',
+                  JSON.stringify(beforePm),
+                  JSON.stringify({ ...beforePm, active: 0, approval_status: 'NONAKTIF_DISETUJUI', deactivation_reason: reasonText }),
+                  `PM Keluar: ${reasonText} (Disahkan Ka. SPPG paket #${id})`,
+                  req.session.user.id
+                ]
+              );
+            }
+          } else if (actionType === 'PERUBAHAN_KATEGORI' && item.pm_id) {
+            // 2. Alih status kategori (contoh Bumil -> Busui)
+            const [[beforePm]] = await conn.query('SELECT * FROM pm WHERE id=? AND kpm_id=?', [item.pm_id, sub.kpm_id]);
+            const targetCat = meta.target_category || item.category;
+            const newClass = item.class_group || beforePm?.class_group || null;
+
             await conn.query(`
-              INSERT INTO pm (kpm_id, full_name, nik, nisn, gender, class_group, category, active)
-              VALUES (?, ?, ?, ?, ?, ?, ?, 1)
-            `, [sub.kpm_id, item.full_name, item.nik, item.nisn, item.gender, item.class_group, item.category]);
+              UPDATE pm
+              SET category = ?, class_group = ?, active = 1, updated_at = NOW()
+              WHERE id = ? AND kpm_id = ?
+            `, [targetCat, newClass, item.pm_id, sub.kpm_id]);
+
+            if (beforePm) {
+              await conn.query(
+                'INSERT INTO pm_change_history(pm_id, effective_from, action, before_data, after_data, reason, actor_id) VALUES(?,?,?,?,?,?,?)',
+                [
+                  item.pm_id,
+                  effDate,
+                  'UPDATE',
+                  JSON.stringify(beforePm),
+                  JSON.stringify({ ...beforePm, category: targetCat, class_group: newClass, active: 1 }),
+                  `Alih Kategori: ${beforePm.category} → ${targetCat} (${reasonText})`,
+                  req.session.user.id
+                ]
+              );
+            }
+          } else if (item.pm_id) {
+            // 3. Koreksi identitas PM lama
+            const [[beforePm]] = await conn.query('SELECT * FROM pm WHERE id=? AND kpm_id=?', [item.pm_id, sub.kpm_id]);
+            await conn.query(`
+              UPDATE pm
+              SET full_name = ?, nik = ?, gender = ?, class_group = ?, category = ?, active = 1, updated_at = NOW()
+              WHERE id = ? AND kpm_id = ?
+            `, [item.full_name, item.nik || null, item.gender || null, item.class_group || null, item.category, item.pm_id, sub.kpm_id]);
+
+            if (beforePm) {
+              await conn.query(
+                'INSERT INTO pm_change_history(pm_id, effective_from, action, before_data, after_data, reason, actor_id) VALUES(?,?,?,?,?,?,?)',
+                [
+                  item.pm_id,
+                  effDate,
+                  'UPDATE',
+                  JSON.stringify(beforePm),
+                  JSON.stringify({ ...beforePm, full_name: item.full_name, nik: item.nik, gender: item.gender, category: item.category }),
+                  `Koreksi Identitas: ${reasonText}`,
+                  req.session.user.id
+                ]
+              );
+            }
+          } else if (item.full_name) {
+            // 4. PM Baru
+            const [pr] = await conn.query(`
+              INSERT INTO pm (kpm_id, full_name, nik, nisn, gender, class_group, category, active, approval_status)
+              VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'AKTIF')
+            `, [sub.kpm_id, item.full_name, item.nik || null, item.nisn || null, item.gender || null, item.class_group || null, item.category]);
+
+            const newPmId = pr.insertId;
+            await conn.query('UPDATE kpm_pm_submission_rows SET pm_id=? WHERE id=?', [newPmId, item.id]);
+            await conn.query(
+              'INSERT INTO pm_change_history(pm_id, effective_from, action, before_data, after_data, reason, actor_id) VALUES(?,?,?,?,?,?,?)',
+              [
+                newPmId,
+                effDate,
+                'CREATE',
+                null,
+                JSON.stringify({ id: newPmId, kpm_id: sub.kpm_id, full_name: item.full_name, nik: item.nik, category: item.category }),
+                `Pendaftaran PM Baru: ${reasonText} (Paket #${id})`,
+                req.session.user.id
+              ]
+            );
           }
         }
+        // Sync aggregated KPM daily data metrics
+        await syncKpmDailyData(conn, sub.kpm_id, sub.effective_from);
       }
+
+      await conn.query(
+        'INSERT INTO kpm_pm_submission_history(submission_id, action, from_status, to_status, note, actor_id) VALUES(?,?,?,?,?,?)',
+        [id, 'REVIEW', sub.status, decision, `${decision === 'DISETUJUI' ? 'Disahkan & Diterapkan' : 'Ditolak/Perlu Perbaikan'} oleh Pimpinan: ${note || '-'}`, req.session.user.id]
+      );
 
       await conn.commit();
     } catch (e) {

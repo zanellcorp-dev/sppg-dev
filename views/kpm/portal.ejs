@@ -117,12 +117,7 @@
   <% const schoolGroups=[['PENDIDIK','Pendidik'],['TENAGA_KEPENDIDIKAN','Tenaga Kependidikan'],['PESERTA_DIDIK','Peserta Didik']]; const posyanduGroups=[['BALITA','Balita'],['BUMIL','Bumil'],['BUSUI','Busui']]; %>
   <%- include('pm-management', { access, pm, previewMode, portalToken, schoolGroups, posyanduGroups, csrfToken: typeof csrfToken !== 'undefined' ? csrfToken : '' }) %>
 
-  <section class="kpm-section">
-    <div class="kpm-section-head"><div><h2>Status Pengajuan Perubahan</h2><p>Riwayat pengajuan data PM dari KPM.</p></div></div>
-    <div class="kpm-submission">
-      <% if(subs.length){ subs.forEach(s=>{ %><div class="kpm-submission-item"><strong><%= s.status %></strong> · berlaku <%= s.effective_from %><br><small>Dibuat: <%= s.created_at %><% if(s.reviewed_at){ %> · Direview: <%= s.reviewed_at %><% } %><% if(s.review_note){ %> · Catatan: <%= s.review_note %><% } %></small></div><% }) }else{ %><div class="kpm-empty">Belum ada pengajuan perubahan.</div><% } %>
-    </div>
-  </section>
+  <%- include('posyandu-pm-updater', { access, pm, subs, previewMode, portalToken, csrfToken: typeof csrfToken !== 'undefined' ? csrfToken : '' }) %>
 
   <p class="kpm-footer"><%= settings?.sppg_name || 'SPPG' %> · Pusat Data Penerima Manfaat · <%= settings?.location_name || '' %></p>
 </main>

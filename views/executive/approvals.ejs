@@ -81,28 +81,45 @@
                 <table class="table" style="font-size:12px;">
                   <thead>
                     <tr>
-                      <th>#</th>
+                      <th style="width:36px;text-align:center">#</th>
+                      <th style="width:130px">Jenis Perubahan</th>
                       <th>Nama Lengkap</th>
                       <th>NIK / NISN</th>
                       <th>L/P</th>
-                      <th>Kelas / Rombel</th>
-                      <th>Kategori</th>
-                      <th>Catatan Validasi</th>
+                      <th>Kategori / Kelompok</th>
+                      <th>Rincian / Alasan Perubahan</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <% sub.items.forEach((item, idx) => { %>
+                    <% sub.items.forEach((item, idx) => { 
+                      const act = item.action_type || 'PM_BARU';
+                      let actBadge = '<span class="badge green">👶 PM Baru</span>';
+                      if (act === 'PM_KELUAR') actBadge = '<span class="badge red">🚪 PM Keluar</span>';
+                      else if (act === 'KOREKSI') actBadge = '<span class="badge purple" style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe">✏️ Koreksi</span>';
+                      else if (act === 'PERUBAHAN_KATEGORI') actBadge = '<span class="badge blue">🔄 Alih Kategori</span>';
+                    %>
                       <tr>
-                        <td><%= idx + 1 %></td>
+                        <td style="text-align:center;font-weight:700;color:#64748b"><%= idx + 1 %></td>
+                        <td><%- actBadge %></td>
                         <td><strong><%= item.full_name %></strong></td>
                         <td>
                           <span>NIK: <%= item.nik || '-' %></span><br>
                           <small style="color:#64748b;">NISN: <%= item.nisn || '-' %></small>
                         </td>
                         <td><span class="badge"><%= item.gender || '-' %></span></td>
-                        <td><%= item.class_group || '-' %></td>
-                        <td><span class="badge"><%= item.category %></span></td>
-                        <td><small style="color:#007a5e;"><%= item.validation_note || 'Data valid' %></small></td>
+                        <td>
+                          <span class="badge"><%= item.category %></span>
+                          <% if(item.meta && item.meta.target_category){ %>
+                            <span style="color:#007a5e;font-weight:700"> → <%= item.meta.target_category %></span>
+                          <% } %>
+                          <br><small style="color:#64748b"><%= item.class_group || '-' %></small>
+                        </td>
+                        <td>
+                          <strong><%= item.action_reason || item.validation_note || 'Data valid' %></strong>
+                          <% if(item.meta && item.meta.effective_from){ %>
+                            <br><small style="color:#64748b">Efektif: <%= item.meta.effective_from %></small>
+                          <% } %>
+                        </td>
                       </tr>
                     <% }) %>
                   </tbody>

@@ -1,0 +1,1626 @@
+<%
+  const activeSubs = Array.isArray(subs) ? subs : [];
+  const pendingCount = activeSubs.filter(s => ['DIAJUKAN', 'DITINJAU'].includes(s.status)).length;
+  const revisionCount = activeSubs.filter(s => s.status === 'DITOLAK').length;
+  const completedCount = activeSubs.filter(s => ['DISETUJUI', 'DITERAPKAN'].includes(s.status)).length;
+  const activePmList = pm.filter(x => Number(x.active) === 1);
+  const isPosyandu = (access.kpm_type || access.type) === 'POSYANDU';
+  const postUrl = previewMode 
+    ? `/portal/kpm/preview/${access.kpm_id || access.id}/package-submission` 
+    : `/portal/kpm/${portalToken}/package-submission`;
+%>
+
+<section class="kpm-section pm-package-section" id="pm-package-section" aria-label="Paket Pembaruan Data PM">
+  <!-- Header Bagian C -->
+  <div class="kpm-section-head pm-package-head">
+    <div>
+      <div class="pm-package-eyebrow">
+        <span class="pm-package-badge-tag">BAGIAN C · PEMBARUAN DATA PM</span>
+        <span class="pm-package-kpm-badge"><%= access.kpm_name %> · <%= access.kpm_code %></span>
+      </div>
+      <h2 style="margin:6px 0 3px">C. Pengajuan Pembaruan Data PM <%= isPosyandu ? 'Posyandu' : '' %></h2>
+      <p style="margin:0;color:#64748b;font-size:13px">
+        Ajukan penambahan, pengeluaran, koreksi, atau perubahan kategori penerima manfaat dalam satu pengajuan paket ke Ka. SPPG.
+      </p>
+    </div>
+  </div>
+
+  <!-- Status Pengajuan 4 Metric Cards -->
+  <div class="pm-status-cards-grid">
+    <!-- 1. Draft Perubahan -->
+    <div class="pm-status-card" id="cardDraftStatus" onclick="switchPackageTab('tab-paket')" style="cursor:pointer">
+      <div class="pm-status-card-icon draft">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </div>
+      <div class="pm-status-card-info">
+        <strong class="pm-status-card-num" id="metricDraftCount">0</strong>
+        <span class="pm-status-card-label">Draft perubahan</span>
+        <small class="pm-status-card-sub" id="metricDraftDetail">0 item perubahan</small>
+      </div>
+    </div>
+
+    <!-- 2. Menunggu Verifikasi -->
+    <div class="pm-status-card" onclick="switchPackageTab('tab-riwayat')" style="cursor:pointer">
+      <div class="pm-status-card-icon pending">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <div class="pm-status-card-info">
+        <strong class="pm-status-card-num"><%= pendingCount %></strong>
+        <span class="pm-status-card-label">Menunggu verifikasi</span>
+        <small class="pm-status-card-sub">Dalam review Ka. SPPG</small>
+      </div>
+    </div>
+
+    <!-- 3. Perlu Perbaikan -->
+    <div class="pm-status-card" onclick="switchPackageTab('tab-riwayat')" style="cursor:pointer">
+      <div class="pm-status-card-icon revision">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div class="pm-status-card-info">
+        <strong class="pm-status-card-num"><%= revisionCount %></strong>
+        <span class="pm-status-card-label">Perlu perbaikan</span>
+        <small class="pm-status-card-sub">Catatan revisi tersedia</small>
+      </div>
+    </div>
+
+    <!-- 4. Selesai -->
+    <div class="pm-status-card" onclick="switchPackageTab('tab-riwayat')" style="cursor:pointer">
+      <div class="pm-status-card-icon completed">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="pm-status-card-info">
+        <strong class="pm-status-card-num"><%= completedCount %></strong>
+        <span class="pm-status-card-label">Selesai</span>
+        <small class="pm-status-card-sub">Disahkan & diterapkan</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Switcher Nav -->
+  <div class="pm-package-tabs-bar">
+    <button type="button" class="pm-pkg-tab-btn active" id="tabBtnPaket" onclick="switchPackageTab('tab-paket')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      <span>Paket Pembaruan Data</span>
+      <span class="pm-pkg-tab-badge" id="tabDraftBadge">0</span>
+    </button>
+    <button type="button" class="pm-pkg-tab-btn" id="tabBtnRiwayat" onclick="switchPackageTab('tab-riwayat')">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>Riwayat Pengajuan</span>
+      <span class="pm-pkg-tab-badge"><%= activeSubs.length %></span>
+    </button>
+  </div>
+
+  <!-- TAB 1: KONTEN PAKET PEMBARUAN DATA (DRAFT / AKTIF) -->
+  <div class="pm-pkg-tab-content active" id="tabContentPaket">
+    <div class="pm-package-card-panel">
+      <!-- Header Paket -->
+      <div class="pm-panel-top">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <h3 style="margin:0;font-size:16px;color:#0f243d">Pembaruan Data PM <%= isPosyandu ? 'Posyandu' : '' %></h3>
+            <span class="pm-draft-status-pill" id="draftStatusPill">Draft</span>
+          </div>
+          <p style="margin:4px 0 0;font-size:12.5px;color:#64748b">
+            Gabungkan semua perubahan dalam satu paket. Kader dapat mencampur PM baru, PM keluar, koreksi identitas, dan perubahan kategori.
+          </p>
+        </div>
+        <div>
+          <button type="button" class="btn primary" onclick="openMutationPickerModal()">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Tambah Perubahan ke Paket</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Action Shortcut Cards -->
+      <div class="pm-mutation-shortcuts-grid">
+        <!-- 1. PM Baru -->
+        <div class="pm-mutation-shortcut" onclick="openNewPmModal()">
+          <div class="pm-ms-head">
+            <span class="pm-ms-icon blue">👶</span>
+            <div class="pm-ms-text">
+              <strong>PM Baru</strong>
+              <small>Isi identitas PM yang belum terdaftar</small>
+            </div>
+          </div>
+          <button type="button" class="pm-ms-action-btn">＋ Tambah</button>
+        </div>
+
+        <!-- 2. PM Keluar -->
+        <div class="pm-mutation-shortcut" onclick="openExitPmModal()">
+          <div class="pm-ms-head">
+            <span class="pm-ms-icon amber">🚪</span>
+            <div class="pm-ms-text">
+              <strong>PM Keluar</strong>
+              <small>Pilih dari database resmi, tanpa ketik ulang</small>
+            </div>
+          </div>
+          <button type="button" class="pm-ms-action-btn">🚪 Keluar</button>
+        </div>
+
+        <!-- 3. Koreksi Identitas -->
+        <div class="pm-mutation-shortcut" onclick="openCorrectionPmModal()">
+          <div class="pm-ms-head">
+            <span class="pm-ms-icon purple">✏️</span>
+            <div class="pm-ms-text">
+              <strong>Koreksi Identitas</strong>
+              <small>Pilih PM lama, ubah hanya data yang salah</small>
+            </div>
+          </div>
+          <button type="button" class="pm-ms-action-btn">✏️ Koreksi</button>
+        </div>
+
+        <!-- 4. Perubahan Kategori -->
+        <div class="pm-mutation-shortcut" onclick="openCategoryChangeModal()">
+          <div class="pm-ms-head">
+            <span class="pm-ms-icon green">🔄</span>
+            <div class="pm-ms-text">
+              <strong>Perubahan Kategori</strong>
+              <small>Contoh: Bumil melahirkan menjadi Busui</small>
+            </div>
+          </div>
+          <button type="button" class="pm-ms-action-btn">🔄 Alih Kategori</button>
+        </div>
+      </div>
+
+      <!-- Mini Counter Mutasi Saat Ini -->
+      <div class="pm-draft-counters-bar">
+        <div class="pm-draft-count-item">
+          <span>PM Baru:</span>
+          <strong id="counterNewPm">0</strong>
+        </div>
+        <div class="pm-draft-count-item">
+          <span>PM Keluar:</span>
+          <strong id="counterExitPm">0</strong>
+        </div>
+        <div class="pm-draft-count-item">
+          <span>Koreksi Identitas:</span>
+          <strong id="counterCorrectionPm">0</strong>
+        </div>
+        <div class="pm-draft-count-item">
+          <span>Perubahan Kategori:</span>
+          <strong id="counterCategoryPm">0</strong>
+        </div>
+      </div>
+
+      <!-- Tabel / Kontainer Isi Paket Saat Ini -->
+      <div class="pm-package-items-section">
+        <div class="pm-package-items-head">
+          <strong style="font-size:13.5px;color:#1e293b">Daftar Perubahan dalam Paket Saat Ini</strong>
+          <span style="font-size:12px;color:#64748b" id="pkgItemsCountNote">0 perubahan</span>
+        </div>
+
+        <!-- State Kosong (Belum ada perubahan) -->
+        <div class="pm-package-empty-state" id="pkgEmptyState">
+          <div class="pm-empty-icon-wrap">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </div>
+          <strong style="color:#1e293b;font-size:13.5px">Belum ada perubahan dalam paket</strong>
+          <p style="margin:4px 0 14px;color:#64748b;font-size:12px;max-width:380px">
+            Tekan salah satu jenis perubahan di atas atau tombol "Tambah Perubahan ke Paket" untuk menyusun paket pengajuan ke Ka. SPPG.
+          </p>
+          <button type="button" class="btn primary" onclick="openMutationPickerModal()">
+            Mulai Tambah Perubahan
+          </button>
+        </div>
+
+        <!-- Tabel Perubahan Terisi -->
+        <div class="kpm-table-wrap" id="pkgItemsTableWrap" style="display:none;margin-top:10px">
+          <table class="kpm-table pm-table">
+            <thead>
+              <tr>
+                <th style="width:40px;text-align:center">No</th>
+                <th style="width:140px">Jenis Perubahan</th>
+                <th>Nama Lengkap & Identitas</th>
+                <th>Kategori & Sub-Kelompok</th>
+                <th>Rincian / Alasan</th>
+                <th style="width:110px">Tanggal Efektif</th>
+                <th style="width:70px;text-align:center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="pkgItemsTableBody">
+              <!-- Baris dinamis via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Ringkasan Dampak Porsi & Form Pengiriman Paket -->
+        <div class="pm-package-submission-panel" id="pkgSubmissionPanel" style="display:none">
+          <div class="pm-impact-summary-box">
+            <div class="pm-impact-head">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#007a5e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              <strong>Proyeksi Rekapitulasi Perubahan Porsi</strong>
+            </div>
+            <div class="pm-impact-metrics">
+              <div class="pm-im-item">
+                <small>Total Item Perubahan</small>
+                <strong id="impactTotalItems">0 Item</strong>
+              </div>
+              <div class="pm-im-item">
+                <small>Balita (Porsi Kecil)</small>
+                <strong id="impactSmallPortion">± 0</strong>
+              </div>
+              <div class="pm-im-item">
+                <small>Bumil & Busui (Porsi Besar)</small>
+                <strong id="impactLargePortion">± 0</strong>
+              </div>
+            </div>
+          </div>
+
+          <form id="pkgFinalSubmitForm" method="post" action="<%= postUrl %>" onsubmit="return validateFinalPackageSubmit(event)">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="items_json" id="pkgItemsJsonInput" value="[]">
+            <input type="hidden" name="is_draft" id="pkgIsDraftInput" value="0">
+
+            <div class="pm-submit-controls-row">
+              <div class="field" style="margin:0;min-width:200px">
+                <label style="font-size:12px;font-weight:700;color:#334155">Tanggal Efektif Paket Berlaku <span style="color:#d92d20">*</span></label>
+                <input class="input" type="date" name="effective_from" id="pkgEffectiveFromInput" value="<%= new Date().toISOString().slice(0,10) %>" required>
+              </div>
+              <div class="field full" style="margin:0;flex:1;min-width:260px">
+                <label style="font-size:12px;font-weight:700;color:#334155">Catatan Pengantar untuk Ka. SPPG (Opsional)</label>
+                <input class="input" type="text" name="submission_note" placeholder="Contoh: Pembaruan data rutin Posyandu Cempaka 1 periode Oktober 2026...">
+              </div>
+            </div>
+
+            <div class="pm-submit-actions-row">
+              <button type="button" class="btn gray" onclick="clearPackageDraft()">
+                🗑️ Bersihkan Draft
+              </button>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button type="button" class="btn secondary" onclick="submitPackageDraft(true)">
+                  💾 Simpan sebagai Draft
+                </button>
+                <button type="button" class="btn primary" onclick="submitPackageDraft(false)">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  <span>Kirim Pengajuan ke Ka. SPPG</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: RIWAYAT PENGAJUAN -->
+  <div class="pm-pkg-tab-content" id="tabContentRiwayat">
+    <div class="pm-history-panel">
+      <div class="pm-panel-top">
+        <div>
+          <h3 style="margin:0;font-size:16px;color:#0f243d">Riwayat Pengajuan Pembaruan Data</h3>
+          <p style="margin:4px 0 0;font-size:12.5px;color:#64748b">
+            Paket yang pernah dikirim, nomor registrasi, status verifikasi Ka. SPPG, dan hasil persetujuan tercatat di sini.
+          </p>
+        </div>
+      </div>
+
+      <% if(activeSubs.length){ %>
+        <div class="pm-history-list">
+          <% activeSubs.forEach(s => { 
+            const isPending = ['DIAJUKAN', 'DITINJAU'].includes(s.status);
+            const isApproved = ['DISETUJUI', 'DITERAPKAN'].includes(s.status);
+            const isRejected = s.status === 'DITOLAK';
+            const statusLabel = isPending ? 'Menunggu Verifikasi Ka. SPPG' : isApproved ? 'Disetujui Ka. SPPG' : isRejected ? 'Perlu Perbaikan / Ditolak' : s.status;
+            const statusClass = isPending ? 'pending' : isApproved ? 'approved' : isRejected ? 'rejected' : 'draft';
+          %>
+            <div class="pm-history-card">
+              <div class="pm-hc-head">
+                <div class="pm-hc-title-wrap">
+                  <span class="pm-hc-code">#PKT-<%= String(s.id).padStart(4, '0') %></span>
+                  <strong class="pm-hc-title">Paket Pembaruan Data PM · <%= access.kpm_name %></strong>
+                  <span class="pm-hc-badge <%= statusClass %>"><%= statusLabel %></span>
+                </div>
+                <div class="pm-hc-dates">
+                  <span>📅 Berlaku: <strong><%= s.effective_from %></strong></span>
+                  <span style="color:#94a3b8">·</span>
+                  <span>Diajukan: <%= new Date(s.created_at).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}) %></span>
+                </div>
+              </div>
+
+              <div class="pm-hc-body">
+                <div class="pm-hc-note-box">
+                  <% if(s.review_note){ %>
+                    <div><strong>Catatan Review:</strong> <span><%= s.review_note %></span></div>
+                  <% } else { %>
+                    <span style="color:#64748b;font-style:italic">Belum ada catatan tambahan dari Ka. SPPG.</span>
+                  <% } %>
+                  <% if(s.reviewed_at){ %>
+                    <small style="color:#94a3b8;margin-top:2px;display:block">Ditinjau pada: <%= new Date(s.reviewed_at).toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) %></small>
+                  <% } %>
+                </div>
+
+                <div class="pm-hc-actions">
+                  <button type="button" class="btn secondary" onclick="viewPackageDetailModal(<%= s.id %>)">
+                    👁️ Lihat Rincian Paket
+                  </button>
+
+                  <% if(previewMode && isPending){ %>
+                    <!-- Otorisasi Pimpinan Langsung dari Preview -->
+                    <button type="button" class="btn success" onclick="handleExecutiveReviewAction(<%= s.id %>, 'DISETUJUI')">
+                      ✅ Sahkan & Setujui
+                    </button>
+                    <button type="button" class="btn danger" onclick="handleExecutiveReviewAction(<%= s.id %>, 'PERLU_PERBAIKAN')">
+                      ⚠️ Minta Revisi
+                    </button>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="pm-package-empty-state">
+          <div class="pm-empty-icon-wrap">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <strong style="color:#1e293b;font-size:13.5px">Belum ada riwayat pengajuan</strong>
+          <p style="margin:4px 0 14px;color:#64748b;font-size:12px">
+            Paket pembaruan yang dikirim ke Ka. SPPG beserta status verifikasinya akan tercatat rapi di sini.
+          </p>
+          <button type="button" class="btn secondary" onclick="switchPackageTab('tab-paket')">
+            Buat Paket Pembaruan Sekarang
+          </button>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================== -->
+<!-- MODAL 1: PICKER JENIS MUTASI (MODAL PILIH MENU)                -->
+<!-- ============================================================== -->
+<div id="modalMutationPicker" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+  <div class="pm-modal-card">
+    <div class="pm-modal-head neutral">
+      <div class="pm-modal-icon-wrap neutral">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <div>
+        <h3 style="margin:0;font-size:16px">Pilih Jenis Perubahan Data</h3>
+        <p style="margin:3px 0 0;font-size:12.5px;color:#64748b">Pilih tindakan yang ingin ditambahkan ke dalam paket pembaruan saat ini.</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeModal('modalMutationPicker')">&times;</button>
+    </div>
+    <div class="pm-modal-body" style="padding:16px 20px">
+      <div class="pm-mutation-picker-list">
+        <div class="pm-picker-opt" onclick="closeModal('modalMutationPicker'); openNewPmModal();">
+          <div class="pm-picker-opt-icon blue">👶</div>
+          <div>
+            <strong>1. Tambah PM Baru</strong>
+            <span>Pendaftaran penerima manfaat baru yang belum terdaftar di database.</span>
+          </div>
+          <span class="pm-picker-arrow">→</span>
+        </div>
+
+        <div class="pm-picker-opt" onclick="closeModal('modalMutationPicker'); openExitPmModal();">
+          <div class="pm-picker-opt-icon amber">🚪</div>
+          <div>
+            <strong>2. PM Keluar (Pilih dari Data Resmi)</strong>
+            <span>Pilih orang yang sudah ada tanpa mengetik ulang NIK/nama (pindah, lulus usia, dll).</span>
+          </div>
+          <span class="pm-picker-arrow">→</span>
+        </div>
+
+        <div class="pm-picker-opt" onclick="closeModal('modalMutationPicker'); openCorrectionPmModal();">
+          <div class="pm-picker-opt-icon purple">✏️</div>
+          <div>
+            <strong>3. Koreksi Identitas</strong>
+            <span>Perbaiki salah ketik nama, NIK, tanggal lahir, atau alamat penerima yang sudah ada.</span>
+          </div>
+          <span class="pm-picker-arrow">→</span>
+        </div>
+
+        <div class="pm-picker-opt" onclick="closeModal('modalMutationPicker'); openCategoryChangeModal();">
+          <div class="pm-picker-opt-icon green">🔄</div>
+          <div>
+            <strong>4. Perubahan Kategori (Alih Status)</strong>
+            <span>Alih status penerima manfaat (contoh: Bumil melahirkan beralih menjadi Busui).</span>
+          </div>
+          <span class="pm-picker-arrow">→</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 2: FORM TAMBAH PM BARU                                   -->
+<!-- ============================================================== -->
+<div id="modalNewPm" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+  <div class="pm-modal-card">
+    <div class="pm-modal-head neutral">
+      <div class="pm-modal-icon-wrap neutral">👶</div>
+      <div>
+        <h3 style="margin:0;font-size:16px">Tambah PM Baru ke Paket</h3>
+        <p style="margin:3px 0 0;font-size:12.5px;color:#64748b">Identitas penerima manfaat yang belum terdaftar di <%= access.kpm_name %>.</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeModal('modalNewPm')">&times;</button>
+    </div>
+    <form onsubmit="handleAddNewPmSubmit(event)">
+      <div class="pm-modal-body">
+        <!-- Kategori PM -->
+        <div class="pm-form-field">
+          <label>Kategori PM <span style="color:#d92d20">*</span></label>
+          <div class="pm-radio-pills">
+            <label class="pm-radio-pill"><input type="radio" name="newpm_category" value="BALITA" checked onchange="updateNewPmSubgroupOptions()"> 👶 Balita</label>
+            <label class="pm-radio-pill"><input type="radio" name="newpm_category" value="BUMIL" onchange="updateNewPmSubgroupOptions()"> 🤰 Bumil</label>
+            <label class="pm-radio-pill"><input type="radio" name="newpm_category" value="BUSUI" onchange="updateNewPmSubgroupOptions()"> 🤱 Busui</label>
+          </div>
+        </div>
+
+        <div class="pm-form-field">
+          <label>Nama Lengkap <span style="color:#d92d20">*</span></label>
+          <input type="text" id="newpm_name" class="pm-modal-input" placeholder="Nama lengkap sesuai dokumen KK/KTP" required>
+        </div>
+
+        <div class="pm-form-grid-2">
+          <div class="pm-form-field">
+            <label>NIK (16 Digit)</label>
+            <input type="text" id="newpm_nik" class="pm-modal-input" placeholder="16 digit angka NIK" maxlength="16" pattern="[0-9]{16}">
+          </div>
+          <div class="pm-form-field">
+            <label>Jenis Kelamin <span style="color:#d92d20">*</span></label>
+            <select id="newpm_gender" class="pm-modal-select" required>
+              <option value="L">Laki-laki (L)</option>
+              <option value="P" selected>Perempuan (P)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pm-form-grid-2">
+          <div class="pm-form-field">
+            <label>Tanggal Lahir</label>
+            <input type="date" id="newpm_birth" class="pm-modal-input">
+          </div>
+          <div class="pm-form-field">
+            <label>Sub-Kelompok / Porsi</label>
+            <select id="newpm_subgroup" class="pm-modal-select">
+              <option value="0-5 Bulan (Bayi)">0-5 Bulan (Bayi)</option>
+              <option value="6-23 Bulan (Baduta)" selected>6-23 Bulan (Baduta)</option>
+              <option value="24-59 Bulan (Balita)">24-59 Bulan (Balita)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pm-form-field">
+          <label>Alasan Penambahan <span style="color:#d92d20">*</span></label>
+          <input type="text" id="newpm_reason" class="pm-modal-input" placeholder="Contoh: Penerima baru yang memenuhi kriteria program MBG" value="Penerima baru yang memenuhi kriteria" required>
+        </div>
+
+        <div class="pm-form-field">
+          <label>Tanggal Efektif Mulai <span style="color:#d92d20">*</span></label>
+          <input type="date" id="newpm_effective" class="pm-modal-input" value="<%= new Date().toISOString().slice(0,10) %>" required>
+        </div>
+      </div>
+      <div class="pm-modal-foot">
+        <button type="button" class="btn secondary" onclick="closeModal('modalNewPm')">Batal</button>
+        <button type="submit" class="btn primary">＋ Tambahkan ke Paket</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 3: PM KELUAR (AMBIL DARI DATABASE RESMI)                  -->
+<!-- ============================================================== -->
+<div id="modalExitPm" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+  <div class="pm-modal-card pm-modal-card-lg">
+    <div class="pm-modal-head neutral">
+      <div class="pm-modal-icon-wrap neutral">🚪</div>
+      <div>
+        <h3 style="margin:0;font-size:16px">Pilih PM Keluar dari Data Resmi</h3>
+        <p style="margin:3px 0 0;font-size:12.5px;color:#64748b">Data diambil langsung dari database <%= access.kpm_name %>. Kader tidak perlu mengetik ulang.</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeModal('modalExitPm')">&times;</button>
+    </div>
+    <form onsubmit="handleAddExitPmSubmit(event)">
+      <div class="pm-modal-body">
+        <!-- 1. Filter Kategori PM -->
+        <div class="pm-form-field">
+          <label>1. Filter Kategori PM</label>
+          <div class="pm-radio-pills" id="exitFilterPills">
+            <label class="pm-radio-pill"><input type="radio" name="exit_cat_filter" value="ALL" checked onchange="filterExitPmList()"> Semua</label>
+            <label class="pm-radio-pill"><input type="radio" name="exit_cat_filter" value="BALITA" onchange="filterExitPmList()"> 👶 Balita</label>
+            <label class="pm-radio-pill"><input type="radio" name="exit_cat_filter" value="BUMIL" onchange="filterExitPmList()"> 🤰 Bumil</label>
+            <label class="pm-radio-pill"><input type="radio" name="exit_cat_filter" value="BUSUI" onchange="filterExitPmList()"> 🤱 Busui</label>
+          </div>
+        </div>
+
+        <!-- 2. Cari Nama / NIK -->
+        <div class="pm-form-field">
+          <label>2. Cari Nama atau NIK PM</label>
+          <input type="search" id="exitSearchInput" class="pm-modal-input" placeholder="Ketik nama atau NIK penerima manfaat..." oninput="filterExitPmList()">
+        </div>
+
+        <!-- Daftar Penerima Manfaat yang Bisa Dipilih -->
+        <div class="pm-db-picker-container" id="exitPmPickerContainer">
+          <% activePmList.forEach(p => { %>
+            <label class="pm-db-picker-row" data-id="<%= p.id %>" data-cat="<%= p.category %>" data-name="<%= p.full_name.toLowerCase() %>" data-nik="<%= (p.nik||'').toLowerCase() %>">
+              <input type="radio" name="selected_exit_pm_id" value="<%= p.id %>" required onchange="onExitPmSelected(this)">
+              <div class="pm-db-row-content">
+                <strong><%= p.full_name %></strong>
+                <small>NIK: <%= p.nik || '-' %> · <%= p.class_group || '-' %></small>
+              </div>
+              <span class="pm-cat-pill"><%= p.category %></span>
+            </label>
+          <% }) %>
+        </div>
+
+        <!-- Card Pratinjau Terpilih -->
+        <div class="pm-selected-preview" id="exitSelectedPreview" style="display:none">
+          <small>PENERIMA MANFAAT TERPILIH:</small>
+          <strong id="exitSelectedName">-</strong>
+          <span id="exitSelectedMeta" style="color:#64748b;font-size:12px">NIK: -</span>
+        </div>
+
+        <!-- 3. Alasan PM Keluar -->
+        <div class="pm-form-field" style="margin-top:14px">
+          <label>3. Alasan PM Keluar <span style="color:#d92d20">*</span></label>
+          <select id="exit_reason" class="pm-modal-select" required>
+            <option value="">— Pilih Alasan Keluar —</option>
+            <option value="Pindah domisili ke luar wilayah">Pindah domisili ke luar wilayah</option>
+            <option value="Melewati batas usia balita (> 2 tahun / > 5 tahun)">Melewati batas usia balita (> 2 tahun / > 5 tahun)</option>
+            <option value="Lulus masa menyusui / Bayi genap 2 tahun">Lulus masa menyusui / Bayi genap 2 tahun</option>
+            <option value="Mengundurkan diri secara sukarela">Mengundurkan diri secara sukarela</option>
+            <option value="Meninggal dunia">Meninggal dunia</option>
+            <option value="Koreksi data duplikat">Koreksi data duplikat</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+
+        <div class="pm-form-grid-2">
+          <div class="pm-form-field">
+            <label>Tanggal Efektif Keluar <span style="color:#d92d20">*</span></label>
+            <input type="date" id="exit_effective" class="pm-modal-input" value="<%= new Date().toISOString().slice(0,10) %>" required>
+          </div>
+          <div class="pm-form-field">
+            <label>Catatan Tambahan (Opsional)</label>
+            <input type="text" id="exit_custom_note" class="pm-modal-input" placeholder="Keterangan opsional petugas...">
+          </div>
+        </div>
+      </div>
+      <div class="pm-modal-foot">
+        <button type="button" class="btn secondary" onclick="closeModal('modalExitPm')">Batal</button>
+        <button type="submit" class="btn primary" id="btnSubmitExitPm">🚪 Tambahkan PM Keluar ke Paket</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 4: KOREKSI IDENTITAS (PILIH DARI DATA RESMI)              -->
+<!-- ============================================================== -->
+<div id="modalCorrectionPm" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+  <div class="pm-modal-card pm-modal-card-lg">
+    <div class="pm-modal-head neutral">
+      <div class="pm-modal-icon-wrap neutral">✏️</div>
+      <div>
+        <h3 style="margin:0;font-size:16px">Koreksi Identitas Penerima Manfaat</h3>
+        <p style="margin:3px 0 0;font-size:12.5px;color:#64748b">Pilih PM lama, lalu ubah hanya kolom yang salah (e-KTP/KK baru).</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeModal('modalCorrectionPm')">&times;</button>
+    </div>
+    <form onsubmit="handleAddCorrectionSubmit(event)">
+      <div class="pm-modal-body">
+        <div class="pm-form-field">
+          <label>Cari PM yang Ingin Dikoreksi</label>
+          <input type="search" id="corrSearchInput" class="pm-modal-input" placeholder="Ketik nama atau NIK..." oninput="filterCorrectionPmList()">
+        </div>
+
+        <div class="pm-db-picker-container" id="corrPmPickerContainer" style="max-height:160px">
+          <% activePmList.forEach(p => { %>
+            <label class="pm-db-picker-row" data-id="<%= p.id %>" data-name="<%= p.full_name.toLowerCase() %>" data-nik="<%= (p.nik||'').toLowerCase() %>">
+              <input type="radio" name="selected_corr_pm_id" value="<%= p.id %>" required onchange="onCorrPmSelected(<%= JSON.stringify(p) %>)">
+              <div class="pm-db-row-content">
+                <strong><%= p.full_name %></strong>
+                <small>NIK: <%= p.nik || '-' %> · <%= p.class_group || '-' %></small>
+              </div>
+              <span class="pm-cat-pill"><%= p.category %></span>
+            </label>
+          <% }) %>
+        </div>
+
+        <div id="corrFormFields" style="display:none;margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px">
+          <input type="hidden" id="corr_pm_id">
+          <div class="pm-form-field">
+            <label>Nama Lengkap (Koreksi)</label>
+            <input type="text" id="corr_name" class="pm-modal-input" required>
+          </div>
+          <div class="pm-form-grid-2">
+            <div class="pm-form-field">
+              <label>NIK (16 Digit)</label>
+              <input type="text" id="corr_nik" class="pm-modal-input" maxlength="16">
+            </div>
+            <div class="pm-form-field">
+              <label>Jenis Kelamin</label>
+              <select id="corr_gender" class="pm-modal-select">
+                <option value="L">Laki-laki (L)</option>
+                <option value="P">Perempuan (P)</option>
+              </select>
+            </div>
+          </div>
+          <div class="pm-form-field">
+            <label>Alasan Koreksi <span style="color:#d92d20">*</span></label>
+            <input type="text" id="corr_reason" class="pm-modal-input" placeholder="Contoh: Perbaikan salah ketik NIK sesuai e-KTP baru" required>
+          </div>
+          <div class="pm-form-field">
+            <label>Tanggal Efektif Koreksi <span style="color:#d92d20">*</span></label>
+            <input type="date" id="corr_effective" class="pm-modal-input" value="<%= new Date().toISOString().slice(0,10) %>" required>
+          </div>
+        </div>
+      </div>
+      <div class="pm-modal-foot">
+        <button type="button" class="btn secondary" onclick="closeModal('modalCorrectionPm')">Batal</button>
+        <button type="submit" class="btn primary" id="btnSubmitCorrPm" disabled>✏️ Tambahkan Koreksi ke Paket</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 5: PERUBAHAN KATEGORI (ALIH STATUS MISAL BUMIL -> BUSUI)  -->
+<!-- ============================================================== -->
+<div id="modalCategoryChange" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+  <div class="pm-modal-card pm-modal-card-lg">
+    <div class="pm-modal-head neutral">
+      <div class="pm-modal-icon-wrap neutral">🔄</div>
+      <div>
+        <h3 style="margin:0;font-size:16px">Perubahan Kategori (Alih Status)</h3>
+        <p style="margin:3px 0 0;font-size:12.5px;color:#64748b">Contoh: Ibu Hamil (Bumil) melahirkan beralih status menjadi Ibu Menyusui (Busui).</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeModal('modalCategoryChange')">&times;</button>
+    </div>
+    <form onsubmit="handleAddCategoryChangeSubmit(event)">
+      <div class="pm-modal-body">
+        <div class="pm-form-field">
+          <label>Cari PM yang Beralih Kategori</label>
+          <input type="search" id="catChangeSearchInput" class="pm-modal-input" placeholder="Ketik nama atau NIK..." oninput="filterCatChangePmList()">
+        </div>
+
+        <div class="pm-db-picker-container" id="catChangePmPickerContainer" style="max-height:160px">
+          <% activePmList.forEach(p => { %>
+            <label class="pm-db-picker-row" data-id="<%= p.id %>" data-name="<%= p.full_name.toLowerCase() %>" data-nik="<%= (p.nik||'').toLowerCase() %>">
+              <input type="radio" name="selected_catchange_pm_id" value="<%= p.id %>" required onchange="onCatChangeSelected(<%= JSON.stringify(p) %>)">
+              <div class="pm-db-row-content">
+                <strong><%= p.full_name %></strong>
+                <small>NIK: <%= p.nik || '-' %> · Kategori Saat Ini: <%= p.category %></small>
+              </div>
+              <span class="pm-cat-pill"><%= p.category %></span>
+            </label>
+          <% }) %>
+        </div>
+
+        <div id="catChangeFormFields" style="display:none;margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px">
+          <input type="hidden" id="catchange_pm_id">
+          
+          <div class="pm-target-summary" style="margin-bottom:12px">
+            <small>PENERIMA MANFAAT TERPILIH</small>
+            <strong id="catchange_target_name">-</strong>
+            <span id="catchange_target_meta" style="color:#64748b;font-size:12px">-</span>
+          </div>
+
+          <div class="pm-form-grid-2">
+            <div class="pm-form-field">
+              <label>Kategori Asal (Saat Ini)</label>
+              <input type="text" id="catchange_origin_cat" class="pm-modal-input" readonly style="background:#f1f5f9;cursor:not-allowed">
+            </div>
+            <div class="pm-form-field">
+              <label>Kategori Baru (Tujuan) <span style="color:#d92d20">*</span></label>
+              <select id="catchange_target_cat" class="pm-modal-select" required onchange="updateCatChangeSubgroups()">
+                <option value="BUSUI">🤱 Busui (Ibu Menyusui)</option>
+                <option value="BUMIL">🤰 Bumil (Ibu Hamil)</option>
+                <option value="BALITA">👶 Balita</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pm-form-field">
+            <label>Sub-Kelompok Baru</label>
+            <select id="catchange_target_subgroup" class="pm-modal-select">
+              <option value="Bayi 0–6 Bulan (ASI Eksklusif)">Bayi 0–6 Bulan (ASI Eksklusif)</option>
+              <option value="Bayi 7–12 Bulan">Bayi 7–12 Bulan</option>
+              <option value="Bayi 13–24 Bulan">Bayi 13–24 Bulan</option>
+            </select>
+          </div>
+
+          <div class="pm-form-field">
+            <label>Alasan Perubahan Status <span style="color:#d92d20">*</span></label>
+            <input type="text" id="catchange_reason" class="pm-modal-input" placeholder="Contoh: Ibu telah melahirkan dan memasuki masa menyusui" value="Ibu telah melahirkan dan memasuki masa menyusui" required>
+          </div>
+
+          <div class="pm-form-field">
+            <label>Tanggal Efektif Alih Status <span style="color:#d92d20">*</span></label>
+            <input type="date" id="catchange_effective" class="pm-modal-input" value="<%= new Date().toISOString().slice(0,10) %>" required>
+          </div>
+        </div>
+      </div>
+      <div class="pm-modal-foot">
+        <button type="button" class="btn secondary" onclick="closeModal('modalCategoryChange')">Batal</button>
+        <button type="submit" class="btn primary" id="btnSubmitCatChange" disabled>🔄 Tambahkan Alih Kategori</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL 6: DETAIL RINCIAN PAKET PENGAJUAN (VIEWER)               -->
+<!-- ============================================================== -->
+<div id="modalPackageDetail" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+  <div class="pm-modal-card pm-modal-card-lg">
+    <div class="pm-modal-head neutral">
+      <div class="pm-modal-icon-wrap neutral">📦</div>
+      <div>
+        <h3 style="margin:0;font-size:16px" id="modalDetailTitle">Rincian Paket Pembaruan Data</h3>
+        <p style="margin:3px 0 0;font-size:12.5px;color:#64748b" id="modalDetailSubtitle">Daftar item perubahan data penerima manfaat.</p>
+      </div>
+      <button type="button" class="pm-modal-close" onclick="closeModal('modalPackageDetail')">&times;</button>
+    </div>
+    <div class="pm-modal-body">
+      <div id="detailLoadingState" style="text-align:center;padding:24px;color:#64748b">
+        <div class="pm-spinner" style="margin:0 auto 8px"></div>
+        <span>Memuat rincian paket...</span>
+      </div>
+      <div id="detailContentState" style="display:none">
+        <div class="pm-target-summary" style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+            <div>
+              <small>INFORMASI PAKET</small>
+              <strong id="detailPackageCode">-</strong>
+              <span id="detailPackageStatus" class="pm-hc-badge draft">-</span>
+            </div>
+            <div style="text-align:right">
+              <span id="detailEffectiveDate" style="font-size:12px;color:#64748b;display:block">Tanggal Berlaku: -</span>
+              <span id="detailSubmitDate" style="font-size:11.5px;color:#94a3b8;display:block">Diajukan: -</span>
+            </div>
+          </div>
+          <div id="detailReviewNoteBox" style="margin-top:8px;padding-top:8px;border-top:1px dashed #cbd5e1;font-size:12.5px">
+            <strong>Catatan Ka. SPPG:</strong> <span id="detailReviewNoteText">-</span>
+          </div>
+        </div>
+
+        <div class="kpm-table-wrap">
+          <table class="kpm-table pm-table">
+            <thead>
+              <tr>
+                <th style="width:36px;text-align:center">No</th>
+                <th style="width:120px">Jenis</th>
+                <th>Nama PM & NIK</th>
+                <th>Kategori & Kelompok</th>
+                <th>Keterangan / Alasan</th>
+              </tr>
+            </thead>
+            <tbody id="detailItemsTableBody">
+              <!-- Item dinamis -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="pm-modal-foot" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <% if(previewMode){ %>
+        <div id="detailExecutiveActions" style="display:none;align-items:center;gap:8px">
+          <button type="button" class="btn success" id="btnDetailApprove" style="background:#059669;color:#fff;border:0;padding:7px 14px;font-size:12px;font-weight:700">
+            ✅ Sahkan & Setujui
+          </button>
+          <button type="button" class="btn danger" id="btnDetailReject" style="background:#dc2626;color:#fff;border:0;padding:7px 14px;font-size:12px;font-weight:700">
+            ⚠️ Minta Revisi
+          </button>
+        </div>
+      <% } else { %>
+        <div></div>
+      <% } %>
+      <button type="button" class="btn secondary" onclick="closeModal('modalPackageDetail')">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- CSS SCOPED PM PACKAGE SECTION & MODALS                         -->
+<!-- ============================================================== -->
+<style>
+.pm-package-section{margin-top:24px;border:1px solid #dbe5ee;box-shadow:0 6px 24px rgba(15,35,55,.05);border-radius:18px;background:#fff;overflow:hidden}
+.pm-package-head{padding:20px 24px;border-bottom:1px solid #edf2f7;background:#fff}
+.pm-package-eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.pm-package-badge-tag{font-size:10.5px;font-weight:800;letter-spacing:.07em;color:#007a5e;text-transform:uppercase}
+.pm-package-kpm-badge{display:inline-block;padding:2px 8px;border-radius:6px;background:#f1f5f9;color:#334155;font-size:11px;font-weight:700}
+
+/* 4 Status Cards Grid */
+.pm-status-cards-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:16px 24px;background:#f8fafc;border-bottom:1px solid #edf2f7}
+.pm-status-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all .15s ease}
+.pm-status-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(15,35,55,.06);border-color:#cbd5e1}
+.pm-status-card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pm-status-card-icon.draft{background:#f1f5f9;color:#475569}
+.pm-status-card-icon.pending{background:#fffbeb;color:#b45309}
+.pm-status-card-icon.revision{background:#fef2f2;color:#b91c1c}
+.pm-status-card-icon.completed{background:#ecfdf5;color:#047857}
+.pm-status-card-num{display:block;font-size:22px;color:#0f243d;line-height:1}
+.pm-status-card-label{display:block;font-size:12.5px;font-weight:700;color:#334155;margin-top:3px}
+.pm-status-card-sub{display:block;font-size:11px;color:#64748b}
+
+/* Tab Switcher Bar */
+.pm-package-tabs-bar{display:flex;align-items:center;gap:6px;padding:12px 24px 0;background:#fff;border-bottom:1px solid #e2e8f0}
+.pm-pkg-tab-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:0;border-bottom:2px solid transparent;background:transparent;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
+.pm-pkg-tab-btn:hover{color:#0f172a}
+.pm-pkg-tab-btn.active{color:#007a5e;border-bottom-color:#007a5e}
+.pm-pkg-tab-badge{display:inline-flex;align-items:center;justify-content:center;padding:1px 7px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:11px}
+.pm-pkg-tab-btn.active .pm-pkg-tab-badge{background:#e8f7ef;color:#047857}
+
+/* Tab Contents */
+.pm-pkg-tab-content{display:none;padding:20px 24px}
+.pm-pkg-tab-content.active{display:block}
+
+/* Panel Header & Elements */
+.pm-panel-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.pm-draft-status-pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#f1f5f9;border:1px solid #e2e8f0;color:#475569;font-size:11px;font-weight:700}
+.pm-draft-status-pill.has-items{background:#e8f7ef;border-color:#a7f3d0;color:#047857}
+
+/* 4 Mutation Shortcut Cards */
+.pm-mutation-shortcuts-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.pm-mutation-shortcut{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;cursor:pointer;transition:all .15s ease;display:flex;flex-direction:column;justify-content:space-between;gap:12px}
+.pm-mutation-shortcut:hover{background:#fff;border-color:#007a5e;box-shadow:0 4px 12px rgba(0,122,94,.08);transform:translateY(-1px)}
+.pm-ms-head{display:flex;align-items:flex-start;gap:10px}
+.pm-ms-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.pm-ms-icon.blue{background:#eff6ff}
+.pm-ms-icon.amber{background:#fffbeb}
+.pm-ms-icon.purple{background:#f5f3ff}
+.pm-ms-icon.green{background:#ecfdf5}
+.pm-ms-text strong{display:block;font-size:13px;color:#1e293b}
+.pm-ms-text small{display:block;font-size:11px;color:#64748b;margin-top:2px;line-height:1.35}
+.pm-ms-action-btn{align-self:flex-start;padding:4px 10px;border-radius:6px;border:1px solid #d3e1ec;background:#fff;color:#007a5e;font-size:11px;font-weight:700;cursor:pointer}
+.pm-mutation-shortcut:hover .pm-ms-action-btn{background:#007a5e;color:#fff;border-color:#007a5e}
+
+/* Mini Counter Bar */
+.pm-draft-counters-bar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:#f1f5f9;border-radius:10px;margin-bottom:16px;flex-wrap:wrap}
+.pm-draft-count-item{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#475569}
+.pm-draft-count-item strong{color:#0f172a;font-size:13px}
+
+/* Empty State */
+.pm-package-empty-state{text-align:center;padding:36px 20px;border:1.5px dashed #cbd5e1;border-radius:14px;background:#fbfcfd}
+.pm-empty-icon-wrap{width:52px;height:52px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+
+/* Impact Summary Box */
+.pm-impact-summary-box{margin-top:18px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px}
+.pm-impact-head{display:flex;align-items:center;gap:8px;color:#166534;font-size:13px;margin-bottom:10px}
+.pm-impact-metrics{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.pm-im-item small{display:block;font-size:11px;color:#15803d;text-transform:uppercase;font-weight:700}
+.pm-im-item strong{display:block;font-size:16px;color:#14532d;margin-top:2px}
+
+/* Submission Controls */
+.pm-submit-controls-row{display:flex;align-items:flex-end;gap:14px;margin-top:16px;flex-wrap:wrap}
+.pm-submit-actions-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid #e2e8f0;flex-wrap:wrap}
+
+/* Mutation Badge Colors */
+.pm-mut-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700}
+.pm-mut-badge.pm-baru{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.pm-mut-badge.pm-keluar{background:#fff1f2;color:#be123c;border:1px solid #fecdd3}
+.pm-mut-badge.koreksi{background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe}
+.pm-mut-badge.perubahan-kategori{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+
+/* History Cards */
+.pm-history-list{display:flex;flex-direction:column;gap:12px}
+.pm-history-card{border:1px solid #e2e8f0;border-radius:14px;background:#fff;padding:16px 20px;transition:.15s}
+.pm-history-card:hover{border-color:#cbd5e1;box-shadow:0 4px 14px rgba(15,35,55,.05)}
+.pm-hc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.pm-hc-title-wrap{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pm-hc-code{font-family:monospace;font-size:12px;font-weight:700;padding:2px 6px;border-radius:4px;background:#f1f5f9;color:#334155}
+.pm-hc-title{font-size:14px;color:#0f243d}
+.pm-hc-badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+.pm-hc-badge.pending{background:#fffbeb;color:#b45309;border:1px solid #fde68a}
+.pm-hc-badge.approved{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+.pm-hc-badge.rejected{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+.pm-hc-badge.draft{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
+.pm-hc-dates{font-size:12px;color:#64748b;display:flex;align-items:center;gap:6px}
+.pm-hc-body{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.pm-hc-note-box{font-size:12.5px;color:#334155;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #e2e8f0;flex:1;min-width:240px}
+.pm-hc-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+
+/* ============================================================== */
+/* MODAL SYSTEM COMPLETE STYLING                                  */
+/* ============================================================== */
+.pm-modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.65);backdrop-filter:blur(4px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;overflow-y:auto}
+.pm-modal-card{background:#fff;border-radius:16px;width:100%;max-width:580px;box-shadow:0 25px 50px -12px rgba(0,0,0,.35);border:1px solid #cbd5e1;display:flex;flex-direction:column;max-height:90vh;overflow:hidden;animation:pmModalFadeIn .18s cubic-bezier(0.16,1,0.3,1);margin:auto}
+.pm-modal-card-lg{max-width:720px}
+@keyframes pmModalFadeIn{from{opacity:0;transform:scale(.96) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+.pm-modal-head{padding:16px 20px;border-bottom:1px solid #edf2f7;display:flex;align-items:center;gap:12px;background:#f8fafc;position:relative}
+.pm-modal-icon-wrap{width:38px;height:38px;border-radius:10px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.pm-modal-close{margin-left:auto;width:32px;height:32px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;transition:.15s}
+.pm-modal-close:hover{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+
+.pm-modal-body{padding:20px;overflow-y:auto;flex:1;max-height:calc(90vh - 140px)}
+.pm-modal-foot{padding:14px 20px;border-top:1px solid #edf2f7;background:#f8fafc;display:flex;justify-content:flex-end;gap:10px}
+
+/* Modal Inputs & Fields */
+.pm-form-field{margin-bottom:14px}
+.pm-form-field label{display:block;font-size:12px;font-weight:700;color:#334155;margin-bottom:6px}
+.pm-modal-input{width:100%;height:40px;border:1px solid #cbd5e1;border-radius:8px;padding:0 12px;font-size:13px;box-sizing:border-box;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+.pm-modal-input:focus,.pm-modal-select:focus{border-color:#007a5e;box-shadow:0 0 0 3px rgba(0,122,94,.12)}
+.pm-modal-select{width:100%;height:40px;padding:0 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:13px;box-sizing:border-box}
+
+.pm-radio-pills{display:flex;gap:8px;flex-wrap:wrap}
+.pm-radio-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12.5px;font-weight:600;cursor:pointer;transition:.12s}
+.pm-radio-pill:hover{border-color:#007a5e;background:#f8fafc}
+.pm-form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.pm-db-picker-container{max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:6px;background:#f8fafc;padding:6px}
+.pm-db-picker-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#fff;margin-bottom:6px;border:1px solid #e8eef4;cursor:pointer;transition:.12s}
+.pm-db-picker-row:hover{background:#f0fdf4;border-color:#86efac}
+.pm-db-row-content{flex:1;min-width:0}
+.pm-db-row-content strong{display:block;font-size:13px;color:#0f172a}
+.pm-db-row-content small{display:block;font-size:11px;color:#64748b}
+.pm-cat-pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#f1f5f9;font-size:10.5px;font-weight:700;color:#334155}
+
+.pm-selected-preview{background:#ecfdf5;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-top:10px}
+.pm-selected-preview small{display:block;font-size:10px;font-weight:800;color:#047857}
+.pm-selected-preview strong{display:block;font-size:13.5px;color:#065f46}
+
+/* Target summary for category change & detail */
+.pm-target-summary{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px}
+.pm-target-summary small{display:block;font-size:10px;font-weight:800;color:#64748b;letter-spacing:.05em}
+.pm-target-summary strong{display:block;font-size:14px;color:#0f172a;margin-top:2px}
+
+/* Spinner */
+.pm-spinner{width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:#007a5e;border-radius:50%;animation:pmSpin .8s linear infinite}
+@keyframes pmSpin{to{transform:rotate(360deg)}}
+
+/* Picker List */
+.pm-mutation-picker-list{display:flex;flex-direction:column;gap:8px}
+.pm-picker-opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;transition:.15s}
+.pm-picker-opt:hover{border-color:#007a5e;background:#f8fafc;transform:translateX(3px)}
+.pm-picker-opt-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.pm-picker-opt-icon.blue{background:#eff6ff}
+.pm-picker-opt-icon.amber{background:#fffbeb}
+.pm-picker-opt-icon.purple{background:#f5f3ff}
+.pm-picker-opt-icon.green{background:#ecfdf5}
+.pm-picker-opt strong{display:block;font-size:13.5px;color:#0f172a}
+.pm-picker-opt span{display:block;font-size:12px;color:#64748b;margin-top:2px}
+.pm-picker-arrow{margin-left:auto;color:#94a3b8;font-weight:700}
+
+@media(max-width:768px){
+  .pm-status-cards-grid{grid-template-columns:1fr 1fr}
+  .pm-mutation-shortcuts-grid{grid-template-columns:1fr}
+  .pm-form-grid-2{grid-template-columns:1fr}
+}
+</style>
+
+<!-- ============================================================== -->
+<!-- JAVASCRIPT MODULAR CONTROLLER UNTUK PAKET PEMBARUAN DATA PM    -->
+<!-- ============================================================== -->
+<script>
+(function() {
+  const KPM_ID = <%= access.kpm_id || access.id %>;
+  const DRAFT_STORAGE_KEY = 'SPPG_PM_PACKAGE_DRAFT_' + KPM_ID;
+  
+  // State draft dalam memori
+  let packageDraft = [];
+
+  // Load draft from localStorage on startup
+  function loadDraft() {
+    try {
+      const stored = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (stored) {
+        packageDraft = JSON.parse(stored) || [];
+      }
+    } catch(e) {
+      packageDraft = [];
+    }
+    renderDraftTable();
+    updateMetrics();
+  }
+
+  function saveDraft() {
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(packageDraft));
+    } catch(e) {}
+    renderDraftTable();
+    updateMetrics();
+  }
+
+  // Update top metrics & counters
+  function updateMetrics() {
+    const draftCount = packageDraft.length;
+    const elDraftCount = document.getElementById('metricDraftCount');
+    const elDraftDetail = document.getElementById('metricDraftDetail');
+    const elTabDraftBadge = document.getElementById('tabDraftBadge');
+    const elPill = document.getElementById('draftStatusPill');
+
+    if (elDraftCount) elDraftCount.textContent = draftCount;
+    if (elDraftDetail) elDraftDetail.textContent = draftCount + ' item perubahan';
+    if (elTabDraftBadge) elTabDraftBadge.textContent = draftCount;
+
+    if (elPill) {
+      if (draftCount > 0) {
+        elPill.textContent = draftCount + ' Item Siap Diajukan';
+        elPill.className = 'pm-draft-status-pill has-items';
+      } else {
+        elPill.textContent = 'Draft (0 Item)';
+        elPill.className = 'pm-draft-status-pill';
+      }
+    }
+
+    // Mini Counters
+    const newCount = packageDraft.filter(x => x.action_type === 'PM_BARU').length;
+    const exitCount = packageDraft.filter(x => x.action_type === 'PM_KELUAR').length;
+    const corrCount = packageDraft.filter(x => x.action_type === 'KOREKSI').length;
+    const catCount = packageDraft.filter(x => x.action_type === 'PERUBAHAN_KATEGORI').length;
+
+    const elNew = document.getElementById('counterNewPm');
+    const elExit = document.getElementById('counterExitPm');
+    const elCorr = document.getElementById('counterCorrectionPm');
+    const elCat = document.getElementById('counterCategoryPm');
+
+    if (elNew) elNew.textContent = newCount;
+    if (elExit) elExit.textContent = exitCount;
+    if (elCorr) elCorr.textContent = corrCount;
+    if (elCat) elCat.textContent = catCount;
+
+    // Projection calculation
+    // Balita = porsi kecil; Bumil & Busui = porsi besar
+    let smallDelta = 0;
+    let largeDelta = 0;
+
+    packageDraft.forEach(item => {
+      if (item.action_type === 'PM_BARU') {
+        if (item.category === 'BALITA') smallDelta += 1;
+        else if (['BUMIL', 'BUSUI'].includes(item.category)) largeDelta += 1;
+      } else if (item.action_type === 'PM_KELUAR') {
+        if (item.category === 'BALITA') smallDelta -= 1;
+        else if (['BUMIL', 'BUSUI'].includes(item.category)) largeDelta -= 1;
+      } else if (item.action_type === 'PERUBAHAN_KATEGORI') {
+        const fromCat = item.category;
+        const toCat = item.target_category;
+        if (fromCat === 'BALITA' && ['BUMIL', 'BUSUI'].includes(toCat)) {
+          smallDelta -= 1;
+          largeDelta += 1;
+        } else if (['BUMIL', 'BUSUI'].includes(fromCat) && toCat === 'BALITA') {
+          largeDelta -= 1;
+          smallDelta += 1;
+        }
+      }
+    });
+
+    const elTotal = document.getElementById('impactTotalItems');
+    const elSmall = document.getElementById('impactSmallPortion');
+    const elLarge = document.getElementById('impactLargePortion');
+
+    if (elTotal) elTotal.textContent = draftCount + ' Item';
+    if (elSmall) elSmall.textContent = (smallDelta >= 0 ? '+' : '') + smallDelta + ' Balita';
+    if (elLarge) elLarge.textContent = (largeDelta >= 0 ? '+' : '') + largeDelta + ' Bumil/Busui';
+  }
+
+  // Render Table of items in draft
+  function renderDraftTable() {
+    const tableWrap = document.getElementById('pkgItemsTableWrap');
+    const emptyState = document.getElementById('pkgEmptyState');
+    const subPanel = document.getElementById('pkgSubmissionPanel');
+    const countNote = document.getElementById('pkgItemsCountNote');
+    const tbody = document.getElementById('pkgItemsTableBody');
+
+    if (!tbody) return;
+
+    if (!packageDraft.length) {
+      if (emptyState) emptyState.style.display = 'block';
+      if (tableWrap) tableWrap.style.display = 'none';
+      if (subPanel) subPanel.style.display = 'none';
+      if (countNote) countNote.textContent = '0 perubahan';
+      tbody.innerHTML = '';
+      return;
+    }
+
+    if (emptyState) emptyState.style.display = 'none';
+    if (tableWrap) tableWrap.style.display = 'block';
+    if (subPanel) subPanel.style.display = 'block';
+    if (countNote) countNote.textContent = packageDraft.length + ' perubahan siap diajukan';
+
+    let html = '';
+    packageDraft.forEach((item, idx) => {
+      let badgeHtml = '';
+      let descHtml = '';
+
+      if (item.action_type === 'PM_BARU') {
+        badgeHtml = '<span class="pm-mut-badge pm-baru">👶 PM Baru</span>';
+        descHtml = '<strong>Pendaftaran Baru</strong><br><small style="color:#64748b">' + (item.reason || '-') + '</small>';
+      } else if (item.action_type === 'PM_KELUAR') {
+        badgeHtml = '<span class="pm-mut-badge pm-keluar">🚪 PM Keluar</span>';
+        descHtml = '<span style="color:#be123c">Alasan: ' + (item.reason || '-') + '</span>';
+      } else if (item.action_type === 'KOREKSI') {
+        badgeHtml = '<span class="pm-mut-badge koreksi">✏️ Koreksi</span>';
+        descHtml = '<span>' + (item.reason || 'Perbaikan data identitas') + '</span>';
+      } else if (item.action_type === 'PERUBAHAN_KATEGORI') {
+        badgeHtml = '<span class="pm-mut-badge perubahan-kategori">🔄 Alih Kategori</span>';
+        descHtml = '<strong>' + item.category + ' → ' + item.target_category + '</strong><br><small style="color:#64748b">' + (item.reason || '-') + '</small>';
+      }
+
+      html += '<tr>' +
+        '<td style="text-align:center;color:#64748b;font-weight:700">' + (idx + 1) + '</td>' +
+        '<td>' + badgeHtml + '</td>' +
+        '<td><strong>' + escapeHtml(item.full_name) + '</strong><br><code style="font-size:11px;background:#f1f5f9;padding:1px 4px;border-radius:4px">' + (item.nik || '-') + '</code> · ' + (item.gender || '-') + '</td>' +
+        '<td><span class="pm-cat-pill">' + item.category + '</span><br><small style="color:#64748b">' + (item.class_group || '-') + '</small></td>' +
+        '<td>' + descHtml + '</td>' +
+        '<td><span style="font-size:12px;color:#1e293b">' + (item.effective_from || '-') + '</span></td>' +
+        '<td style="text-align:center">' +
+          '<button type="button" class="btn danger" style="padding:4px 8px;font-size:11px" onclick="removeDraftItem(' + idx + ')" title="Hapus dari paket">' +
+            '🗑️' +
+          '</button>' +
+        '</td>' +
+      '</tr>';
+    });
+
+    tbody.innerHTML = html;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Remove item from draft
+  window.removeDraftItem = function(index) {
+    if (confirm('Hapus perubahan ini dari paket?')) {
+      packageDraft.splice(index, 1);
+      saveDraft();
+    }
+  };
+
+  // Clear entire draft
+  window.clearPackageDraft = function() {
+    if (confirm('Bersihkan seluruh draft perubahan di paket saat ini?')) {
+      packageDraft = [];
+      saveDraft();
+    }
+  };
+
+  // Tab switcher
+  window.switchPackageTab = function(tabId) {
+    const btnPaket = document.getElementById('tabBtnPaket');
+    const btnRiwayat = document.getElementById('tabBtnRiwayat');
+    const contentPaket = document.getElementById('tabContentPaket');
+    const contentRiwayat = document.getElementById('tabContentRiwayat');
+
+    if (tabId === 'tab-paket') {
+      if (btnPaket) btnPaket.classList.add('active');
+      if (btnRiwayat) btnRiwayat.classList.remove('active');
+      if (contentPaket) contentPaket.classList.add('active');
+      if (contentRiwayat) contentRiwayat.classList.remove('active');
+    } else {
+      if (btnRiwayat) btnRiwayat.classList.add('active');
+      if (btnPaket) btnPaket.classList.remove('active');
+      if (contentRiwayat) contentRiwayat.classList.add('active');
+      if (contentPaket) contentPaket.classList.remove('active');
+    }
+  };
+
+  // Modal helpers
+  window.openModal = function(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'flex';
+  };
+
+  window.closeModal = function(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  };
+
+  window.openMutationPickerModal = function() {
+    openModal('modalMutationPicker');
+  };
+
+  window.openNewPmModal = function() {
+    openModal('modalNewPm');
+  };
+
+  window.openExitPmModal = function() {
+    openModal('modalExitPm');
+  };
+
+  window.openCorrectionPmModal = function() {
+    openModal('modalCorrectionPm');
+  };
+
+  window.openCategoryChangeModal = function() {
+    openModal('modalCategoryChange');
+  };
+
+  // Filter PM Keluar List
+  window.filterExitPmList = function() {
+    const query = (document.getElementById('exitSearchInput')?.value || '').toLowerCase().trim();
+    const filterCat = document.querySelector('input[name="exit_cat_filter"]:checked')?.value || 'ALL';
+    const rows = document.querySelectorAll('#exitPmPickerContainer .pm-db-picker-row');
+
+    rows.forEach(r => {
+      const cat = r.dataset.cat || '';
+      const name = r.dataset.name || '';
+      const nik = r.dataset.nik || '';
+
+      const matchCat = filterCat === 'ALL' || cat === filterCat;
+      const matchQuery = !query || name.includes(query) || nik.includes(query);
+
+      r.style.display = (matchCat && matchQuery) ? 'flex' : 'none';
+    });
+  };
+
+  window.onExitPmSelected = function(radio) {
+    const row = radio.closest('.pm-db-picker-row');
+    const name = row.querySelector('.pm-db-row-content strong')?.textContent || '-';
+    const meta = row.querySelector('.pm-db-row-content small')?.textContent || '-';
+
+    const prevBox = document.getElementById('exitSelectedPreview');
+    const prevName = document.getElementById('exitSelectedName');
+    const prevMeta = document.getElementById('exitSelectedMeta');
+
+    if (prevBox) prevBox.style.display = 'block';
+    if (prevName) prevName.textContent = name;
+    if (prevMeta) prevMeta.textContent = meta;
+  };
+
+  // Submits
+  window.handleAddNewPmSubmit = function(e) {
+    e.preventDefault();
+    const cat = document.querySelector('input[name="newpm_category"]:checked')?.value || 'BALITA';
+    const name = document.getElementById('newpm_name')?.value.trim();
+    const nik = document.getElementById('newpm_nik')?.value.trim();
+    const gender = document.getElementById('newpm_gender')?.value || 'P';
+    const birth = document.getElementById('newpm_birth')?.value;
+    const subgroup = document.getElementById('newpm_subgroup')?.value;
+    const reason = document.getElementById('newpm_reason')?.value.trim();
+    const eff = document.getElementById('newpm_effective')?.value || new Date().toISOString().slice(0, 10);
+
+    if (!name) return alert('Nama lengkap wajib diisi.');
+
+    packageDraft.push({
+      action_type: 'PM_BARU',
+      pm_id: null,
+      full_name: name,
+      nik: nik || null,
+      gender: gender,
+      category: cat,
+      class_group: subgroup,
+      birth_date: birth || null,
+      reason: reason || 'Penerima baru terdaftar',
+      effective_from: eff
+    });
+
+    saveDraft();
+    closeModal('modalNewPm');
+    e.target.reset();
+  };
+
+  window.handleAddExitPmSubmit = function(e) {
+    e.preventDefault();
+    const checkedRadio = document.querySelector('input[name="selected_exit_pm_id"]:checked');
+    if (!checkedRadio) return alert('Pilih penerima manfaat yang akan dikeluarkan.');
+
+    const pmId = checkedRadio.value;
+    const row = checkedRadio.closest('.pm-db-picker-row');
+    const name = row.querySelector('.pm-db-row-content strong')?.textContent || '-';
+    const cat = row.dataset.cat || 'BALITA';
+    const reason = document.getElementById('exit_reason')?.value;
+    const eff = document.getElementById('exit_effective')?.value || new Date().toISOString().slice(0, 10);
+    const customNote = document.getElementById('exit_custom_note')?.value.trim();
+
+    if (!reason) return alert('Pilih alasan PM keluar.');
+
+    const fullReason = reason + (customNote ? ' — ' + customNote : '');
+
+    // Prevent duplicate in draft
+    if (packageDraft.some(x => x.pm_id == pmId && x.action_type === 'PM_KELUAR')) {
+      return alert('PM ini sudah ada dalam daftar PM keluar di paket saat ini.');
+    }
+
+    packageDraft.push({
+      action_type: 'PM_KELUAR',
+      pm_id: Number(pmId),
+      full_name: name,
+      category: cat,
+      reason: fullReason,
+      effective_from: eff
+    });
+
+    saveDraft();
+    closeModal('modalExitPm');
+    e.target.reset();
+    document.getElementById('exitSelectedPreview').style.display = 'none';
+  };
+
+  // Filter Correction List
+  window.filterCorrectionPmList = function() {
+    const query = (document.getElementById('corrSearchInput')?.value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#corrPmPickerContainer .pm-db-picker-row');
+    rows.forEach(r => {
+      const name = r.dataset.name || '';
+      const nik = r.dataset.nik || '';
+      r.style.display = (!query || name.includes(query) || nik.includes(query)) ? 'flex' : 'none';
+    });
+  };
+
+  window.onCorrPmSelected = function(pmData) {
+    const fields = document.getElementById('corrFormFields');
+    const btn = document.getElementById('btnSubmitCorrPm');
+    if (fields) fields.style.display = 'block';
+    if (btn) btn.disabled = false;
+
+    document.getElementById('corr_pm_id').value = pmData.id;
+    document.getElementById('corr_name').value = pmData.full_name || '';
+    document.getElementById('corr_nik').value = pmData.nik || '';
+    document.getElementById('corr_gender').value = pmData.gender || 'P';
+  };
+
+  window.handleAddCorrectionSubmit = function(e) {
+    e.preventDefault();
+    const pmId = document.getElementById('corr_pm_id').value;
+    const name = document.getElementById('corr_name').value.trim();
+    const nik = document.getElementById('corr_nik').value.trim();
+    const gender = document.getElementById('corr_gender').value;
+    const reason = document.getElementById('corr_reason').value.trim();
+    const eff = document.getElementById('corr_effective').value || new Date().toISOString().slice(0, 10);
+
+    if (!name || !pmId) return alert('Data PM dan nama wajib valid.');
+
+    packageDraft.push({
+      action_type: 'KOREKSI',
+      pm_id: Number(pmId),
+      full_name: name,
+      nik: nik || null,
+      gender: gender,
+      reason: reason || 'Koreksi data identitas',
+      effective_from: eff
+    });
+
+    saveDraft();
+    closeModal('modalCorrectionPm');
+    e.target.reset();
+    document.getElementById('corrFormFields').style.display = 'none';
+    document.getElementById('btnSubmitCorrPm').disabled = true;
+  };
+
+  // Filter Category Change List
+  window.filterCatChangePmList = function() {
+    const query = (document.getElementById('catChangeSearchInput')?.value || '').toLowerCase().trim();
+    const rows = document.querySelectorAll('#catChangePmPickerContainer .pm-db-picker-row');
+    rows.forEach(r => {
+      const name = r.dataset.name || '';
+      const nik = r.dataset.nik || '';
+      r.style.display = (!query || name.includes(query) || nik.includes(query)) ? 'flex' : 'none';
+    });
+  };
+
+  window.onCatChangeSelected = function(pmData) {
+    const fields = document.getElementById('catChangeFormFields');
+    const btn = document.getElementById('btnSubmitCatChange');
+    if (fields) fields.style.display = 'block';
+    if (btn) btn.disabled = false;
+
+    document.getElementById('catchange_pm_id').value = pmData.id;
+    document.getElementById('catchange_target_name').textContent = pmData.full_name;
+    document.getElementById('catchange_target_meta').textContent = 'NIK: ' + (pmData.nik || '-') + ' · Kategori Saat Ini: ' + pmData.category;
+    document.getElementById('catchange_origin_cat').value = pmData.category;
+
+    // Default target
+    const targetSelect = document.getElementById('catchange_target_cat');
+    if (pmData.category === 'BUMIL') {
+      targetSelect.value = 'BUSUI';
+    } else if (pmData.category === 'BUSUI') {
+      targetSelect.value = 'BALITA';
+    }
+  };
+
+  window.handleAddCategoryChangeSubmit = function(e) {
+    e.preventDefault();
+    const pmId = document.getElementById('catchange_pm_id').value;
+    const name = document.getElementById('catchange_target_name').textContent;
+    const originCat = document.getElementById('catchange_origin_cat').value;
+    const targetCat = document.getElementById('catchange_target_cat').value;
+    const targetSub = document.getElementById('catchange_target_subgroup').value;
+    const reason = document.getElementById('catchange_reason').value.trim();
+    const eff = document.getElementById('catchange_effective').value || new Date().toISOString().slice(0, 10);
+
+    if (!pmId || !originCat || !targetCat) return alert('Pilih penerima manfaat dan kategori tujuan.');
+
+    packageDraft.push({
+      action_type: 'PERUBAHAN_KATEGORI',
+      pm_id: Number(pmId),
+      full_name: name,
+      category: originCat,
+      target_category: targetCat,
+      class_group: targetSub,
+      reason: reason || 'Alih kategori status program',
+      effective_from: eff
+    });
+
+    saveDraft();
+    closeModal('modalCategoryChange');
+    e.target.reset();
+    document.getElementById('catChangeFormFields').style.display = 'none';
+    document.getElementById('btnSubmitCatChange').disabled = true;
+  };
+
+  // Submit Final Package to Backend
+  window.submitPackageDraft = function(isDraft) {
+    if (!packageDraft.length && !isDraft) {
+      return alert('Belum ada item perubahan dalam paket. Silakan tambahkan minimal satu perubahan.');
+    }
+
+    const confirmMsg = isDraft 
+      ? 'Simpan draft paket pembaruan ini?' 
+      : 'Kirim paket pembaruan (' + packageDraft.length + ' perubahan) kepada Ka. SPPG untuk diverifikasi?';
+
+    if (!confirm(confirmMsg)) return;
+
+    const inputJson = document.getElementById('pkgItemsJsonInput');
+    const inputIsDraft = document.getElementById('pkgIsDraftInput');
+    const form = document.getElementById('pkgFinalSubmitForm');
+
+    if (inputJson && inputIsDraft && form) {
+      inputJson.value = JSON.stringify(packageDraft);
+      inputIsDraft.value = isDraft ? '1' : '0';
+
+      // Clear local storage draft if submitting for real
+      if (!isDraft) {
+        try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch(e) {}
+      }
+
+      form.submit();
+    }
+  };
+
+  // View Package Detail Modal
+  window.viewPackageDetailModal = function(subId) {
+    const modal = document.getElementById('modalPackageDetail');
+    const loading = document.getElementById('detailLoadingState');
+    const content = document.getElementById('detailContentState');
+    const title = document.getElementById('modalDetailTitle');
+    const tbody = document.getElementById('detailItemsTableBody');
+
+    if (modal) modal.style.display = 'flex';
+    if (loading) loading.style.display = 'block';
+    if (content) content.style.display = 'none';
+
+    fetch('/api/kpm-package/submissions/' + subId + '/items')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) throw new Error(data.error || 'Gagal memuat rincian paket.');
+
+        if (loading) loading.style.display = 'none';
+        if (content) content.style.display = 'block';
+
+        const sub = data.submission;
+        const items = data.items || [];
+
+        document.getElementById('detailPackageCode').textContent = '#PKT-' + String(sub.id).padStart(4, '0') + ' (' + items.length + ' Item)';
+        document.getElementById('detailEffectiveDate').textContent = 'Tanggal Berlaku: ' + (sub.effective_from || '-');
+        document.getElementById('detailSubmitDate').textContent = 'Dibuat: ' + new Date(sub.created_at).toLocaleDateString('id-ID');
+        
+        const statusEl = document.getElementById('detailPackageStatus');
+        if (statusEl) {
+          statusEl.textContent = sub.status;
+          statusEl.className = 'pm-hc-badge ' + (sub.status === 'DISETUJUI' ? 'approved' : sub.status === 'DITOLAK' ? 'rejected' : 'pending');
+        }
+
+        const noteText = document.getElementById('detailReviewNoteText');
+        if (noteText) noteText.textContent = sub.review_note || 'Tidak ada catatan khusus.';
+
+        let rowsHtml = '';
+        items.forEach((item, idx) => {
+          let badgeHtml = '<span class="pm-mut-badge pm-baru">PM Baru</span>';
+          if (item.action_type === 'PM_KELUAR') badgeHtml = '<span class="pm-mut-badge pm-keluar">PM Keluar</span>';
+          else if (item.action_type === 'KOREKSI') badgeHtml = '<span class="pm-mut-badge koreksi">Koreksi</span>';
+          else if (item.action_type === 'PERUBAHAN_KATEGORI') badgeHtml = '<span class="pm-mut-badge perubahan-kategori">Alih Kategori</span>';
+
+          rowsHtml += '<tr>' +
+            '<td style="text-align:center;color:#64748b">' + (idx + 1) + '</td>' +
+            '<td>' + badgeHtml + '</td>' +
+            '<td><strong>' + escapeHtml(item.full_name) + '</strong><br><small style="color:#64748b">NIK: ' + (item.nik || '-') + '</small></td>' +
+            '<td>' + (item.category || '-') + '<br><small style="color:#64748b">' + (item.class_group || '-') + '</small></td>' +
+            '<td>' + escapeHtml(item.change_reason || '-') + '</td>' +
+          '</tr>';
+        });
+
+        if (!items.length) {
+          rowsHtml = '<tr><td colspan="5" style="text-align:center;padding:16px;color:#64748b">Belum ada baris perubahan tercatat dalam paket ini.</td></tr>';
+        }
+
+        if (tbody) tbody.innerHTML = rowsHtml;
+
+        // Executive actions inside modal
+        const execActions = document.getElementById('detailExecutiveActions');
+        const btnApprove = document.getElementById('btnDetailApprove');
+        const btnReject = document.getElementById('btnDetailReject');
+        if (execActions && btnApprove && btnReject) {
+          if (['DIAJUKAN', 'DITINJAU'].includes(sub.status)) {
+            execActions.style.display = 'flex';
+            btnApprove.onclick = function() { handleExecutiveReviewAction(sub.id, 'DISETUJUI'); };
+            btnReject.onclick = function() { handleExecutiveReviewAction(sub.id, 'PERLU_PERBAIKAN'); };
+          } else {
+            execActions.style.display = 'none';
+          }
+        }
+      })
+      .catch(err => {
+        if (loading) loading.innerHTML = '<span style="color:#d92d20">Gagal memuat detail paket: ' + err.message + '</span>';
+      });
+  };
+
+  // Executive Review Action
+  window.handleExecutiveReviewAction = function(subId, decision) {
+    const isApprove = decision === 'DISETUJUI';
+    const promptMsg = isApprove 
+      ? 'Masukkan catatan persetujuan Ka. SPPG (opsional):' 
+      : 'Masukkan alasan permintaan perbaikan / pengembalian data:';
+    
+    const note = prompt(promptMsg, isApprove ? 'Disetujui sesuai koordinasi kader' : 'Perbaiki NIK / data yang belum lengkap');
+    if (note === null) return; // cancel
+
+    fetch('/api/kpm-package/submissions/' + subId + '/review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision, note })
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert(res.message);
+        window.location.reload();
+      } else {
+        alert('Gagal merekam review: ' + (res.error || 'Terjadi kesalahan'));
+      }
+    })
+    .catch(err => alert('Kesalahan jaringan: ' + err.message));
+  };
+
+  // Dynamic Subgroup Options for New PM
+  window.updateNewPmSubgroupOptions = function() {
+    const cat = document.querySelector('input[name="newpm_category"]:checked')?.value || 'BALITA';
+    const select = document.getElementById('newpm_subgroup');
+    const genderSelect = document.getElementById('newpm_gender');
+    if (!select) return;
+
+    if (cat === 'BALITA') {
+      select.innerHTML = '<option value="0-5 Bulan (Bayi)">0-5 Bulan (Bayi)</option><option value="6-23 Bulan (Baduta)" selected>6-23 Bulan (Baduta)</option><option value="24-59 Bulan (Balita)">24-59 Bulan (Balita)</option>';
+      if (genderSelect) genderSelect.disabled = false;
+    } else if (cat === 'BUMIL') {
+      select.innerHTML = '<option value="Trimester 1 (1–12 Minggu)">Trimester 1 (1–12 Minggu)</option><option value="Trimester 2 (13–27 Minggu)" selected>Trimester 2 (13–27 Minggu)</option><option value="Trimester 3 (28–40 Minggu)">Trimester 3 (28–40 Minggu)</option>';
+      if (genderSelect) { genderSelect.value = 'P'; genderSelect.disabled = true; }
+    } else if (cat === 'BUSUI') {
+      select.innerHTML = '<option value="Bayi 0–6 Bulan (ASI Eksklusif)" selected>Bayi 0–6 Bulan (ASI Eksklusif)</option><option value="Bayi 7–12 Bulan">Bayi 7–12 Bulan</option><option value="Bayi 13–24 Bulan">Bayi 13–24 Bulan</option>';
+      if (genderSelect) { genderSelect.value = 'P'; genderSelect.disabled = true; }
+    }
+  };
+
+  // Dynamic Subgroup Options for Category Change
+  window.updateCatChangeSubgroups = function() {
+    const targetCat = document.getElementById('catchange_target_cat')?.value;
+    const select = document.getElementById('catchange_target_subgroup');
+    if (!select || !targetCat) return;
+
+    if (targetCat === 'BUSUI') {
+      select.innerHTML = '<option value="Bayi 0–6 Bulan (ASI Eksklusif)" selected>Bayi 0–6 Bulan (ASI Eksklusif)</option><option value="Bayi 7–12 Bulan">Bayi 7–12 Bulan</option><option value="Bayi 13–24 Bulan">Bayi 13–24 Bulan</option>';
+    } else if (targetCat === 'BUMIL') {
+      select.innerHTML = '<option value="Trimester 1 (1–12 Minggu)">Trimester 1 (1–12 Minggu)</option><option value="Trimester 2 (13–27 Minggu)" selected>Trimester 2 (13–27 Minggu)</option><option value="Trimester 3 (28–40 Minggu)">Trimester 3 (28–40 Minggu)</option>';
+    } else if (targetCat === 'BALITA') {
+      select.innerHTML = '<option value="0-5 Bulan (Bayi)">0-5 Bulan (Bayi)</option><option value="6-23 Bulan (Baduta)" selected>6-23 Bulan (Baduta)</option><option value="24-59 Bulan (Balita)">24-59 Bulan (Balita)</option>';
+    }
+  };
+
+  // Close modals on clicking outside (backdrop) or pressing Escape
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.classList.contains('pm-modal-backdrop')) {
+      e.target.style.display = 'none';
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.pm-modal-backdrop').forEach(m => {
+        if (m.style.display !== 'none') m.style.display = 'none';
+      });
+    }
+  });
+
+  // Initialize on DOM ready
+  document.addEventListener('DOMContentLoaded', loadDraft);
+  if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    loadDraft();
+  }
+})();
+</script>
