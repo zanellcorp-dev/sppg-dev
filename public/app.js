@@ -173,9 +173,6 @@
       if (!modalId) return;
       var el = document.getElementById(modalId);
       if (!el) return;
-      if (el.parentNode !== document.body) {
-        document.body.appendChild(el);
-      }
       el.style.display = 'flex';
       el.classList.add('open', 'show', 'active');
       el.setAttribute('aria-hidden', 'false');
