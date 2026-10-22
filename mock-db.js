@@ -155,6 +155,7 @@ function createMockPool(opts = {}) {
       }
     ],
     kpm_code_history: [],
+    kpm_status_history: [],
     kpm_daily_data: [
       {
         id: 1,
@@ -830,7 +831,98 @@ function createMockPool(opts = {}) {
       return [{ affectedRows: 1 }, []];
     }
 
-    // KPM
+    // KPM with kpm_daily_data or kpm_status_history (Master KPM & Export)
+    if (lowerSql.match(/\bfrom kpm\b/) && (lowerSql.includes('kpm_daily_data') || lowerSql.includes('kpm_status_history'))) {
+      const targetDate = (params && params[0]) ? String(params[0]) : new Date().toISOString().slice(0, 10);
+      let list = tables.kpm.map(k => {
+        const dailies = (tables.kpm_daily_data || [])
+          .filter(d => Number(d.kpm_id) === Number(k.id) && String(d.effective_from) <= targetDate)
+          .sort((a, b) => String(b.effective_from).localeCompare(String(a.effective_from)) || (b.id - a.id));
+        const d = dailies[0] || {};
+
+        const statuses = (tables.kpm_status_history || [])
+          .filter(s => Number(s.kpm_id) === Number(k.id) && String(s.start_date) <= targetDate && (!s.end_date || String(s.end_date) >= targetDate))
+          .sort((a, b) => String(b.start_date).localeCompare(String(a.start_date)) || (b.id - a.id));
+        const sh = statuses[0] || {};
+
+        return {
+          ...k,
+          daily_id: d.id || null,
+          effective_from: d.effective_from || null,
+          small_female: d.small_female || 0,
+          small_male: d.small_male || 0,
+          large_female: d.large_female || 0,
+          large_male: d.large_male || 0,
+          teacher_female: d.teacher_female || 0,
+          teacher_male: d.teacher_male || 0,
+          staff_female: d.staff_female || 0,
+          staff_male: d.staff_male || 0,
+          balita_female: d.balita_female || 0,
+          balita_male: d.balita_male || 0,
+          bumil: d.bumil || 0,
+          busui: d.busui || 0,
+          period_status: sh.status || null,
+          period_start: sh.start_date || null,
+          period_end: sh.end_date || null,
+          period_reason: sh.reason || null,
+          period_note: sh.note || null
+        };
+      });
+
+      // Active / Status filter
+      if (lowerSql.includes('k.active=1')) {
+        list = list.filter(k => k.active === 1 || ['NONAKTIF_SEMENTARA', 'NONAKTIF'].includes(k.kpm_status));
+      }
+
+      // Filter type
+      if (lowerSql.includes('k.type=?') || lowerSql.includes('type=?')) {
+        const typeParam = params.find(p => p === 'SATUAN_PENDIDIKAN' || p === 'POSYANDU');
+        if (typeParam) list = list.filter(k => k.type === typeParam);
+      }
+
+      // Filter search
+      const likeParam = params.find(p => typeof p === 'string' && p.startsWith('%') && p.endsWith('%'));
+      if (likeParam) {
+        const rawQ = likeParam.replace(/%/g, '').toLowerCase().trim();
+        if (rawQ) {
+          list = list.filter(k => 
+            (k.name && k.name.toLowerCase().includes(rawQ)) || 
+            (k.code && k.code.toLowerCase().includes(rawQ)) || 
+            (k.npsn && k.npsn.toLowerCase().includes(rawQ))
+          );
+        }
+      }
+
+      return [list, []];
+    }
+
+    // KPM status history table
+    if (lowerSql.includes('from kpm_status_history')) {
+      const kId = params && params[0] ? Number(params[0]) : null;
+      let list = tables.kpm_status_history || [];
+      if (kId) {
+        list = list.filter(h => Number(h.kpm_id) === kId);
+      }
+      return [list.map(h => ({ ...h, username: 'admin' })), []];
+    }
+    if (lowerSql.startsWith('insert into kpm_status_history')) {
+      const newId = ++autoId;
+      if (!tables.kpm_status_history) tables.kpm_status_history = [];
+      tables.kpm_status_history.push({
+        id: newId,
+        kpm_id: params[0],
+        status: params[1],
+        start_date: params[2],
+        end_date: params[3],
+        reason: params[4],
+        note: params[5],
+        created_by: params[6],
+        created_at: new Date()
+      });
+      return [{ insertId: newId, affectedRows: 1 }, []];
+    }
+
+    // KPM (Standard lookup)
     if (lowerSql.match(/\bfrom kpm\b/) && !lowerSql.includes('kpm_pm_') && !lowerSql.includes('kpm_portal_') && !lowerSql.includes('kpm_daily_') && !lowerSql.includes('kpm_status_')) {
       if (lowerSql.includes('where id=?')) {
         const id = Number(params[0]);
@@ -887,6 +979,14 @@ function createMockPool(opts = {}) {
       return [{ insertId: newId, affectedRows: 1 }, []];
     }
     if (lowerSql.includes('from kpm_pm_submission_rows')) {
+      if (lowerSql.includes('where submission_id = ?') || lowerSql.includes('where submission_id=?')) {
+        const subId = Number(params[0]);
+        let filtered = (tables.kpm_pm_submission_rows || []).filter(r => Number(r.submission_id) === subId);
+        if (lowerSql.includes("status='valid'") || lowerSql.includes("status = 'valid'")) {
+          filtered = filtered.filter(r => r.status === 'VALID');
+        }
+        return [filtered, []];
+      }
       if (lowerSql.includes('where r.pm_id=?') || lowerSql.includes('where pm_id=?')) {
         const pmId = Number(params[0]);
         const rows = (tables.kpm_pm_submission_rows || []).filter(r => Number(r.pm_id) === pmId);
@@ -1053,12 +1153,103 @@ function createMockPool(opts = {}) {
 
     // Quick links
     if (lowerSql.includes('from quick_links')) {
-      return [tables.quick_links, []];
+      if (lowerSql.includes('where id=?') || lowerSql.includes('where id = ?')) {
+        const id = Number(params[0]);
+        return [tables.quick_links.filter(x => x.id === id), []];
+      }
+      return [tables.quick_links.filter(x => x.active !== 0), []];
+    }
+    if (lowerSql.startsWith('insert into quick_links')) {
+      const newId = tables.quick_links.length + 1;
+      tables.quick_links.push({
+        id: newId,
+        title: params[0],
+        url: params[1],
+        icon: params[2] || 'external-link',
+        sort_order: Number(params[3]) || 0,
+        description: params[4] || '',
+        active: 1,
+        created_at: new Date()
+      });
+      return [{ insertId: newId, affectedRows: 1 }, []];
+    }
+    if (lowerSql.startsWith('update quick_links')) {
+      const id = Number(params[params.length - 1]);
+      const item = tables.quick_links.find(x => x.id === id);
+      if (item) {
+        if (params.length >= 5) {
+          item.title = params[0];
+          item.url = params[1];
+          item.icon = params[2];
+          item.sort_order = Number(params[3]) || 0;
+          item.description = params[4];
+        }
+      }
+      return [{ affectedRows: 1 }, []];
     }
 
     // BGN Documents
     if (lowerSql.includes('from bgn_documents')) {
-      return [tables.bgn_documents, []];
+      if (lowerSql.includes('where id=?') || lowerSql.includes('where id = ?')) {
+        const id = Number(params[0]);
+        return [tables.bgn_documents.filter(x => x.id === id), []];
+      }
+      if (lowerSql.includes('and doc_type=?') || lowerSql.includes('where doc_type=?')) {
+        const type = String(params[0]);
+        return [tables.bgn_documents.filter(x => x.active !== 0 && x.doc_type === type), []];
+      }
+      return [tables.bgn_documents.filter(x => x.active !== 0), []];
+    }
+    if (lowerSql.startsWith('insert into bgn_documents')) {
+      const newId = tables.bgn_documents.length + 1;
+      tables.bgn_documents.push({
+        id: newId,
+        doc_type: params[0],
+        title: params[1],
+        document_number: params[2] || '',
+        document_date: params[3] || new Date().toISOString().slice(0, 10),
+        description: params[4] || '',
+        file_path: params[5] || null,
+        file_name: params[6] || null,
+        active: 1,
+        created_at: new Date()
+      });
+      return [{ insertId: newId, affectedRows: 1 }, []];
+    }
+    if (lowerSql.startsWith('update bgn_documents')) {
+      const id = Number(params[params.length - 1]);
+      const item = tables.bgn_documents.find(x => x.id === id);
+      if (item) {
+        item.doc_type = params[0];
+        item.title = params[1];
+        item.document_number = params[2];
+        item.document_date = params[3];
+        item.description = params[4];
+        if (params.length >= 7) {
+          item.file_path = params[5] || item.file_path;
+          item.file_name = params[6] || item.file_name;
+        }
+      }
+      return [{ affectedRows: 1 }, []];
+    }
+
+    // Foodtray templates
+    if (lowerSql.includes('from foodtray_templates')) {
+      return [tables.foodtray_templates, []];
+    }
+    if (lowerSql.startsWith('update foodtray_templates')) {
+      const t = tables.foodtray_templates[0] || {};
+      if (lowerSql.includes('template_path=?')) {
+        t.template_path = params[0];
+        t.template_name = params[1];
+      } else if (lowerSql.includes('sppg_name=?')) {
+        t.sppg_name = params[0];
+        t.title_line = params[1];
+        t.footer_line = params[2];
+        t.description = params[3];
+        t.guide_text = params[4];
+      }
+      return [{ affectedRows: 1 }, []];
     }
 
     // Daily closings

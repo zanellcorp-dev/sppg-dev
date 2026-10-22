@@ -498,7 +498,7 @@
         <h3 id="histModalTitle">Riwayat Rekam Jejak & Otorisasi BGN</h3>
         <p>Jejak pendaftaran, pembaruan identitas, permohonan nonaktif, dan otorisasi Kepala BGN.</p>
       </div>
-      <button type="button" class="pm-modal-close" onclick="closeHistoryModal()" aria-label="Tutup">&times;</button>
+      <button type="button" class="pm-modal-close" data-close-modal="true" data-action="close" onclick="closeHistoryModal()" aria-label="Tutup">&times;</button>
     </div>
 
     <div class="pm-modal-body">
@@ -550,7 +550,7 @@
 
     <!-- Foot Modal -->
     <div class="pm-modal-foot" id="pmHistoryModalFoot">
-      <button type="button" class="pm-modal-btn primary" onclick="closeHistoryModal()">Tutup</button>
+      <button type="button" class="pm-modal-btn primary" data-close-modal="true" data-action="close" onclick="closeHistoryModal()">Tutup</button>
     </div>
   </div>
 </div>
@@ -667,9 +667,8 @@
 .pm-modal-icon-wrap.success{background:#dcfce7;color:#15803d}
 .pm-modal-icon-wrap.neutral{background:#e2e8f0;color:#334155}
 .pm-modal-head h3{font-size:16px;margin:0;color:#0f243d;font-weight:800}
-.pm-modal-head p{font-size:12.5px;color:#64748b;margin:3px 0 0}
-.pm-modal-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:24px;line-height:1;color:#94a3b8;cursor:pointer;padding:4px}
-.pm-modal-close:hover{color:#1e293b}
+.pm-modal-close{position:absolute;top:14px;right:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;color:#64748b;cursor:pointer;z-index:20;transition:.15s;padding:0}
+.pm-modal-close:hover{background:#fee2e2;color:#b91c1c;border-color:#fecaca}
 
 /* Modal Body */
 .pm-modal-body{padding:20px 22px;max-height:68vh;overflow-y:auto}
@@ -1247,7 +1246,7 @@
     if(histModal) histModal.style.display = 'flex';
 
     if(histFoot){
-      histFoot.innerHTML = '<button type="button" class="pm-modal-btn primary" onclick="closeHistoryModal()">Tutup</button>';
+      histFoot.innerHTML = '<button type="button" class="pm-modal-btn primary" data-close-modal="true" data-action="close" onclick="closeHistoryModal()">Tutup</button>';
     }
 
     var historyUrl = (isPreview || !token) ? 
@@ -1567,7 +1566,7 @@
             footHtml += '<button type="button" class="pm-modal-btn success" onclick="closeHistoryModal();openReactivateModal(' + pmData.id + ', \'' + (pmData.full_name || '').replace(/'/g, "\\'") + '\', \'' + (pmData.nik || '') + '\', \'' + (pmData.deactivation_reason || '').replace(/'/g, "\\'") + '\')">↺ Pulihkan Data ke Aktif</button>';
           }
           footHtml += '</div>';
-          footHtml += '<button type="button" class="pm-modal-btn primary" onclick="closeHistoryModal()">Tutup</button>';
+          footHtml += '<button type="button" class="pm-modal-btn primary" data-close-modal="true" data-action="close" onclick="closeHistoryModal()">Tutup</button>';
           histFoot.innerHTML = footHtml;
         }
       })
@@ -1587,7 +1586,17 @@
   };
 
   window.closeHistoryModal = function(){
-    if(histModal) histModal.style.display = 'none';
+    if(histModal) {
+      histModal.style.display = 'none';
+      histModal.classList.remove('active', 'open', 'show');
+      histModal.setAttribute('aria-hidden', 'true');
+    }
+    document.querySelectorAll('#pmHistoryModal, .pm-modal-backdrop[id*="history"], .pm-modal-backdrop[id*="History"]').forEach(function(m){
+      m.style.display = 'none';
+      m.classList.remove('active', 'open', 'show');
+      m.setAttribute('aria-hidden', 'true');
+    });
+    try { document.body.style.overflow = ''; } catch(e){}
   };
 
   // Close modals on Esc key or click backdrop
@@ -1606,6 +1615,9 @@
       modal.addEventListener('click', function(e){
         if(e.target === modal){
           modal.style.display = 'none';
+          modal.classList.remove('active', 'open', 'show');
+          modal.setAttribute('aria-hidden', 'true');
+          try { document.body.style.overflow = ''; } catch(err){}
         }
       });
     }

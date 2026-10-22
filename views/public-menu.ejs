@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menu Gizi Hari Ini &amp; Jadwal Distribusi · <%= appSettings?.sppg_name || 'SPPG' %></title>
+  <link rel="icon" href="<%= appSettings?.favicon_path ? '/branding/favicon' : '/public/bgn-logo.png' %>">
+  <link rel="stylesheet" href="/public/style.css?v=1.8.38">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .pub-container { max-width: 1080px; margin: 0 auto; padding: 24px 16px 48px; }
+    .pub-header { background: #fff; border: 1px solid #dfe7ee; border-radius: 18px; overflow: hidden; box-shadow: 0 6px 24px rgba(15,35,55,.06); margin-bottom: 20px; }
+    .pub-banner { height: 130px; background: linear-gradient(135deg, #0b2d61 0%, #007a5e 100%); position: relative; }
+    .pub-head-content { padding: 0 24px 20px; position: relative; }
+    .pub-brand { display: flex; align-items: flex-end; gap: 16px; margin-top: -38px; }
+    .pub-logo { width: 80px; height: 80px; border-radius: 16px; background: #fff; border: 1px solid #dfe7ee; display: flex; align-items: center; justify-content: center; padding: 8px; box-shadow: 0 4px 14px rgba(15,35,55,.1); overflow: hidden; }
+    .pub-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .pub-copy h1 { font-size: 22px; color: #0f243d; margin: 0 0 4px; line-height: 1.25; }
+    .pub-copy p { margin: 0; color: #64748b; font-size: 13px; }
+    .pub-pill-public { display: inline-flex; align-items: center; gap: 5px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+
+    .pub-filter-panel { background: #fff; border: 1px solid #dfe7ee; border-radius: 16px; padding: 18px 20px; margin-bottom: 22px; box-shadow: 0 4px 14px rgba(15,35,55,.04); }
+    .pub-filter-grid { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; }
+    @media(max-width: 768px) {
+      .pub-filter-grid { grid-template-columns: 1fr; }
+    }
+    
+    .pub-type-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .pub-tab-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; font-size: 12.5px; font-weight: 700; text-decoration: none; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; transition: all .15s ease; }
+    .pub-tab-btn:hover { background: #edf2f7; color: #0f172a; }
+    .pub-tab-btn.active { background: #007a5e; border-color: #007a5e; color: #fff; box-shadow: 0 2px 8px rgba(0,122,94,.25); }
+
+    .pub-kpm-select-box { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .pub-select-input { flex: 1; min-width: 240px; height: 42px; border-radius: 10px; border: 1px solid #cbd5e1; padding: 0 14px; font-size: 13.5px; font-weight: 600; color: #0f172a; background: #fff; }
+    .pub-date-input { height: 42px; border-radius: 10px; border: 1px solid #cbd5e1; padding: 0 12px; font-size: 13px; font-weight: 600; color: #0f172a; background: #fff; }
+
+    .pub-highlight-kpm { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #86efac; border-radius: 14px; padding: 16px 20px; margin-bottom: 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; }
+    .pub-highlight-kpm h3 { margin: 2px 0; font-size: 16px; color: #065f46; font-weight: 800; }
+    .pub-highlight-kpm p { margin: 0; font-size: 12.5px; color: #166534; }
+
+    .pub-menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 24px; }
+    .pub-menu-card { background: #fff; border: 1px solid #dfe7ee; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 18px rgba(15,35,55,.05); display: flex; flex-direction: column; transition: transform .2s ease; }
+    .pub-menu-card.is-selected-type { border-color: #007a5e; box-shadow: 0 6px 20px rgba(0,122,94,.15); }
+    .pub-menu-head { padding: 16px 20px; border-bottom: 1px solid #edf2f7; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .pub-menu-head h2 { font-size: 16px; margin: 0; color: #0b2d61; display: flex; align-items: center; gap: 6px; }
+    .pub-menu-body { padding: 18px 20px; flex: 1; display: flex; flex-direction: column; gap: 14px; }
+    .pub-menu-title { font-size: 15px; font-weight: 800; color: #0f243d; line-height: 1.4; margin: 0; }
+    .pub-menu-comp { font-size: 13px; color: #475569; line-height: 1.45; }
+    
+    .pub-nutri-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 8px; text-align: center; }
+    .pub-nutri-item small { display: block; font-size: 9.5px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .pub-nutri-item strong { display: block; font-size: 13px; color: #007a5e; margin-top: 2px; }
+
+    .pub-photo-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+    .pub-photo-box { border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; background: #f1f5f9; aspect-ratio: 4/3; position: relative; }
+    .pub-photo-box img { width: 100%; height: 100%; object-fit: cover; }
+    .pub-photo-tag { position: absolute; bottom: 6px; left: 6px; background: rgba(15,23,42,.8); color: #fff; padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; }
+
+    .pub-sched-section { background: #fff; border: 1px solid #dfe7ee; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 18px rgba(15,35,55,.05); margin-bottom: 24px; }
+    .pub-sched-head { padding: 18px 22px; border-bottom: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    .pub-sched-head h2 { font-size: 17px; margin: 0; color: #0b2d61; }
+    .pub-sched-head p { margin: 4px 0 0; color: #64748b; font-size: 12.5px; }
+    
+    .pub-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .pub-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 650px; }
+    .pub-table th { background: #f8fafc; color: #50657b; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+    .pub-table td { padding: 12px 16px; border-bottom: 1px solid #edf2f7; color: #1e293b; }
+    .pub-row-target { background: #f0fdf4 !important; font-weight: 600; }
+    .pub-row-target td { border-bottom: 1.5px solid #86efac; }
+
+    .pub-footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 32px; line-height: 1.6; }
+    .pub-safe-badge { display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 999px; padding: 5px 12px; font-size: 11.5px; font-weight: 700; margin-bottom: 8px; }
+  </style>
+</head>
+<body style="background:#f4f7fa; color:#1e293b; font-family:<%= appSettings?.font_family || 'Arial, sans-serif' %>;">
+  <main class="pub-container">
+    <!-- Header -->
+    <header class="pub-header">
+      <div class="pub-banner"></div>
+      <div class="pub-head-content">
+        <div class="pub-brand">
+          <div class="pub-logo">
+            <img src="<%= appSettings?.logo_path ? '/branding/logo' : '/public/bgn-logo.png' %>" alt="Logo SPPG">
+          </div>
+          <div class="pub-copy">
+            <span class="pub-pill-public"><i data-lucide="check-circle" style="width:12px;height:12px;"></i> INFORMASI RESMI UNTUK ORANG TUA &amp; PUBLIK</span>
+            <h1><%= appSettings?.sppg_name || 'SPPG Subang Pusakajaya' %></h1>
+            <p>Satuan Pelayanan Pemenuhan Gizi (SPPG) · Badan Gizi Nasional Republik Indonesia</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <% 
+      // Identify selected KPM if provided
+      let currentKpm = null;
+      if (typeof selectedKpmId !== 'undefined' && selectedKpmId && kpms && kpms.length) {
+        currentKpm = kpms.find(k => Number(k.id) === Number(selectedKpmId));
+      }
+      const activeType = currentKpm ? currentKpm.type : (typeof selectedType !== 'undefined' ? selectedType : '');
+      const delivList = (typeof deliveries !== 'undefined' && deliveries) ? deliveries : (typeof clusters !== 'undefined' ? clusters : []);
+      const matchedDelivery = currentKpm ? delivList.find(d => Number(d.kpm_id) === Number(currentKpm.id)) : null;
+    %>
+
+    <!-- Interactive KPM & Date Selector -->
+    <section class="pub-filter-panel">
+      <!-- Category Tabs (Pendidikan vs Posyandu) -->
+      <div class="pub-type-tabs">
+        <a href="/menu-hari-ini?date=<%= selectedDate %>" class="pub-tab-btn <%= !activeType ? 'active' : '' %>">
+          <i data-lucide="layers" style="width:14px;height:14px;"></i> Semua Kategori
+        </a>
+        <a href="/menu-hari-ini?date=<%= selectedDate %>&type=SCHOOL" class="pub-tab-btn <%= activeType === 'SCHOOL' ? 'active' : '' %>">
+          <i data-lucide="school" style="width:14px;height:14px;"></i> Satuan Pendidikan (Sekolah)
+        </a>
+        <a href="/menu-hari-ini?date=<%= selectedDate %>&type=POSYANDU" class="pub-tab-btn <%= activeType === 'POSYANDU' ? 'active' : '' %>">
+          <i data-lucide="baby" style="width:14px;height:14px;"></i> Posyandu (Balita &amp; Ibu Hamil)
+        </a>
+      </div>
+
+      <!-- Form Selector -->
+      <form method="get" action="/menu-hari-ini" id="filterForm" class="pub-filter-grid">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <label for="dateSelect" style="font-size:12.5px; font-weight:700; color:#475569; display:flex; align-items:center; gap:5px;">
+            <i data-lucide="calendar" style="width:15px;height:15px;color:#007a5e;"></i> Tanggal:
+          </label>
+          <input id="dateSelect" type="date" name="date" class="pub-date-input" value="<%= selectedDate %>" onchange="this.form.submit()">
+        </div>
+
+        <div class="pub-kpm-select-box">
+          <label for="kpmSelect" style="font-size:12.5px; font-weight:700; color:#475569; display:flex; align-items:center; gap:5px; white-space:nowrap;">
+            <i data-lucide="search" style="width:15px;height:15px;color:#007a5e;"></i> Pilih KPM Anda:
+          </label>
+          <select id="kpmSelect" name="kpm_id" class="pub-select-input" onchange="this.form.submit()">
+            <option value="">-- Tampilkan Semua Sekolah &amp; Posyandu --</option>
+            
+            <% if (kpms && kpms.length > 0) { %>
+              <% const schools = kpms.filter(k => k.type === 'SCHOOL'); %>
+              <% const posyandus = kpms.filter(k => k.type === 'POSYANDU'); %>
+              
+              <% if(schools.length > 0 && (!activeType || activeType === 'SCHOOL')){ %>
+                <optgroup label="🏫 Satuan Pendidikan (Sekolah)">
+                  <% schools.forEach(k => { %>
+                    <option value="<%= k.id %>" <%= currentKpm && currentKpm.id === k.id ? 'selected' : '' %>>
+                      <%= k.name %> (<%= k.code %>)
+                    </option>
+                  <% }) %>
+                </optgroup>
+              <% } %>
+
+              <% if(posyandus.length > 0 && (!activeType || activeType === 'POSYANDU')){ %>
+                <optgroup label="👶 Posyandu (Balita &amp; Ibu Hamil)">
+                  <% posyandus.forEach(k => { %>
+                    <option value="<%= k.id %>" <%= currentKpm && currentKpm.id === k.id ? 'selected' : '' %>>
+                      <%= k.name %> (<%= k.code %>)
+                    </option>
+                  <% }) %>
+                </optgroup>
+              <% } %>
+            <% } %>
+          </select>
+          <% if(activeType && !currentKpm){ %>
+            <input type="hidden" name="type" value="<%= activeType %>">
+          <% } %>
+          <% if(currentKpm){ %>
+            <a href="/menu-hari-ini?date=<%= selectedDate %>" class="outline-btn" style="height:42px; font-size:12px; padding:0 12px;" title="Reset pilihan KPM">
+              Reset
+            </a>
+          <% } %>
+        </div>
+      </form>
+    </section>
+
+    <!-- Prominent Highlight Banner if KPM is selected -->
+    <% if(currentKpm){ %>
+      <section class="pub-highlight-kpm">
+        <div>
+          <span class="badge" style="background:#059669; color:#fff; font-size:10.5px; padding:2px 8px;">
+            <%= currentKpm.type === 'POSYANDU' ? 'POSYANDU' : 'SATUAN PENDIDIKAN' %>
+          </span>
+          <h3><%= currentKpm.name %></h3>
+          <p><%= currentKpm.address || 'Kawasan Layanan SPPG' %></p>
+        </div>
+        <div style="text-align:right;">
+          <small style="display:block; color:#065f46; font-size:11px; font-weight:700;">ESTIMASI KEDATANGAN MAKANAN</small>
+          <% if(matchedDelivery){ %>
+            <strong style="font-size:18px; color:#0b2d61; display:flex; align-items:center; gap:6px; justify-content:flex-end;">
+              <i data-lucide="clock" style="width:16px;height:16px;color:#007a5e;"></i>
+              <%= matchedDelivery.handover_time ? matchedDelivery.handover_time.slice(0,5) + ' WIB' : 'Sesuai Kloter ' + matchedDelivery.cluster_no %>
+            </strong>
+            <small style="color:#059669; font-weight:700;">Kloter <%= matchedDelivery.cluster_no %> · <%= matchedDelivery.vehicle || 'Armada MBG' %></small>
+          <% } else { %>
+            <span style="font-size:13px; color:#64748b;">Jadwal pengantaran reguler</span>
+          <% } %>
+        </div>
+      </section>
+    <% } %>
+
+    <!-- Menu Cards Grid -->
+    <section>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+        <h2 style="font-size:18px; color:#0b2d61; margin:0; display:flex; align-items:center; gap:8px;">
+          <i data-lucide="utensils" style="color:#007a5e;"></i> Menu Makanan Bergizi Gratis (MBG)
+        </h2>
+        <span style="font-size:12.5px; color:#64748b;">
+          <%= new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) %>
+        </span>
+      </div>
+
+      <% 
+        let displayMenus = menus || [];
+        if (activeType) {
+          displayMenus = displayMenus.filter(m => m.kpm_type === activeType);
+        }
+      %>
+
+      <% if(displayMenus && displayMenus.length > 0){ %>
+        <div class="pub-menu-grid">
+          <% displayMenus.forEach(m => { %>
+            <article class="pub-menu-card <%= (activeType && m.kpm_type === activeType) ? 'is-selected-type' : '' %>">
+              <div class="pub-menu-head">
+                <h2>
+                  <i data-lucide="<%= m.kpm_type === 'POSYANDU' ? 'baby' : 'school' %>" style="width:16px;height:16px;color:#007a5e;"></i>
+                  <span><%= m.kpm_type === 'POSYANDU' ? 'Posyandu (Balita, Bumil, Busui)' : 'Satuan Pendidikan (Sekolah)' %></span>
+                </h2>
+                <span class="badge" style="background:#f1f5f9; color:#334155;"><%= m.menu_code %></span>
+              </div>
+              <div class="pub-menu-body">
+                <div>
+                  <h3 class="pub-menu-title"><%= m.menu_name %></h3>
+                  <% if(m.component_name){ %>
+                    <div class="pub-menu-comp" style="margin-top:4px;"><strong>Komponen:</strong> <%= m.component_name %></div>
+                  <% } %>
+                </div>
+
+                <!-- Nilai Gizi Porsi Kecil -->
+                <div>
+                  <div style="font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; margin-bottom:4px;">
+                    <%= m.kpm_type === 'POSYANDU' ? 'Gizi Porsi Balita (Porsi Kecil)' : 'Gizi Siswa Kelas 1–3 (Porsi Kecil)' %>:
+                  </div>
+                  <div class="pub-nutri-grid">
+                    <div class="pub-nutri-item"><small>Energi</small><strong><%= m.energy_small ? m.energy_small + ' kkal' : '-' %></strong></div>
+                    <div class="pub-nutri-item"><small>Protein</small><strong><%= m.protein_small ? m.protein_small + ' g' : '-' %></strong></div>
+                    <div class="pub-nutri-item"><small>Lemak</small><strong><%= m.fat_small ? m.fat_small + ' g' : '-' %></strong></div>
+                    <div class="pub-nutri-item"><small>Karbo</small><strong><%= m.carb_small ? m.carb_small + ' g' : '-' %></strong></div>
+                    <div class="pub-nutri-item"><small>Serat</small><strong><%= m.fiber_small ? m.fiber_small + ' g' : '-' %></strong></div>
+                  </div>
+                </div>
+
+                <!-- Nilai Gizi Porsi Besar -->
+                <div>
+                  <div style="font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; margin-bottom:4px;">
+                    <%= m.kpm_type === 'POSYANDU' ? 'Gizi Bumil & Busui (Porsi Besar)' : 'Gizi Siswa Kelas 4–6 & Guru (Porsi Besar)' %>:
+                  </div>
+                  <div class="pub-nutri-grid" style="background:#fffbeb; border-color:#fde68a;">
+                    <div class="pub-nutri-item"><small>Energi</small><strong style="color:#b45309;"><%= m.energy_large ? m.energy_large + ' kkal' : '-' %></strong></div>
+                    <div class="pub-nutri-item"><small>Protein</small><strong style="color:#b45309;"><%= m.protein_large ? m.protein_large + ' g' : '-' %></strong></div>
+                    <div class="pub-nutri-item"><small>Lemak</small><strong style="color:#b45309;"><%= m.fat_large ? m.fat_large + ' g' : '-' %></strong></div>
+                    <div class="pub-nutri-item"><small>Karbo</small><strong style="color:#b45309;"><%= m.carb_large ? m.carb_large + ' g' : '-' %></strong></div>
+                    <div class="pub-nutri-item"><small>Serat</small><strong style="color:#b45309;"><%= m.fiber_large ? m.fiber_large + ' g' : '-' %></strong></div>
+                  </div>
+                </div>
+
+                <!-- Foto Menu jika ada -->
+                <% if(m.photo_small_path || m.photo_large_path){ %>
+                  <div class="pub-photo-row">
+                    <% if(m.photo_small_path){ %>
+                      <div class="pub-photo-box">
+                        <img src="/uploads/<%= m.photo_small_path %>" alt="Foto Porsi Kecil">
+                        <span class="pub-photo-tag">Porsi Kecil</span>
+                      </div>
+                    <% } %>
+                    <% if(m.photo_large_path){ %>
+                      <div class="pub-photo-box">
+                        <img src="/uploads/<%= m.photo_large_path %>" alt="Foto Porsi Besar">
+                        <span class="pub-photo-tag">Porsi Besar</span>
+                      </div>
+                    <% } %>
+                  </div>
+                <% } %>
+              </div>
+            </article>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="card empty-state" style="background:#fff; border:1px solid #dfe7ee; border-radius:16px; padding:36px; text-align:center; margin-bottom:24px;">
+          <i data-lucide="chef-hat" style="width:36px; height:36px; color:#94a3b8; margin-bottom:10px;"></i>
+          <strong style="display:block; font-size:15px; color:#1e293b;">Belum ada menu yang dijadwalkan untuk kategori ini</strong>
+          <span style="color:#64748b; font-size:13px;">Silakan pilih kategori lain atau periksa kembali tanggal operasional.</span>
+        </div>
+      <% } %>
+    </section>
+
+    <!-- Schedule Section (Zero PII, Filtered/Highlighted for KPM) -->
+    <section class="pub-sched-section" id="jadwalSection">
+      <div class="pub-sched-head">
+        <div>
+          <h2><i data-lucide="truck" style="width:17px;height:17px;color:#007a5e;vertical-align:middle;margin-right:6px"></i> Jadwal Kedatangan Distribusi Makanan</h2>
+          <p>Estimasi waktu kedatangan armada pengantaran makanan ke lokasi Satuan Pendidikan &amp; Posyandu.</p>
+        </div>
+        <% if(currentKpm){ %>
+          <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">
+            KPM Anda: <%= currentKpm.name %>
+          </span>
+        <% } %>
+      </div>
+
+      <% 
+        let filteredDeliv = delivList;
+        if (currentKpm) {
+          // Put the selected KPM on top
+          const target = delivList.filter(d => Number(d.kpm_id) === Number(currentKpm.id));
+          const others = delivList.filter(d => Number(d.kpm_id) !== Number(currentKpm.id));
+          filteredDeliv = [...target, ...others];
+        } else if (activeType) {
+          filteredDeliv = delivList.filter(d => d.kpm_type === activeType);
+        }
+      %>
+
+      <% if(filteredDeliv && filteredDeliv.length > 0){ %>
+        <div class="pub-table-wrap">
+          <table class="pub-table">
+            <thead>
+              <tr>
+                <th style="width:40px; text-align:center;">#</th>
+                <th>Satuan Pendidikan / Posyandu</th>
+                <th>Jenis KPM</th>
+                <th>Kloter &amp; Rute</th>
+                <th>Kendaraan</th>
+                <th>Estimasi Serah Terima</th>
+                <th>Status Distribusi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% filteredDeliv.forEach((d, idx) => { 
+                   const isSelected = currentKpm && Number(d.kpm_id) === Number(currentKpm.id);
+              %>
+                <tr class="<%= isSelected ? 'pub-row-target' : '' %>">
+                  <td style="text-align:center; font-weight:700; color:<%= isSelected ? '#059669' : '#64748b' %>;">
+                    <%= isSelected ? '★' : idx + 1 %>
+                  </td>
+                  <td>
+                    <strong><%= d.kpm_name %></strong>
+                    <% if(isSelected){ %>
+                      <span class="badge" style="background:#059669; color:#fff; font-size:10px; margin-left:6px;">Pilihan Anda</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <span class="badge" style="font-size:11px;"><%= d.kpm_type === 'POSYANDU' ? 'Posyandu' : 'Sekolah' %></span>
+                  </td>
+                  <td>
+                    <strong>Kloter <%= d.cluster_no %></strong>
+                    <% if(d.route_name){ %><br><small style="color:#64748b;"><%= d.route_name %></small><% } %>
+                  </td>
+                  <td><span class="badge" style="font-family:monospace;"><%= d.vehicle || '-' %></span></td>
+                  <td>
+                    <strong style="color:#007a5e;"><%= d.handover_time ? d.handover_time.slice(0,5) + ' WIB' : 'Sesuai Jadwal Kloter' %></strong>
+                  </td>
+                  <td>
+                    <% if(d.status === 'SELESAI'){ %>
+                      <span class="status-pill success" style="font-size:11px;">Tiba &amp; Diserahterimakan</span>
+                    <% } else if(d.status === 'BERJALAN'){ %>
+                      <span class="status-pill warning" style="font-size:11px;">Dalam Perjalanan</span>
+                    <% } else { %>
+                      <span class="status-pill info" style="font-size:11px;">Terjadwal Hari Ini</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div style="padding:28px; text-align:center; color:#64748b; font-size:13px;">
+          Belum ada jadwal distribusi yang dirilis pada tanggal ini.
+        </div>
+      <% } %>
+    </section>
+
+    <!-- Footer Security Notice -->
+    <footer class="pub-footer">
+      <div class="pub-safe-badge">
+        <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
+        <span>Portal Informasi Terbuka · Dilindungi Protokol Kerahasiaan Data (Zero PII)</span>
+      </div>
+      <div><%= appSettings?.sppg_name || 'SPPG Subang Pusakajaya' %> · <%= appSettings?.location_name || 'Kebondanas' %></div>
+      <div style="margin-top:4px; font-size:11.5px; color:#94a3b8;">
+        Dikelola secara resmi oleh Satuan Pelayanan Pemenuhan Gizi · Badan Gizi Nasional Republik Indonesia (BGN)
+      </div>
+    </footer>
+  </main>
+  <script>
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+  </script>
+</body>
+</html>

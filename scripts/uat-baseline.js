@@ -22,7 +22,7 @@ const tests=[
  ['backup checksum',server.includes('sha256')&&server.includes('verifyFullBackup')],
  ['backup integrity verification route',server.includes("app.post('/backup/verify/:id'")],
  ['backup schema checksum column',schema.includes('sha256 CHAR(64)')],
- ['CSRF on backup actions',server.includes("csrfValid(req,req.body._csrf)")],
+ ['CSRF on backup actions',server.includes("requireCsrf(req,res)")||server.includes("csrfValid(req,req.body._csrf)")],
  ['health endpoint',server.includes("app.get('/health'")],
  ['audit log',server.includes('activity_log')],
  ['KPM statement upload and persistent storage',server.includes("kpm_portal_statements")&&server.includes("upload.single('file')")&&server.includes('resolveStoredFile')],

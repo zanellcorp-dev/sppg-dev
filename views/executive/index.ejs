@@ -15,7 +15,10 @@
         </p>
       </div>
 
-      <div style="display:flex; align-items:center; gap:10px;">
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <a href="/" class="outline-btn" style="text-decoration:none; height:38px; font-size:12.5px; padding:0 12px; gap:6px; background:#fff;">
+          <i data-lucide="arrow-left" style="width:14px; height:14px;"></i> Kembali ke Operasional
+        </a>
         <div style="text-align:right;">
           <small style="display:block; color:#718092; font-size:11px; font-weight:600;">STATUS OPERASIONAL HARI INI (<%= today %>)</small>
           <% if(closing.status === 'CLOSED'){ %>
@@ -34,6 +37,25 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Executive Navigation Tabs -->
+  <div class="chip-row" style="margin-bottom: 20px;">
+    <a href="/executive" class="filter-chip active">
+      <i data-lucide="crown" style="width:14px; height:14px;"></i> Pusat Komando
+    </a>
+    <a href="/executive/approvals" class="filter-chip">
+      <i data-lucide="check-check" style="width:14px; height:14px;"></i> Persetujuan Perubahan
+      <% if(pendingApprovalsCount > 0){ %>
+        <span style="background:#e11d48; color:#fff; border-radius:999px; font-size:10px; font-weight:800; padding:1px 6px;"><%= pendingApprovalsCount %></span>
+      <% } %>
+    </a>
+    <a href="/executive/lock-control" class="filter-chip">
+      <i data-lucide="lock" style="width:14px; height:14px;"></i> Penguncian Buku Harian
+    </a>
+    <a href="/executive/history" class="filter-chip">
+      <i data-lucide="history" style="width:14px; height:14px;"></i> Riwayat &amp; Audit
+    </a>
   </div>
 
   <!-- Key Metrics 4-Grid -->

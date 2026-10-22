@@ -1,5 +1,8 @@
 const fs=require('fs'),path=require('path');
-const root=path.resolve(__dirname,'..'); const server=fs.readFileSync(path.join(root,'server.js'),'utf8'); const view=fs.readFileSync(path.join(root,'views/kpm/portal.ejs'),'utf8');
+const root=path.resolve(__dirname,'..');
+const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
+const kpmViewFiles=['portal.ejs','posyandu-card.ejs','education-card.ejs','pm-management.ejs','posyandu-pm-updater.ejs'];
+const view=kpmViewFiles.map(f=>{const p=path.join(root,'views/kpm',f);return fs.existsSync(p)?fs.readFileSync(p,'utf8'):''}).join('\n');
 let pass=0,fail=0;function ok(name,cond){if(cond){console.log('PASS',name);pass++}else{console.log('FAIL',name);fail++}}
 ok('preview route exists',server.includes("app.get('/portal/kpm/preview/:id"));
 ok('portal token route exists',server.includes("app.get('/portal/kpm/:token'"));
@@ -8,7 +11,7 @@ ok('same portal view used by token',server.includes("res.render('kpm/portal',{ti
 ok('portal scoped by kpm_id',server.includes('WHERE kpm_id=? ORDER BY FIELD(category'));
 ok('school identity fields',view.includes('NPSN')&&view.includes('Kepala Satuan Pendidikan')&&view.includes('PIC MBG Satuan Pendidikan'));
 ok('posyandu identity fields',view.includes('Kader Posyandu'));
-ok('coordinates and View Maps',view.includes('View Maps')&&view.includes('google.com/maps/search'));
+ok('coordinates and View Maps',(view.includes('View Maps')||view.includes('Buka Google Maps'))&&view.includes('google.com/maps/search'));
 ok('PM school groups',view.includes("['PENDIDIK','Pendidik']")&&view.includes("['TENAGA_KEPENDIDIKAN','Tenaga Kependidikan']")&&view.includes("['PESERTA_DIDIK','Peserta Didik']"));
 ok('PM posyandu groups',view.includes("['BALITA','Balita']")&&view.includes("['BUMIL','Bumil']")&&view.includes("['BUSUI','Busui']"));
 ok('statement section',view.includes('Surat Pernyataan KPM'));

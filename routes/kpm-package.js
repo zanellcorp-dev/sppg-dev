@@ -1,7 +1,7 @@
 const express = require('express');
 
 module.exports = function createKpmPackageRouter(deps) {
-  const { pool, log, logPortal, clean, requireCsrf, flash } = deps;
+  const { pool, log, logPortal, clean, requireCsrf, flash, defaultAppSettings } = deps;
   const router = express.Router();
 
   const ar = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -60,6 +60,67 @@ module.exports = function createKpmPackageRouter(deps) {
       console.warn('[Sync KPM Daily Data]', err.message);
     }
   }
+
+  // GET: Dedicated Workspace for Preview Mode
+  router.get('/portal/kpm/preview/:kpmId([0-9]+)/paket', ar(async (req, res) => {
+    const kpmId = Number(req.params.kpmId);
+    const [[access]] = await pool.query(
+      "SELECT id kpm_id, name kpm_name, code kpm_code, type kpm_type, education_level, address, npsn, head_name, head_phone, pic_name, pic_phone, cadre_name, cadre_phone, latitude, longitude, email FROM kpm WHERE id=?",
+      [kpmId]
+    );
+    if (!access) return res.status(404).send('KPM tidak ditemukan.');
+
+    const [pm] = await pool.query(
+      "SELECT id, full_name, nik, nisn, gender, class_group, category, active, approval_status, deactivated_at, deactivation_reason, created_at, updated_at FROM pm WHERE kpm_id=? ORDER BY FIELD(category,'PENDIDIK','TENAGA_KEPENDIDIKAN','PESERTA_DIDIK','BALITA','BUMIL','BUSUI'),class_group,full_name",
+      [kpmId]
+    );
+    const [subs] = await pool.query(
+      'SELECT id, effective_from, status, created_at, reviewed_at, review_note FROM kpm_pm_submissions WHERE kpm_id=? ORDER BY created_at DESC, id DESC LIMIT 20',
+      [kpmId]
+    );
+    const [settingsRows] = await pool.query('SELECT * FROM app_settings WHERE id=1');
+    const settings = settingsRows[0] || {};
+
+    res.render('kpm/package-workspace', {
+      title: 'Lembar Kerja Pembaruan Data PM · ' + access.kpm_name,
+      access,
+      pm: pm || [],
+      subs: subs || [],
+      previewMode: true,
+      portalToken: null,
+      csrfToken: (typeof req.csrfToken === 'function') ? req.csrfToken() : '',
+      settings: { ...(defaultAppSettings || {}), ...settings }
+    });
+  }));
+
+  // GET: Dedicated Workspace for Portal Token (Kader/Private Access)
+  router.get('/portal/kpm/:token/paket', ar(async (req, res) => {
+    const rawToken = String(req.params.token || '');
+    const access = await getAccessByToken(rawToken);
+    if (!access) return res.status(403).send('Akses portal tidak valid atau sudah dicabut.');
+
+    const [pm] = await pool.query(
+      "SELECT id, full_name, nik, nisn, gender, class_group, category, active, approval_status, deactivated_at, deactivation_reason, created_at, updated_at FROM pm WHERE kpm_id=? ORDER BY FIELD(category,'PENDIDIK','TENAGA_KEPENDIDIKAN','PESERTA_DIDIK','BALITA','BUMIL','BUSUI'),class_group,full_name",
+      [access.kpm_id]
+    );
+    const [subs] = await pool.query(
+      'SELECT id, effective_from, status, created_at, reviewed_at, review_note FROM kpm_pm_submissions WHERE kpm_id=? ORDER BY created_at DESC, id DESC LIMIT 20',
+      [access.kpm_id]
+    );
+    const [settingsRows] = await pool.query('SELECT * FROM app_settings WHERE id=1');
+    const settings = settingsRows[0] || {};
+
+    res.render('kpm/package-workspace', {
+      title: 'Lembar Kerja Pembaruan Data PM · ' + access.kpm_name,
+      access: { ...access, id: access.kpm_id },
+      pm: pm || [],
+      subs: subs || [],
+      previewMode: false,
+      portalToken: rawToken,
+      csrfToken: (typeof req.csrfToken === 'function') ? req.csrfToken() : '',
+      settings: { ...(defaultAppSettings || {}), ...settings }
+    });
+  }));
 
   // 1. Submit Package from Portal Kader (Token-based)
   router.post('/portal/kpm/:token/package-submission', ar(async (req, res) => {
@@ -162,7 +223,7 @@ module.exports = function createKpmPackageRouter(deps) {
       req.session.flash = { type: isDraft ? 'info' : 'success', message: successMsg };
     }
 
-    res.redirect(`/portal/kpm/${rawToken}#pm-package-section`);
+    res.redirect(`/portal/kpm/${rawToken}/paket`);
   }));
 
   // 2. Submit Package from Preview Mode (Internal SPPG / Ka. SPPG)
@@ -264,7 +325,7 @@ module.exports = function createKpmPackageRouter(deps) {
       req.session.flash = { type: isDraft ? 'info' : 'success', message: successMsg };
     }
 
-    res.redirect(`/portal/kpm/preview/${kpmId}#pm-package-section`);
+    res.redirect(`/portal/kpm/preview/${kpmId}/paket`);
   }));
 
   // 3. API: Get Items of a Submission (JSON for Detail Modal)

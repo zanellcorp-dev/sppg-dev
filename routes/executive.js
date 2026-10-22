@@ -208,11 +208,103 @@ module.exports = function createExecutiveRouter(deps) {
       }
     }
 
+    let profileSubmissions = [];
+    try {
+      let pSql = `
+        SELECT s.*, k.name AS kpm_name, k.code AS kpm_code, k.type AS kpm_type, u.name AS reviewer_name
+        FROM kpm_portal_profile_submissions s
+        LEFT JOIN kpm k ON k.id = s.kpm_id
+        LEFT JOIN users u ON u.id = s.reviewed_by
+      `;
+      const pParams = [];
+      if (statusFilter && statusFilter !== 'ALL') {
+        pSql += ' WHERE s.status = ?';
+        pParams.push(statusFilter);
+      }
+      pSql += ' ORDER BY FIELD(s.status, \'DIAJUKAN\', \'DITINJAU\', \'DISETUJUI\', \'DITERAPKAN\', \'DITOLAK\'), s.created_at DESC LIMIT 50';
+      const [pRows] = await pool.query(pSql, pParams);
+      profileSubmissions = (pRows || []).map(r => {
+        let beforeObj = {}, afterObj = {};
+        try { beforeObj = JSON.parse(r.before_data || '{}'); } catch {}
+        try { afterObj = JSON.parse(r.after_data || '{}'); } catch {}
+        return { ...r, beforeObj, afterObj };
+      });
+    } catch (e) {
+      console.warn('[Executive Approvals Profile]', e.message);
+    }
+
     res.render('executive/approvals', {
       title: 'Pusat Persetujuan Perubahan (Maker-Checker)',
       submissions,
+      profileSubmissions,
       statusFilter
     });
+  }));
+
+  // Handle Decision for KPM Profile Submissions (Approve / Reject)
+  router.post('/approvals/profile/:id/decide', ar(async (req, res) => {
+    if (!requireCsrf(req, res)) return;
+    const id = Number(req.params.id);
+    const decision = clean(req.body.decision);
+    const note = clean(req.body.review_note || '');
+
+    if (!['DISETUJUI', 'DITOLAK'].includes(decision)) {
+      throw new Error('Keputusan tidak valid.');
+    }
+    if (decision === 'DITOLAK' && (!note || note.length < 5)) {
+      throw new Error('Pimpinan wajib mengisi alasan penolakan (minimal 5 karakter).');
+    }
+
+    const [[s]] = await pool.query('SELECT * FROM kpm_portal_profile_submissions WHERE id = ?', [id]);
+    if (!s) return res.status(404).send('Pengajuan profil tidak ditemukan.');
+
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      await conn.query(`
+        UPDATE kpm_portal_profile_submissions
+        SET status = ?, reviewed_by = ?, reviewed_at = NOW(), review_note = ?, applied_by = ?, applied_at = ?
+        WHERE id = ?
+      `, [
+        decision === 'DISETUJUI' ? 'DITERAPKAN' : 'DITOLAK',
+        req.session.user.id,
+        note || (decision === 'DISETUJUI' ? 'Disetujui dan diterapkan ke profil Master KPM' : 'Perlu perbaikan data identitas KPM'),
+        decision === 'DISETUJUI' ? req.session.user.id : null,
+        decision === 'DISETUJUI' ? new Date() : null,
+        id
+      ]);
+
+      if (decision === 'DISETUJUI') {
+        const p = JSON.parse(s.after_data || '{}');
+        await conn.query(
+          'UPDATE kpm SET name=?, education_level=?, address=?, npsn=?, head_name=?, head_phone=?, pic_name=?, pic_phone=?, cadre_name=?, cadre_phone=?, latitude=?, longitude=? WHERE id=?',
+          [p.name, p.education_level, p.address, p.npsn, p.head_name, p.head_phone, p.pic_name, p.pic_phone, p.cadre_name, p.cadre_phone, p.latitude, p.longitude, s.kpm_id]
+        );
+      }
+
+      await conn.commit();
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+
+    if (log) {
+      await log(
+        req,
+        decision === 'DISETUJUI' ? 'Persetujuan Profil KPM' : 'Penolakan Profil KPM',
+        'KPM_PROFILE',
+        s.kpm_id,
+        `${req.session.user.name} ${decision === 'DISETUJUI' ? 'menyetujui & menerapkan perubahan profil' : 'menolak usulan profil'} KPM #${s.kpm_id} (${note || '-'})`,
+        null,
+        { status: decision, note }
+      );
+    }
+
+    if (req.flash) req.flash(decision === 'DISETUJUI' ? 'success' : 'info', decision === 'DISETUJUI' ? 'Perubahan profil KPM berhasil disetujui & diterapkan ke Master KPM.' : 'Pengajuan profil KPM telah ditolak dengan catatan.');
+    res.redirect('/executive/approvals');
   }));
 
   // Handle Decision (Approve / Reject)

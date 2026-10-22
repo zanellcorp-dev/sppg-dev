@@ -178,6 +178,7 @@ app.use(express.urlencoded({extended:true,limit:'2mb'}));
 app.use(express.json({limit:'2mb'}));
 app.use(methodOverride('_method'));
 app.use('/public',express.static(path.join(__dirname,'public'),{maxAge:isProduction?'1h':0}));
+app.use(express.static(path.join(__dirname,'public'),{maxAge:isProduction?'1h':0}));
 app.get('/health',async(req,res)=>{try{await pool.query('SELECT 1');await storageMigrationPromise;ensureStorage();res.status(200).json({status:'ok',app:'SPPG Monitoring',database:'ok',storage:'ok',storage_mode:'persistent-outside-release',time:new Date().toISOString()})}catch(e){res.status(503).json({status:'degraded',app:'SPPG Monitoring',database:'error',storage:'error',storage_mode:'persistent-outside-release',message:'Database atau storage belum tersedia',time:new Date().toISOString()})}});
 app.use(session({
   store: sessionStore,
@@ -225,6 +226,7 @@ app.use((req,res,next)=>{
 const sqlDate=v=>{if(v instanceof Date)return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;return String(v||'').slice(0,10)};
 const requireCsrf=(req,res)=>{if(REVIEW_MODE)return true;const token=req.body?req.body._csrf:req.get('x-csrf-token');if(!csrfValid(req,token)){res.status(403).send('Permintaan ditolak: token keamanan tidak valid.');return false}return true};
 
+const toFiniteId=v=>{const n=Number(v);return(Number.isFinite(n)&&n>0)?n:null};
 const flash=(req,type,message)=>{req.session.flash={type,message}};
 const auth=(req,res,next)=>{
   if(REVIEW_MODE&&!req.session.user) req.session.user = { id: 1, username: 'admin', name: 'Administrator', role: 'ADMIN' };
@@ -376,7 +378,7 @@ async function migrate(){
     cluster_id BIGINT UNSIGNED NULL,
     cluster_kpm_id BIGINT UNSIGNED NULL,
     category VARCHAR(40) NOT NULL,
-    impact VARCHAR(40) NOT NULL DEFAULT 'NO_IMPACT',
+    impact VARCHAR(40) NOT NULL DEFAULT 'TIDAK_BERDAMPAK',
     priority VARCHAR(20) NOT NULL DEFAULT 'INFORMASI',
     description TEXT NOT NULL,
     status VARCHAR(30) NOT NULL DEFAULT 'BARU',
@@ -409,9 +411,6 @@ async function migrate(){
   await ensureColumn('operational_feedback','updated_at','TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
   await pool.query(`CREATE TABLE IF NOT EXISTS operational_issue_updates (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,issue_id BIGINT UNSIGNED NOT NULL,status VARCHAR(30) NULL,pic_user_id INT UNSIGNED NULL,note TEXT NULL,actor_user_id INT UNSIGNED NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX idx_issue_update(issue_id,created_at),CONSTRAINT fk_issue_update_issue FOREIGN KEY(issue_id) REFERENCES operational_issues(id) ON DELETE RESTRICT) ENGINE=InnoDB`);
   await pool.query(`CREATE TABLE IF NOT EXISTS operational_feedback_updates (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,feedback_id BIGINT UNSIGNED NOT NULL,status VARCHAR(30) NULL,pic_user_id INT UNSIGNED NULL,note TEXT NULL,actor_user_id INT UNSIGNED NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX idx_feedback_update(feedback_id,created_at),CONSTRAINT fk_feedback_update_feedback FOREIGN KEY(feedback_id) REFERENCES operational_feedback(id) ON DELETE RESTRICT) ENGINE=InnoDB`);
-  await ensureColumn('operational_feedback','pic_user_id','INT UNSIGNED NULL');
-  await ensureColumn('operational_feedback','followup_note','TEXT NULL');
-  await ensureColumn('operational_feedback','updated_at','TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
   // Permission schema compatibility — NON-DESTRUCTIVE. Never MODIFY a legacy
   // permission column that may participate in an existing foreign key.
   await pool.query(`CREATE TABLE IF NOT EXISTS permissions (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,permission_key VARCHAR(100) NULL,label VARCHAR(180) NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -1219,11 +1218,12 @@ app.post('/data-kpm-pm',auth,requirePermission('data_kpm_pm.manage'),ar(async(re
     await conn.query('INSERT INTO kpm_pm_submission_history(submission_id,action,from_status,to_status,note,actor_id) VALUES(?,?,?,?,?,?)',[sid,'SUBMIT',null,'DIAJUKAN','Data diajukan untuk review Aslap.',req.session.user.id]); await conn.commit(); await log(req,'Ajukan','DATA_KPM_PM',sid,'Pengajuan Data KPM PM',null,{kpm_id:kpmId,effective_from:effective,row_count:names.length}); flash(req,'success','Data KPM PM berhasil diajukan dan menunggu review Aslap.'); res.redirect('/data-kpm-pm/'+sid);
   }catch(e){await conn.rollback();throw e}finally{conn.release()}
 }));
-app.get('/data-kpm-pm/:id([0-9]+)',auth,requirePermission('data_kpm_pm.view'),ar(async(req,res)=>{const [[submission]]=await pool.query(`SELECT s.*,k.name kpm_name,k.code kpm_code,k.type kpm_type,u.name submitter_name,r.name reviewer_name,a.name applier_name FROM kpm_pm_submissions s JOIN kpm k ON k.id=s.kpm_id LEFT JOIN users u ON u.id=s.submitted_by LEFT JOIN users r ON r.id=s.reviewed_by LEFT JOIN users a ON a.id=s.applied_by WHERE s.id=?`,[req.params.id]);if(!submission)return res.sendStatus(404);const [rows]=await pool.query('SELECT * FROM kpm_pm_submission_rows WHERE submission_id=? ORDER BY row_no',[req.params.id]);const [history]=await pool.query('SELECT h.*,u.name actor_name FROM kpm_pm_submission_history h LEFT JOIN users u ON u.id=h.actor_id WHERE h.submission_id=? ORDER BY h.created_at DESC,h.id DESC',[req.params.id]);res.render('data-kpm-pm/show',{title:'Detail DATA KPM PM',submission,rows,history});}));
-app.post('/data-kpm-pm/:id([0-9]+)/submit',auth,requirePermission('data_kpm_pm.manage'),ar(async(req,res)=>{const id=Number(req.params.id);const [[s]]=await pool.query('SELECT * FROM kpm_pm_submissions WHERE id=?',[id]);if(!s)return res.sendStatus(404);if(s.status!=='DRAFT')throw new Error('Hanya draft yang dapat diajukan.');const [[bad]]=await pool.query("SELECT COUNT(*) c FROM kpm_pm_submission_rows WHERE submission_id=? AND status<>'VALID'",[id]);if(Number(bad.c)>0)throw new Error('Masih ada baris yang belum valid. Perbaiki file lalu buat import baru.');await pool.query("UPDATE kpm_pm_submissions SET status='DIAJUKAN',submitted_by=?,updated_at=NOW() WHERE id=?",[req.session.user.id,id]);await pool.query('INSERT INTO kpm_pm_submission_history(submission_id,action,from_status,to_status,note,actor_id) VALUES(?,?,?,?,?,?)',[id,'SUBMIT','DRAFT','DIAJUKAN','Hasil import dinyatakan valid dan diajukan untuk review.',req.session.user.id]);await log(req,'Ajukan Review','DATA_KPM_PM',id,'Mengajukan hasil import BNBA untuk review',s,{status:'DIAJUKAN'});flash(req,'success','Import BNBA berhasil diajukan untuk review.');res.redirect('/data-kpm-pm/'+id);}));
-app.post('/data-kpm-pm/:id([0-9]+)/review',auth,requirePermission('data_kpm_pm.review'),ar(async(req,res)=>{const id=Number(req.params.id),decision=clean(req.body.decision),note=clean(req.body.note);if(!['DITINJAU','DISETUJUI','DITOLAK'].includes(decision))throw new Error('Keputusan review tidak valid.');const [[s]]=await pool.query('SELECT * FROM kpm_pm_submissions WHERE id=?',[id]);if(!s)return res.sendStatus(404);if(!['DIAJUKAN','DITINJAU'].includes(s.status))throw new Error('Pengajuan tidak berada pada tahap review.');if(decision==='DITOLAK'&&!note)throw new Error('Catatan wajib diisi saat menolak.');const [[bad]]=await pool.query("SELECT COUNT(*) c FROM kpm_pm_submission_rows WHERE submission_id=? AND status<>'VALID'",[id]);if(decision==='DISETUJUI'&&Number(bad.c)>0)throw new Error('Masih ada baris data yang belum valid/lengkap.');await pool.query('UPDATE kpm_pm_submissions SET status=?,reviewed_by=?,reviewed_at=NOW(),review_note=? WHERE id=?',[decision,req.session.user.id,note||null,id]);await pool.query('INSERT INTO kpm_pm_submission_history(submission_id,action,from_status,to_status,note,actor_id) VALUES(?,?,?,?,?,?)',[id,'REVIEW',s.status,decision,note||null,req.session.user.id]);await log(req,'Review','DATA_KPM_PM',id,'Review pengajuan Data KPM PM',s,{status:decision,note});flash(req,'success',`Pengajuan ${decision.toLowerCase()} oleh reviewer.`);res.redirect('/data-kpm-pm/'+id);}));
+app.get('/data-kpm-pm/:id([0-9]+)',auth,requirePermission('data_kpm_pm.view'),ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(400);const [[submission]]=await pool.query(`SELECT s.*,k.name kpm_name,k.code kpm_code,k.type kpm_type,u.name submitter_name,r.name reviewer_name,a.name applier_name FROM kpm_pm_submissions s JOIN kpm k ON k.id=s.kpm_id LEFT JOIN users u ON u.id=s.submitted_by LEFT JOIN users r ON r.id=s.reviewed_by LEFT JOIN users a ON a.id=s.applied_by WHERE s.id=?`,[id]);if(!submission)return res.sendStatus(404);const [rows]=await pool.query('SELECT * FROM kpm_pm_submission_rows WHERE submission_id=? ORDER BY row_no',[id]);const [history]=await pool.query('SELECT h.*,u.name actor_name FROM kpm_pm_submission_history h LEFT JOIN users u ON u.id=h.actor_id WHERE h.submission_id=? ORDER BY h.created_at DESC,h.id DESC',[id]);res.render('data-kpm-pm/show',{title:'Detail DATA KPM PM',submission,rows,history});}));
+app.post('/data-kpm-pm/:id([0-9]+)/submit',auth,requirePermission('data_kpm_pm.manage'),ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(400);const [[s]]=await pool.query('SELECT * FROM kpm_pm_submissions WHERE id=?',[id]);if(!s)return res.sendStatus(404);if(s.status!=='DRAFT')throw new Error('Hanya draft yang dapat diajukan.');const [[bad]]=await pool.query("SELECT COUNT(*) c FROM kpm_pm_submission_rows WHERE submission_id=? AND status<>'VALID'",[id]);if(Number(bad.c)>0)throw new Error('Masih ada baris yang belum valid. Perbaiki file lalu buat import baru.');await pool.query("UPDATE kpm_pm_submissions SET status='DIAJUKAN',submitted_by=?,updated_at=NOW() WHERE id=?",[req.session.user.id,id]);await pool.query('INSERT INTO kpm_pm_submission_history(submission_id,action,from_status,to_status,note,actor_id) VALUES(?,?,?,?,?,?)',[id,'SUBMIT','DRAFT','DIAJUKAN','Hasil import dinyatakan valid dan diajukan untuk review.',req.session.user.id]);await log(req,'Ajukan Review','DATA_KPM_PM',id,'Mengajukan hasil import BNBA untuk review',s,{status:'DIAJUKAN'});flash(req,'success','Import BNBA berhasil diajukan untuk review.');res.redirect('/data-kpm-pm/'+id);}));
+app.post('/data-kpm-pm/:id([0-9]+)/review',auth,requirePermission('data_kpm_pm.review'),ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(400);const decision=clean(req.body.decision),note=clean(req.body.note);if(!['DITINJAU','DISETUJUI','DITOLAK'].includes(decision))throw new Error('Keputusan review tidak valid.');const [[s]]=await pool.query('SELECT * FROM kpm_pm_submissions WHERE id=?',[id]);if(!s)return res.sendStatus(404);if(!['DIAJUKAN','DITINJAU'].includes(s.status))throw new Error('Pengajuan tidak berada pada tahap review.');if(decision==='DITOLAK'&&!note)throw new Error('Catatan wajib diisi saat menolak.');const [[bad]]=await pool.query("SELECT COUNT(*) c FROM kpm_pm_submission_rows WHERE submission_id=? AND status<>'VALID'",[id]);if(decision==='DISETUJUI'&&Number(bad.c)>0)throw new Error('Masih ada baris data yang belum valid/lengkap.');await pool.query('UPDATE kpm_pm_submissions SET status=?,reviewed_by=?,reviewed_at=NOW(),review_note=? WHERE id=?',[decision,req.session.user.id,note||null,id]);await pool.query('INSERT INTO kpm_pm_submission_history(submission_id,action,from_status,to_status,note,actor_id) VALUES(?,?,?,?,?,?)',[id,'REVIEW',s.status,decision,note||null,req.session.user.id]);await log(req,'Review','DATA_KPM_PM',id,'Review pengajuan Data KPM PM',s,{status:decision,note});flash(req,'success',`Pengajuan ${decision.toLowerCase()} oleh reviewer.`);res.redirect('/data-kpm-pm/'+id);}));
 app.post('/data-kpm-pm/:id([0-9]+)/apply',auth,requirePermission('data_kpm_pm.manage'),ar(async(req,res)=>{
-  const id=Number(req.params.id);
+  const id=toFiniteId(req.params.id);
+  if(!id) return res.sendStatus(400);
   const [[s]]=await pool.query('SELECT * FROM kpm_pm_submissions WHERE id=?',[id]);
   if(!s)return res.sendStatus(404);
   if(s.status!=='DISETUJUI')throw new Error('Hanya data yang disetujui yang dapat diterapkan.');
@@ -1864,9 +1864,58 @@ app.post('/staff/attendance/replacement/:id/cancel',auth,requirePermission('staf
 app.get('/staff/attendance/recap',auth,requirePermission('staff.view'),ar(async(req,res)=>{const month=/^\d{4}-\d{2}$/.test(clean(req.query.month))?clean(req.query.month):new Date().toISOString().slice(0,7);const teamId=Number(req.query.team_id)||0;const start=month+'-01';const endExpr='LAST_DAY(?)';const params=teamId?[start,start,teamId]:[start,start];const [rows]=await pool.query(`SELECT s.id,s.name,s.position,COUNT(DISTINCT ss.schedule_date) hari_dijadwalkan,COUNT(DISTINCT CASE WHEN a.id IS NOT NULL THEN a.attendance_date END) days_with_attendance,SUM(CASE WHEN a.status='HADIR' THEN 1 ELSE 0 END) hadir,SUM(CASE WHEN a.status='IZIN' THEN 1 ELSE 0 END) izin,SUM(CASE WHEN a.status='SAKIT' THEN 1 ELSE 0 END) sakit,SUM(CASE WHEN a.status='ALPA' THEN 1 ELSE 0 END) alpa,SUM(CASE WHEN a.status='CUTI' THEN 1 ELSE 0 END) cuti,SUM(CASE WHEN a.status='DINAS' THEN 1 ELSE 0 END) dinas FROM staff s LEFT JOIN staff_schedule ss ON ss.staff_id=s.id AND ss.schedule_date BETWEEN ? AND LAST_DAY(?) ${teamId?'AND ss.team_id=?':''} LEFT JOIN staff_attendance a ON a.staff_id=s.id AND a.attendance_date=ss.schedule_date WHERE s.status IN ('AKTIF','CUTI','NONAKTIF_SEMENTARA') GROUP BY s.id ORDER BY s.name`,params);const [replacements]=await pool.query(`SELECT ar.replacement_date,a.name absent_name,r.name replacement_name,t.team_name,ar.task_scope,ar.reason FROM attendance_replacements ar JOIN staff a ON a.id=ar.absent_staff_id JOIN staff r ON r.id=ar.replacement_staff_id LEFT JOIN sppg_teams t ON t.id=ar.team_id WHERE ar.replacement_date BETWEEN ? AND LAST_DAY(?) AND ar.is_active=1 ${teamId?'AND ar.team_id=?':''} ORDER BY ar.replacement_date,a.name`,params);const [[total]]=await pool.query(`SELECT COUNT(*) total FROM staff WHERE status='AKTIF'`);const [teams]=await pool.query(`SELECT id,team_code,team_name FROM sppg_teams WHERE is_active=1 ORDER BY id`);res.render('staff/attendance-recap',{title:'Rekap Absensi',month,teamId,teams,rows,replacements,totalStaff:total.total});}));
 app.get('/staff/attendance/recap.xlsx',auth,requirePermission('finance.export'),ar(async(req,res)=>{const month=/^\d{4}-\d{2}$/.test(clean(req.query.month))?clean(req.query.month):new Date().toISOString().slice(0,7);const teamId=Number(req.query.team_id)||0;const params=teamId?[month+'-01',month+'-01',teamId]:[month+'-01',month+'-01'];const [rows]=await pool.query(`SELECT s.name 'Nama',s.position 'Jabatan',COUNT(DISTINCT ss.schedule_date) 'Hari Dijadwalkan',SUM(CASE WHEN a.status='HADIR' THEN 1 ELSE 0 END) 'Hadir',SUM(CASE WHEN a.status='IZIN' THEN 1 ELSE 0 END) 'Izin',SUM(CASE WHEN a.status='SAKIT' THEN 1 ELSE 0 END) 'Sakit',SUM(CASE WHEN a.status='ALPA' THEN 1 ELSE 0 END) 'Alpa',SUM(CASE WHEN a.status='CUTI' THEN 1 ELSE 0 END) 'Cuti',SUM(CASE WHEN a.status='DINAS' THEN 1 ELSE 0 END) 'Dinas',COUNT(DISTINCT CASE WHEN a.id IS NOT NULL THEN a.attendance_date END) 'Hari Tercatat' FROM staff s LEFT JOIN staff_schedule ss ON ss.staff_id=s.id AND ss.schedule_date BETWEEN ? AND LAST_DAY(?) ${teamId?'AND ss.team_id=?':''} LEFT JOIN staff_attendance a ON a.staff_id=s.id AND a.attendance_date=ss.schedule_date WHERE s.status IN ('AKTIF','CUTI','NONAKTIF_SEMENTARA') GROUP BY s.id ORDER BY s.name`,params);const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Rekap Absensi');const buf=XLSX.write(wb,{bookType:'xlsx',type:'buffer'});res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');res.setHeader('Content-Disposition',`attachment; filename=Rekap-Absensi-${month}.xlsx`);res.send(buf);}));
 app.get('/documents',auth,requirePermission('documents.view'),ar(async(req,res)=>{const type=['JUKNIS','SURAT_EDARAN','SOP'].includes(clean(req.query.type))?clean(req.query.type):'';const [rows]=await pool.query(`SELECT * FROM bgn_documents WHERE active=1 ${type?'AND doc_type=?':''} ORDER BY document_date DESC,id DESC`,type?[type]:[]);res.render('documents/index',{title:'Dokumen & SOP BGN',rows,type})}));
-app.get('/documents/new',auth,requirePermission('documents.manage'),(req,res)=>res.render('module-dashboard',{title:'Tambah Dokumen/SOP',kicker:'DOKUMEN & SOP BGN',heading:'Tambah Dokumen / SOP',description:'Form input dokumen akan dilengkapi bersama upload file dan metadata dokumen.',emptyTitle:'Siap untuk input',emptyText:'Struktur dokumen sudah disiapkan. Detail form menjadi tahap berikutnya.',actionHref:'/documents',actionLabel:'Kembali'}));
+app.get('/documents/new',auth,requirePermission('documents.manage'),(req,res)=>res.render('documents/form',{title:'Tambah Dokumen / SOP',row:null}));
+app.get('/documents/:id([0-9]+)/edit',auth,requirePermission('documents.manage'),ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[row]]=await pool.query('SELECT * FROM bgn_documents WHERE id=?',[id]);if(!row)return res.sendStatus(404);res.render('documents/form',{title:'Edit Dokumen / SOP',row})}));
+app.post('/documents',auth,requirePermission('documents.manage'),upload.single('file'),ar(async(req,res)=>{
+  try{
+    if(!requireCsrf(req,res)){await removeUploaded(req.file);return}
+    const docType=clean(req.body.doc_type),title=clean(req.body.title),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
+    if(!['JUKNIS','SURAT_EDARAN','SOP'].includes(docType)||!title)throw new Error('Jenis dokumen dan judul wajib diisi.');
+    if(!req.file||!(await verifyUploadedFile(req.file))){await removeUploaded(req.file);throw new Error('File dokumen wajib diunggah (format PDF/JPG/PNG).')}
+    const [r]=await pool.query('INSERT INTO bgn_documents(doc_type,title,document_number,document_date,description,file_path,file_name,active) VALUES(?,?,?,?,?,?,?,1)',[docType,title,docNum,docDate,desc,req.file.filename,req.file.originalname]);
+    await log(req,'Tambah','BGN_DOCUMENT',r.insertId,title,null,{doc_type:docType,title,file:req.file.originalname});
+    flash(req,'success','Dokumen / SOP berhasil ditambahkan.');
+    res.redirect('/documents');
+  }catch(e){await removeUploaded(req.file);throw e}
+}));
+app.post('/documents/:id([0-9]+)',auth,requirePermission('documents.manage'),upload.single('file'),ar(async(req,res)=>{
+  try{
+    if(!requireCsrf(req,res)){await removeUploaded(req.file);return}
+    const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[old]]=await pool.query('SELECT * FROM bgn_documents WHERE id=?',[id]);if(!old)return res.sendStatus(404);
+    const docType=clean(req.body.doc_type),title=clean(req.body.title),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
+    if(!['JUKNIS','SURAT_EDARAN','SOP'].includes(docType)||!title)throw new Error('Jenis dokumen dan judul wajib diisi.');
+    let fp=old.file_path,fn=old.file_name;
+    if(req.file){if(!(await verifyUploadedFile(req.file))){await removeUploaded(req.file);throw new Error('File pengganti tidak valid.')}fp=req.file.filename;fn=req.file.originalname;}
+    await pool.query('UPDATE bgn_documents SET doc_type=?,title=?,document_number=?,document_date=?,description=?,file_path=?,file_name=? WHERE id=?',[docType,title,docNum,docDate,desc,fp,fn,id]);
+    if(req.file&&old.file_path&&old.file_path!==fp)await removeUploaded({path:path.join(uploadDir,path.basename(old.file_path))});
+    await log(req,'Edit','BGN_DOCUMENT',id,title,old,{doc_type:docType,title});
+    flash(req,'success','Dokumen berhasil diperbarui.');
+    res.redirect('/documents');
+  }catch(e){await removeUploaded(req.file);throw e}
+}));
+app.get('/documents/:id([0-9]+)/file',auth,ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[doc]]=await pool.query('SELECT file_path,file_name FROM bgn_documents WHERE id=?',[id]);if(!doc||!doc.file_path)return res.status(404).send('File belum tersedia.');const file=await resolveStoredFile(doc.file_path);if(!file)return res.status(404).send('File tidak ditemukan.');res.download(file,doc.file_name||'dokumen')}));
 app.get('/quick-links',auth,requirePermission('quick_links.view'),ar(async(req,res)=>{const [rows]=await pool.query('SELECT * FROM quick_links WHERE active=1 ORDER BY sort_order,title');res.render('quick-links/index',{title:'Akses Cepat',rows})}));
-app.get('/quick-links/new',auth,requirePermission('quick_links.manage'),(req,res)=>res.render('module-dashboard',{title:'Tambah Link',kicker:'AKSES CEPAT',heading:'Tambah Link / Tautan',description:'Tempat untuk menambahkan akses cepat ke sistem yang sering digunakan.',emptyTitle:'Form link belum dibuka',emptyText:'Struktur dashboard sudah siap; form input akan dilanjutkan setelah master kebutuhan link ditetapkan.',actionHref:'/quick-links',actionLabel:'Kembali'}));
+app.get('/quick-links/new',auth,requirePermission('quick_links.manage'),(req,res)=>res.render('quick-links/form',{title:'Tambah Link',row:null}));
+app.get('/quick-links/:id([0-9]+)/edit',auth,requirePermission('quick_links.manage'),ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[row]]=await pool.query('SELECT * FROM quick_links WHERE id=?',[id]);if(!row)return res.sendStatus(404);res.render('quick-links/form',{title:'Edit Link',row})}));
+app.post('/quick-links',auth,requirePermission('quick_links.manage'),ar(async(req,res)=>{
+  if(!requireCsrf(req,res))return;
+  const title=clean(req.body.title),url=clean(req.body.url),icon=clean(req.body.icon)||'external-link',sortOrder=Number(req.body.sort_order)||0,desc=clean(req.body.description)||null;
+  if(!title||!url)throw new Error('Nama link dan URL wajib diisi.');
+  const [r]=await pool.query('INSERT INTO quick_links(title,url,icon,sort_order,description,active) VALUES(?,?,?,?,?,1)',[title,url,icon,sortOrder,desc]);
+  await log(req,'Tambah','QUICK_LINK',r.insertId,title,null,{title,url});
+  flash(req,'success','Tautan akses cepat berhasil ditambahkan.');
+  res.redirect('/quick-links');
+}));
+app.post('/quick-links/:id([0-9]+)',auth,requirePermission('quick_links.manage'),ar(async(req,res)=>{
+  if(!requireCsrf(req,res))return;
+  const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[old]]=await pool.query('SELECT * FROM quick_links WHERE id=?',[id]);if(!old)return res.sendStatus(404);
+  const title=clean(req.body.title),url=clean(req.body.url),icon=clean(req.body.icon)||'external-link',sortOrder=Number(req.body.sort_order)||0,desc=clean(req.body.description)||null;
+  if(!title||!url)throw new Error('Nama link dan URL wajib diisi.');
+  await pool.query('UPDATE quick_links SET title=?,url=?,icon=?,sort_order=?,description=? WHERE id=?',[title,url,icon,sortOrder,desc,id]);
+  await log(req,'Edit','QUICK_LINK',id,title,old,{title,url});
+  flash(req,'success','Tautan akses cepat berhasil diperbarui.');
+  res.redirect('/quick-links');
+}));
 async function nextMenuCode(menuDate,conn=pool){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(menuDate||'')) throw new Error('Tanggal menu tidak valid.');
   const [rows]=await conn.query('SELECT menu_code FROM menu_daily WHERE menu_date=? FOR UPDATE',[menuDate]);
@@ -1927,15 +1976,16 @@ app.post('/menus',auth,requirePermission('menu.manage'),upload.fields([{name:'ph
     }catch(e){await conn.rollback();throw e}finally{conn.release()}
   }catch(e){for(const f of Object.values(req.files||{}).flat())await removeUploaded(f);throw e}
 }));
-app.get('/menus/:id',auth,ar(async(req,res)=>{const [[row]]=await pool.query('SELECT * FROM menu_daily WHERE id=?',[req.params.id]);if(!row)return res.sendStatus(404);res.render('menus/show',{title:'Detail Menu',row})}));
-app.get('/menus/:id([0-9]+)/edit',auth,requirePermission('menu.manage'),ar(async(req,res)=>{const [[row]]=await pool.query('SELECT * FROM menu_daily WHERE id=?',[req.params.id]);if(!row)return res.sendStatus(404);res.render('menus/form',{title:'Edit Menu Harian',row,effectiveDate:sqlDate(row.menu_date)})}));
+app.get('/menus/:id([0-9]+)',auth,ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[row]]=await pool.query('SELECT * FROM menu_daily WHERE id=?',[id]);if(!row)return res.sendStatus(404);res.render('menus/show',{title:'Detail Menu',row})}));
+app.get('/menus/:id([0-9]+)/edit',auth,requirePermission('menu.manage'),ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[row]]=await pool.query('SELECT * FROM menu_daily WHERE id=?',[id]);if(!row)return res.sendStatus(404);res.render('menus/form',{title:'Edit Menu Harian',row,effectiveDate:sqlDate(row.menu_date)})}));
 app.post('/menus/:id/update',auth,requirePermission('menu.manage'),upload.fields([{name:'photo_small',maxCount:1},{name:'photo_large',maxCount:1}]),ar(async(req,res)=>{
   const uploaded=Object.values(req.files||{}).flat();
   let saved=false;
   try{
     if(!requireCsrf(req,res)){for(const f of uploaded)await removeUploaded(f);return}
     for(const f of uploaded){if(!(await verifyUploadedFile(f))){await removeUploaded(f);throw new Error('Foto menu tidak valid atau isi file tidak sesuai.')}}
-    const [[old]]=await pool.query('SELECT * FROM menu_daily WHERE id=?',[req.params.id]);if(!old)return res.sendStatus(404);
+    const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);
+    const [[old]]=await pool.query('SELECT * FROM menu_daily WHERE id=?',[id]);if(!old)return res.sendStatus(404);
     const b=req.body;if(!clean(b.menu_name)||!['SATUAN_PENDIDIKAN','POSYANDU'].includes(b.kpm_type))throw new Error('Data menu tidak valid.');
     const numeric=['energy_small','protein_small','fat_small','carb_small','fiber_small','energy_large','protein_large','fat_large','carb_large','fiber_large'];
     const vals=numeric.map(k=>clean(b[k])===''?null:Number(b[k]));
@@ -1945,13 +1995,13 @@ app.post('/menus/:id/update',auth,requirePermission('menu.manage'),upload.fields
     const conn=await pool.getConnection();
     try{
       await conn.beginTransaction();
-      await conn.query('UPDATE menu_daily SET menu_name=?,component_name=?,kpm_type=?,energy_small=?,protein_small=?,fat_small=?,carb_small=?,fiber_small=?,energy_large=?,protein_large=?,fat_large=?,carb_large=?,fiber_large=?,photo_small_path=?,photo_large_path=? WHERE id=?',[clean(b.menu_name),clean(b.component_name)||null,b.kpm_type,...vals,sp,lp,req.params.id]);
+      await conn.query('UPDATE menu_daily SET menu_name=?,component_name=?,kpm_type=?,energy_small=?,protein_small=?,fat_small=?,carb_small=?,fiber_small=?,energy_large=?,protein_large=?,fat_large=?,carb_large=?,fiber_large=?,photo_small_path=?,photo_large_path=? WHERE id=?',[clean(b.menu_name),clean(b.component_name)||null,b.kpm_type,...vals,sp,lp,id]);
       await conn.commit();saved=true;
     }catch(e){await conn.rollback();throw e}finally{conn.release()}
     // Delete replaced files only after the new DB references are safely committed.
     if(small&&old.photo_small_path&&old.photo_small_path!==sp)await removeUploaded({path:path.join(uploadDir,path.basename(old.photo_small_path))});
     if(large&&old.photo_large_path&&old.photo_large_path!==lp)await removeUploaded({path:path.join(uploadDir,path.basename(old.photo_large_path))});
-    await log(req,'Edit','MENU_HARIAN',req.params.id,clean(b.menu_name),old,{...b,photo_small_replaced:!!small,photo_large_replaced:!!large});
+    await log(req,'Edit','MENU_HARIAN',id,clean(b.menu_name),old,{...b,photo_small_replaced:!!small,photo_large_replaced:!!large});
     flash(req,'success','Menu tanggal '+sqlDate(old.menu_date)+' berhasil diperbarui.');
     res.redirect('/menus?date='+sqlDate(old.menu_date));
   }catch(e){
@@ -1959,13 +2009,23 @@ app.post('/menus/:id/update',auth,requirePermission('menu.manage'),upload.fields
     throw e;
   }
 }));
-app.post('/menus/:id/remove',auth,requirePermission('menu.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const [[row]]=await pool.query('SELECT * FROM menu_daily WHERE id=?',[req.params.id]);if(!row)return res.sendStatus(404);await pool.query('DELETE FROM menu_daily WHERE id=?',[req.params.id]);await log(req,'Hapus dari Tanggal','MENU_HARIAN',req.params.id,row.menu_name,row,null);flash(req,'success','Menu dihapus dari tanggal tersebut. Master menu tetap tersimpan untuk penggunaan kembali.');res.redirect('/menus?date='+sqlDate(row.menu_date));}));
+app.post('/menus/:id/remove',auth,requirePermission('menu.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[row]]=await pool.query('SELECT * FROM menu_daily WHERE id=?',[id]);if(!row)return res.sendStatus(404);await pool.query('DELETE FROM menu_daily WHERE id=?',[id]);await log(req,'Hapus dari Tanggal','MENU_HARIAN',id,row.menu_name,row,null);flash(req,'success','Menu dihapus dari tanggal tersebut. Master menu tetap tersimpan untuk penggunaan kembali.');res.redirect('/menus?date='+sqlDate(row.menu_date));}));
 app.get('/menus/copy',auth,ar(async(req,res)=>{const today=new Date().toISOString().slice(0,10);const source=/^\d{4}-\d{2}-\d{2}$/.test(clean(req.query.source))?clean(req.query.source):today;const target=/^\d{4}-\d{2}-\d{2}$/.test(clean(req.query.target))?clean(req.query.target):today;const [rows]=await pool.query('SELECT * FROM menu_daily WHERE menu_date=? ORDER BY kpm_type,menu_name,id',[source]);const [dates]=await pool.query("SELECT DISTINCT DATE_FORMAT(menu_date,'%Y-%m-%d') menu_date FROM menu_daily ORDER BY menu_date DESC");const dateOptions=[...new Set([today,source,target,...dates.map(x=>sqlDate(x.menu_date))])].sort((a,b)=>b.localeCompare(a));res.render('menus/copy',{title:'Salin Menu',source,target,rows,dateOptions})}));
 app.post('/menus/copy',auth,requirePermission('menu.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const source=/^\d{4}-\d{2}-\d{2}$/.test(clean(req.body.source))?clean(req.body.source):'';const target=/^\d{4}-\d{2}-\d{2}$/.test(clean(req.body.target))?clean(req.body.target):'';if(!source||!target)throw new Error('Tanggal sumber dan tujuan wajib valid.');if(source===target)throw new Error('Tanggal sumber dan tujuan tidak boleh sama.');let ids=req.body.menu_ids||[];if(!Array.isArray(ids))ids=[ids];ids=ids.map(x=>Number(x)).filter(Number.isInteger);if(!ids.length)throw new Error('Pilih minimal satu menu untuk disalin.');const conn=await pool.getConnection();try{await conn.beginTransaction();const [src]=await conn.query(`SELECT * FROM menu_daily WHERE menu_date=? AND id IN (${ids.map(()=>'?').join(',')}) ORDER BY id`,[source,...ids]);if(src.length!==ids.length)throw new Error('Sebagian menu sumber tidak ditemukan.');let copied=0;for(const r of src){const [[dup]]=await conn.query('SELECT id FROM menu_daily WHERE menu_date=? AND menu_id=? LIMIT 1',[target,r.menu_id]);if(dup)continue;const code=await nextMenuCode(target,conn);await conn.query('INSERT INTO menu_daily(menu_date,menu_id,menu_code,menu_name,component_name,kpm_type,energy_small,protein_small,fat_small,carb_small,fiber_small,energy_large,protein_large,fat_large,carb_large,fiber_large,photo_small_path,photo_large_path,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',[target,r.menu_id,code,r.menu_name,r.component_name,r.kpm_type,r.energy_small,r.protein_small,r.fat_small,r.carb_small,r.fiber_small,r.energy_large,r.protein_large,r.fat_large,r.carb_large,r.fiber_large,r.photo_small_path,r.photo_large_path,req.session.user?.id||null]);copied++}await conn.commit();await log(req,'Salin Menu','MENU_HARIAN',0,`${source} → ${target}`,null,{source,target,ids,copied});flash(req,'success',`${copied} menu berhasil disalin ke ${target}.${copied<ids.length?' Menu yang sudah ada dilewati.':''}`);res.redirect('/menus?date='+target)}catch(e){await conn.rollback();throw e}finally{conn.release()}}));
 
 app.get('/foodtray',auth,requirePermission('foodtray.view'),ar(async(req,res)=>{const [[template]]=await pool.query('SELECT * FROM foodtray_templates WHERE id=1');res.render('foodtray/index',{title:'Label Foodtray',template:template||{}})}));
 app.post('/foodtray/upload',auth,requirePermission('foodtray.manage'),upload.single('template_file'),ar(async(req,res)=>{try{if(!requireCsrf(req,res)){await removeUploaded(req.file);return}if(!req.file||!(await verifyUploadedFile(req.file))){await removeUploaded(req.file);flash(req,'error','Template tidak valid. Gunakan PDF, JPG, PNG, XLSX, atau DOCX.');return res.redirect('/foodtray')}const [[old]]=await pool.query('SELECT template_path,template_name FROM foodtray_templates WHERE id=1');await pool.query('UPDATE foodtray_templates SET template_path=?,template_name=? WHERE id=1',[req.file.filename,req.file.originalname]);if(old?.template_path)await removeUploaded({path:path.join(uploadDir,path.basename(old.template_path))});await log(req,'Upload Template','LABEL_FOODTRAY',1,'Template Label Foodtray',old,{file:req.file.originalname});flash(req,'success','Template label foodtray berhasil diunggah.');res.redirect('/foodtray')}catch(e){await removeUploaded(req.file);throw e}}));
-app.get('/foodtray/edit',auth,requirePermission('foodtray.manage'),(req,res)=>res.render('module-dashboard',{title:'Edit Label Foodtray',kicker:'LABEL FOODTRAY',heading:'Edit Template Label Foodtray',description:'Pengaturan template, ukuran, konten, dan panduan label.',emptyTitle:'Editor template',emptyText:'Editor detail template akan disiapkan pada tahap berikutnya.',actionHref:'/foodtray',actionLabel:'Kembali'}));
+app.get('/foodtray/edit',auth,requirePermission('foodtray.manage'),ar(async(req,res)=>{const [[template]]=await pool.query('SELECT * FROM foodtray_templates WHERE id=1');res.render('foodtray/form',{title:'Edit Label Foodtray',template:template||{}})}));
+app.post('/foodtray/edit',auth,requirePermission('foodtray.manage'),ar(async(req,res)=>{
+  if(!requireCsrf(req,res))return;
+  const sppgName=clean(req.body.sppg_name),titleLine=clean(req.body.title_line),footerLine=clean(req.body.footer_line),desc=clean(req.body.description)||null,guideText=clean(req.body.guide_text)||null;
+  if(!sppgName)throw new Error('Nama SPPG pada label wajib diisi.');
+  const [[old]]=await pool.query('SELECT * FROM foodtray_templates WHERE id=1');
+  await pool.query('UPDATE foodtray_templates SET sppg_name=?,title_line=?,footer_line=?,description=?,guide_text=? WHERE id=1',[sppgName,titleLine||null,footerLine||null,desc,guideText]);
+  await log(req,'Edit','LABEL_FOODTRAY',1,'Perbarui Panduan & Teks Label Foodtray',old,{sppg_name:sppgName,title_line:titleLine,footer_line:footerLine});
+  flash(req,'success','Teks dan panduan label foodtray berhasil diperbarui.');
+  res.redirect('/foodtray');
+}));
 app.get('/foodtray/download',auth,ar(async(req,res)=>{const [[t]]=await pool.query('SELECT template_path,template_name FROM foodtray_templates WHERE id=1');if(!t||!t.template_path)return res.status(404).send('Template belum tersedia.');const file=await resolveStoredFile(t.template_path);if(!file)return res.status(404).send('File template tidak ditemukan.');res.download(file,t.template_name||'template-label-foodtray') }));
 for(const mod of ['menu','pemorsian','distribusi','pencucian']) app.get('/documentation/'+mod,auth,requirePermission('documentation.view'),ar(async(req,res)=>{const map={menu:'MENU',pemorsian:'PEMORSIAN',distribusi:'DISTRIBUSI',pencucian:'PENCUCIAN'};const module=map[mod];const date=/^\d{4}-\d{2}-\d{2}$/.test(clean(req.query.date))?clean(req.query.date):new Date().toISOString().slice(0,10);const [rows]=await pool.query('SELECT * FROM documentation_records WHERE documentation_date=? AND module=? ORDER BY created_at DESC',[date,module]);res.render('documentation/index',{title:'Dokumentasi '+module.charAt(0)+module.slice(1).toLowerCase(),module,date,rows})}));
 
@@ -1992,9 +2052,9 @@ async function calculateExceptions(date){
 }
 app.get('/documentation/:mod/upload',auth,requirePermission('documentation.manage'),ar(async(req,res)=>{const map={menu:'MENU',pemorsian:'PEMORSIAN',distribusi:'DISTRIBUSI',pencucian:'PENCUCIAN'};const mod=String(req.params.mod||'').toLowerCase();if(!map[mod])return res.sendStatus(404);const date=/^\d{4}-\d{2}-\d{2}$/.test(clean(req.query.date))?clean(req.query.date):new Date().toISOString().slice(0,10);res.render('documentation/form',{title:'Tambah Dokumentasi',module:map[mod],date});}));
 app.post('/documentation/upload',auth,requirePermission('documentation.manage'),upload.single('file'),ar(async(req,res)=>{try{if(!requireCsrf(req,res)){await removeUploaded(req.file);return}const module=clean(req.body.module).toUpperCase(),date=clean(req.body.documentation_date),title=clean(req.body.title)||null,description=clean(req.body.description)||null;if(!['MENU','PEMORSIAN','DISTRIBUSI','PENCUCIAN'].includes(module)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)||!req.file||!(await verifyUploadedFile(req.file))) {await removeUploaded(req.file);throw new Error('Dokumentasi tidak valid.');}await assertDayWritable(req,date);const [r]=await pool.query('INSERT INTO documentation_records(documentation_date,module,title,description,file_path,original_name,mime_type,created_by) VALUES(?,?,?,?,?,?,?,?)',[date,module,title,description,req.file.filename,req.file.originalname,req.file.mimetype,req.session.user.id]);await log(req,'Upload Dokumentasi','DOCUMENTATION',r.insertId,title,null,{date,module,file:req.file.originalname});flash(req,'success','Dokumentasi berhasil disimpan.');res.redirect('/documentation/'+module.toLowerCase()+'?date='+encodeURIComponent(date));}catch(e){await removeUploaded(req.file);throw e}}));
-app.get('/documentation/file/:id',auth,requirePermission('documentation.view'),ar(async(req,res)=>{const [[r]]=await pool.query('SELECT * FROM documentation_records WHERE id=?',[Number(req.params.id)]);if(!r)return res.sendStatus(404);const file=await resolveStoredFile(r.file_path);if(!file)return res.sendStatus(404);res.download(file,r.original_name||'dokumentasi');}));
+app.get('/documentation/file/:id',auth,requirePermission('documentation.view'),ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[r]]=await pool.query('SELECT * FROM documentation_records WHERE id=?',[id]);if(!r)return res.sendStatus(404);const file=await resolveStoredFile(r.file_path);if(!file)return res.sendStatus(404);res.download(file,r.original_name||'dokumentasi');}));
 app.get('/exceptions',auth,requirePermission('dashboard.view'),ar(async(req,res)=>{const date=/^\d{4}-\d{2}-\d{2}$/.test(clean(req.query.date))?clean(req.query.date):new Date().toISOString().slice(0,10);const fresh=await calculateExceptions(date);for(const x of fresh)await pool.query(`INSERT INTO exception_items(work_date,code,team,severity,title,detail,source_type,source_id,status) VALUES(?,?,?,?,?,?,?,?,'OPEN') ON DUPLICATE KEY UPDATE severity=VALUES(severity),title=VALUES(title),detail=VALUES(detail),status='OPEN'`,[date,x.code,x.team,x.severity,x.title,x.detail,x.source_type,x.source_id]);const [rows]=await pool.query('SELECT * FROM exception_items WHERE work_date=? ORDER BY FIELD(status,\'OPEN\',\'RESOLVED\'),FIELD(severity,\'KRITIS\',\'PENTING\',\'INFORMASI\'),created_at DESC',[date]);res.render('exceptions/index',{title:'Exception Engine',date,rows});}));
-app.post('/exceptions/:id/resolve',auth,requirePermission('issues.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;await pool.query("UPDATE exception_items SET status='RESOLVED' WHERE id=?",[Number(req.params.id)]);await log(req,'Resolve Exception','EXCEPTION',Number(req.params.id),'Exception diselesaikan',null,{date:clean(req.body.date)});res.redirect('/exceptions?date='+encodeURIComponent(clean(req.body.date)));}));
+app.post('/exceptions/:id/resolve',auth,requirePermission('issues.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);await pool.query("UPDATE exception_items SET status='RESOLVED' WHERE id=?",[id]);await log(req,'Resolve Exception','EXCEPTION',id,'Exception diselesaikan',null,{date:clean(req.body.date)});res.redirect('/exceptions?date='+encodeURIComponent(clean(req.body.date)));}));
 app.get('/daily-closing',auth,requirePermission('dashboard.view'),ar(async(req,res)=>{const date=/^\d{4}-\d{2}-\d{2}$/.test(clean(req.query.date))?clean(req.query.date):new Date().toISOString().slice(0,10);const closing=await getClosing(date);const exceptions=await calculateExceptions(date);const checks=[{key:'issues',label:'Kendala terbuka',count:exceptions.filter(x=>x.code==='KENDALA_TERBUKA').length},{key:'feedback',label:'Feedback terbuka',count:exceptions.filter(x=>x.code==='FEEDBACK_TERBUKA').length},{key:'pickup',label:'Pengambilan belum selesai dicuci',count:exceptions.filter(x=>x.code==='PICKUP_BELUM_CUCI').length},{key:'work',label:'Pekerjaan operasional belum selesai',count:exceptions.filter(x=>x.code.includes('BELUM_SELESAI')||x.code.includes('BELUM_MULAI')).length}];res.render('daily-closing/index',{title:'Daily Closing',date,closing,checks,canManage:['ADMIN','ASLAP','KASP'].includes(req.session.user?.role)});}));
 app.post('/daily-closing/close',auth,requirePermission('issues.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const date=clean(req.body.date);const ex=await calculateExceptions(date);if(ex.length)throw new Error('Daily Closing ditolak karena masih ada kondisi yang perlu ditindaklanjuti. Buka Exception Engine terlebih dahulu.');await pool.query(`INSERT INTO daily_closings(work_date,status,closed_by,closed_at) VALUES(?,'CLOSED',?,CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE status='CLOSED',closed_by=VALUES(closed_by),closed_at=CURRENT_TIMESTAMP,reopened_by=NULL,reopened_at=NULL,reopen_reason=NULL`,[date,req.session.user.id]);await log(req,'Daily Closing','DAILY_CLOSING',0,date,null,{status:'CLOSED'});flash(req,'success','Daily Closing berhasil. Tanggal dikunci untuk user operasional.');res.redirect('/daily-closing?date='+encodeURIComponent(date));}));
 app.post('/daily-closing/reopen',auth,requirePermission('issues.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const date=clean(req.body.date),reason=clean(req.body.reason);if(reason.length<5)throw new Error('Alasan reopen wajib diisi.');await pool.query(`INSERT INTO daily_closings(work_date,status,reopened_by,reopened_at,reopen_reason) VALUES(?,'REOPENED',?,CURRENT_TIMESTAMP,?) ON DUPLICATE KEY UPDATE status='REOPENED',reopened_by=VALUES(reopened_by),reopened_at=CURRENT_TIMESTAMP,reopen_reason=VALUES(reopen_reason)`,[date,req.session.user.id,reason]);await log(req,'Reopen Daily Closing','DAILY_CLOSING',0,date,null,{status:'REOPENED',reason});flash(req,'success','Daily Closing dibuka kembali dengan alasan.');res.redirect('/daily-closing?date='+encodeURIComponent(date));}));
@@ -2018,7 +2078,7 @@ app.get('/issues/new',auth,requirePermission('issues.manage'),ar(async(req,res)=
   const qdate=clean(req.query.date);
   const workDate=/^\d{4}-\d{2}-\d{2}$/.test(qdate)?qdate:new Date().toISOString().slice(0,10);
   const clusterId=Number(req.query.cluster_id)||null;
-  res.render('issues/form',{title:'Laporkan Kendala',team,workDate,clusterId,issueCategories,issueImpacts,issuePriorities});
+  res.render('issues/form',{title:'Laporkan Kendala',team,workDate,clusterId,operationalTeams,issueCategories,issueImpacts,issuePriorities});
 }));
 app.post('/issues',auth,requirePermission('issues.manage'),ar(async(req,res)=>{
   if(!requireCsrf(req,res))return; const team=String(req.body.team||'').toUpperCase(),workDate=clean(req.body.work_date),category=clean(req.body.category),impact=clean(req.body.impact),priority=clean(req.body.priority),description=clean(req.body.description),clusterId=Number(req.body.cluster_id)||null,clusterKpmId=Number(req.body.cluster_kpm_id)||null;
@@ -2027,7 +2087,7 @@ app.post('/issues',auth,requirePermission('issues.manage'),ar(async(req,res)=>{
   await log(req,'Tambah','OPERATIONAL_ISSUE',r.insertId,description,null,{work_date:workDate,team,category,impact,priority,status:'BARU'}); flash(req,'success','Kendala berhasil dilaporkan.'); res.redirect('/issues');
 }));
 app.post('/issues/:id/status',auth,requirePermission('issues.manage'),ar(async(req,res)=>{
-  if(!requireCsrf(req,res))return; const id=Number(req.params.id),status=clean(req.body.status),pic=Number(req.body.pic_user_id)||null,note=clean(req.body.resolution_note)||null; if(!issueStatuses.includes(status))throw new Error('Status kendala tidak valid.');
+  if(!requireCsrf(req,res))return; const id=toFiniteId(req.params.id); if(!id)return res.sendStatus(404); const status=clean(req.body.status),pic=Number(req.body.pic_user_id)||null,note=clean(req.body.resolution_note)||null; if(!issueStatuses.includes(status))throw new Error('Status kendala tidak valid.');
   const [[old]]=await pool.query('SELECT * FROM operational_issues WHERE id=?',[id]); if(!old)return res.sendStatus(404);
   await pool.query('UPDATE operational_issues SET status=?,pic_user_id=?,resolution_note=?,last_activity_at=CURRENT_TIMESTAMP WHERE id=?',[status,pic,note,id]);
   await log(req,'Status','OPERATIONAL_ISSUE',id,`Kendala ${old.status} → ${status}`,old,{status,pic_user_id:pic,resolution_note:note}); flash(req,'success','Status kendala diperbarui.'); res.redirect('/issues');
@@ -2035,7 +2095,7 @@ app.post('/issues/:id/status',auth,requirePermission('issues.manage'),ar(async(r
 app.get('/feedback',auth,requirePermission('feedback.view'),ar(async(req,res)=>{const [rows]=await pool.query('SELECT f.*,u.name created_by_name FROM operational_feedback f LEFT JOIN users u ON u.id=f.created_by ORDER BY f.created_at DESC');res.render('feedback/index',{title:'Feedback Operasional',rows,feedbackCategories,operationalTeams})}));
 app.post('/feedback',auth,requirePermission('feedback.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const team=String(req.body.team||'').toUpperCase(),category=clean(req.body.category),description=clean(req.body.description),workDate=clean(req.body.work_date)||new Date().toISOString().slice(0,10);if(!operationalTeams.includes(team)||!feedbackCategories.includes(category)||description.length<3)throw new Error('Data feedback tidak valid.');const [r]=await pool.query('INSERT INTO operational_feedback(work_date,team,cluster_id,cluster_kpm_id,category,description,created_by) VALUES(?,?,?,?,?,?,?)',[workDate,team,Number(req.body.cluster_id)||null,Number(req.body.cluster_kpm_id)||null,category,description,req.session.user.id]);await log(req,'Tambah','OPERATIONAL_FEEDBACK',r.insertId,description,null,{work_date:workDate,team,category});flash(req,'success','Feedback berhasil dikirim.');res.redirect('/feedback')}));
 
-app.post('/feedback/:id/status',auth,requirePermission('feedback.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const id=Number(req.params.id),status=clean(req.body.status),pic=Number(req.body.pic_user_id)||null,note=clean(req.body.followup_note)||null;if(!['BARU','DITINDAKLANJUTI','MENUNGGU','SELESAI','DITUTUP'].includes(status))throw new Error('Status feedback tidak valid.');const [[old]]=await pool.query('SELECT * FROM operational_feedback WHERE id=?',[id]);if(!old)return res.sendStatus(404);await pool.query('UPDATE operational_feedback SET status=?,pic_user_id=?,followup_note=? WHERE id=?',[status,pic,note,id]);await pool.query('INSERT INTO operational_feedback_updates(feedback_id,status,pic_user_id,note,actor_user_id) VALUES(?,?,?,?,?)',[id,status,pic,note,req.session.user.id]);await log(req,'Status Feedback','OPERATIONAL_FEEDBACK',id,`Feedback ${old.status||'BARU'} → ${status}`,old,{status,pic_user_id:pic,followup_note:note});flash(req,'success','Status feedback diperbarui.');res.redirect('/feedback');}));
+app.post('/feedback/:id/status',auth,requirePermission('feedback.manage'),ar(async(req,res)=>{if(!requireCsrf(req,res))return;const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const status=clean(req.body.status),pic=Number(req.body.pic_user_id)||null,note=clean(req.body.followup_note)||null;if(!['BARU','DITINDAKLANJUTI','MENUNGGU','SELESAI','DITUTUP'].includes(status))throw new Error('Status feedback tidak valid.');const [[old]]=await pool.query('SELECT * FROM operational_feedback WHERE id=?',[id]);if(!old)return res.sendStatus(404);await pool.query('UPDATE operational_feedback SET status=?,pic_user_id=?,followup_note=? WHERE id=?',[status,pic,note,id]);await pool.query('INSERT INTO operational_feedback_updates(feedback_id,status,pic_user_id,note,actor_user_id) VALUES(?,?,?,?,?)',[id,status,pic,note,req.session.user.id]);await log(req,'Status Feedback','OPERATIONAL_FEEDBACK',id,`Feedback ${old.status||'BARU'} → ${status}`,old,{status,pic_user_id:pic,followup_note:note});flash(req,'success','Status feedback diperbarui.');res.redirect('/feedback');}));
 
 // Team scope: operational roles can only view/execute their own team.
 const roleTeamMap={PERSIAPAN:'PERSIAPAN',PENGOLAHAN:'PENGOLAHAN',PEMORSIAN:'PEMORSIAN',DISTRIBUSI:'DISTRIBUSI',PENCUCIAN:'PENCUCIAN'};
@@ -2174,10 +2234,11 @@ app.get('/roles',auth,requireAdmin,ar(async(req,res)=>{
 }));
 app.get('/roles/new',auth,requireAdmin,(req,res)=>res.render('roles/form',{title:'Tambah Pengguna',account:null,roles:[...allowedRoles]}));
 app.post('/roles/user',auth,requireAdmin,ar(async(req,res)=>{if(!requireCsrf(req,res))return;const username=clean(req.body.username),email=clean(req.body.email)||null,name=clean(req.body.name),role=clean(req.body.role),password=String(req.body.password||'');if(!username||!name||!allowedRoles.has(role)||password.length<12)throw new Error('Data pengguna tidak valid. Password minimal 12 karakter.');const [dup]=await pool.query('SELECT id FROM users WHERE username=? OR (email IS NOT NULL AND email=?)',[username,email]);if(dup[0])throw new Error('Username atau email sudah digunakan.');const [r]=await pool.query('INSERT INTO users(username,email,password_hash,name,role) VALUES(?,?,?,?,?)',[username,email,await bcrypt.hash(password,12),name,role]);await log(req,'Tambah','USER',r.insertId,'Membuat pengguna baru',null,{username,email,name,role});flash(req,'success','Pengguna berhasil dibuat.');res.redirect('/roles')}));
-app.post('/roles/user/:id',auth,requireAdmin,ar(async(req,res)=>{if(!requireCsrf(req,res))return;const id=Number(req.params.id);const [[old]]=await pool.query('SELECT id,username,email,name,role FROM users WHERE id=?',[id]);if(!old)return res.sendStatus(404);const name=clean(req.body.name),email=clean(req.body.email)||null,role=clean(req.body.role);if(!name||!allowedRoles.has(role))throw new Error('Data pengguna tidak valid.');if(id===req.session.user.id&&role!=='ADMIN')throw new Error('Akun yang sedang digunakan tidak boleh menurunkan role dirinya sendiri.');const [dup]=await pool.query('SELECT id FROM users WHERE (username=? OR (email IS NOT NULL AND email=?)) AND id<>?',[clean(req.body.username),email,id]);if(dup[0])throw new Error('Username atau email sudah digunakan.');const username=clean(req.body.username);await pool.query('UPDATE users SET username=?,email=?,name=?,role=? WHERE id=?',[username,email,name,role,id]);if(String(req.body.password||'')){if(String(req.body.password).length<12)throw new Error('Password minimal 12 karakter.');await pool.query('UPDATE users SET password_hash=? WHERE id=?',[await bcrypt.hash(String(req.body.password),12),id]);}if(id===req.session.user.id)req.session.user={...req.session.user,name,role,username};await log(req,'Edit','USER',id,'Memperbarui pengguna',old,{username,email,name,role,password_changed:!!String(req.body.password||'')});flash(req,'success','Pengguna berhasil diperbarui.');res.redirect('/roles')}));
+app.post('/roles/user/:id',auth,requireAdmin,ar(async(req,res)=>{if(!requireCsrf(req,res))return;const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[old]]=await pool.query('SELECT id,username,email,name,role FROM users WHERE id=?',[id]);if(!old)return res.sendStatus(404);const name=clean(req.body.name),email=clean(req.body.email)||null,role=clean(req.body.role);if(!name||!allowedRoles.has(role))throw new Error('Data pengguna tidak valid.');if(id===req.session.user.id&&role!=='ADMIN')throw new Error('Akun yang sedang digunakan tidak boleh menurunkan role dirinya sendiri.');const [dup]=await pool.query('SELECT id FROM users WHERE (username=? OR (email IS NOT NULL AND email=?)) AND id<>?',[clean(req.body.username),email,id]);if(dup[0])throw new Error('Username atau email sudah digunakan.');const username=clean(req.body.username);await pool.query('UPDATE users SET username=?,email=?,name=?,role=? WHERE id=?',[username,email,name,role,id]);if(String(req.body.password||'')){if(String(req.body.password).length<12)throw new Error('Password minimal 12 karakter.');await pool.query('UPDATE users SET password_hash=? WHERE id=?',[await bcrypt.hash(String(req.body.password),12),id]);}if(id===req.session.user.id)req.session.user={...req.session.user,name,role,username};await log(req,'Edit','USER',id,'Memperbarui pengguna',old,{username,email,name,role,password_changed:!!String(req.body.password||'')});flash(req,'success','Pengguna berhasil diperbarui.');res.redirect('/roles')}));
 app.post('/roles/user/:id/team',auth,requireAdmin,ar(async(req,res)=>{
   if(!requireCsrf(req,res))return;
-  const userId=Number(req.params.id),teamId=Number(req.body.team_id);
+  const userId=toFiniteId(req.params.id),teamId=Number(req.body.team_id);
+  if(!userId) return res.sendStatus(404);
   const [[user]]=await pool.query('SELECT id,name,role FROM users WHERE id=?',[userId]);
   const [[team]]=await pool.query('SELECT id,team_code,team_name FROM sppg_teams WHERE id=? AND is_active=1',[teamId]);
   if(!user||!team)throw new Error('Pengguna atau tim tidak valid.');
@@ -2191,7 +2252,8 @@ app.post('/roles/user/:id/team',auth,requireAdmin,ar(async(req,res)=>{
 }));
 app.post('/roles/user/:id/staff',auth,requireAdmin,ar(async(req,res)=>{
   if(!requireCsrf(req,res))return;
-  const userId=Number(req.params.id),staffId=Number(req.body.staff_id)||null;
+  const userId=toFiniteId(req.params.id),staffId=Number(req.body.staff_id)||null;
+  if(!userId) return res.sendStatus(404);
   const [[user]]=await pool.query('SELECT id,name,staff_id FROM users WHERE id=?',[userId]);
   if(!user) return res.sendStatus(404);
   if(staffId){ const [[staff]]=await pool.query('SELECT id,name FROM staff WHERE id=?',[staffId]); if(!staff)throw new Error('Data staf tidak ditemukan.'); const [[dup]]=await pool.query('SELECT id,name FROM users WHERE staff_id=? AND id<>?',[staffId,userId]); if(dup)throw new Error(`Staf tersebut sudah terhubung ke akun ${dup.name}.`);}
@@ -2200,7 +2262,7 @@ app.post('/roles/user/:id/staff',auth,requireAdmin,ar(async(req,res)=>{
   flash(req,'success','Keterkaitan akun dan data staf diperbarui.');res.redirect('/roles');
 }));
 app.post('/roles/team-member/:id/remove',auth,requireAdmin,ar(async(req,res)=>{
-  if(!requireCsrf(req,res))return; const id=Number(req.params.id); const [[old]]=await pool.query(`SELECT tm.*,t.team_code,t.team_name,u.name user_name FROM team_members tm JOIN sppg_teams t ON t.id=tm.team_id JOIN users u ON u.id=tm.user_id WHERE tm.id=?`,[id]); if(!old)return res.sendStatus(404); await pool.query('UPDATE team_members SET is_active=0,left_at=CURRENT_TIMESTAMP WHERE id=?',[id]); await log(req,'Edit','TEAM_MEMBER',old.user_id,'Menonaktifkan keanggotaan tim',old,{is_active:0}); flash(req,'success',`${old.user_name} dikeluarkan dari tim ${old.team_name}.`);res.redirect('/roles');
+  if(!requireCsrf(req,res))return; const id=toFiniteId(req.params.id); if(!id)return res.sendStatus(404); const [[old]]=await pool.query(`SELECT tm.*,t.team_code,t.team_name,u.name user_name FROM team_members tm JOIN sppg_teams t ON t.id=tm.team_id JOIN users u ON u.id=tm.user_id WHERE tm.id=?`,[id]); if(!old)return res.sendStatus(404); await pool.query('UPDATE team_members SET is_active=0,left_at=CURRENT_TIMESTAMP WHERE id=?',[id]); await log(req,'Edit','TEAM_MEMBER',old.user_id,'Menonaktifkan keanggotaan tim',old,{is_active:0}); flash(req,'success',`${old.user_name} dikeluarkan dari tim ${old.team_name}.`);res.redirect('/roles');
 }));
 app.post('/roles/permissions',auth,requireAdmin,ar(async(req,res)=>{if(!requireCsrf(req,res))return;const role=clean(req.body.role);if(!allowedRoles.has(role))throw new Error('Role tidak valid.');let keys=req.body.permissions||[];if(!Array.isArray(keys))keys=[keys];keys=keys.filter(k=>Object.prototype.hasOwnProperty.call(permissionCatalog,k));const conn=await pool.getConnection();try{await conn.beginTransaction();const [old]=await conn.query('SELECT p.permission_key FROM role_permissions rp JOIN permissions p ON p.id=rp.permission_id WHERE rp.role=?',[role]);await conn.query('DELETE FROM role_permissions WHERE role=?',[role]);for(const key of keys){const [[pr]]=await conn.query('SELECT id FROM permissions WHERE permission_key=?',[key]);if(pr)await conn.query('INSERT INTO role_permissions(role,permission_id) VALUES(?,?)',[role,pr.id]);}await conn.commit();await log(req,'Edit','ROLE_PERMISSION',null,'Memperbarui permission role',old,keys);flash(req,'success',`Permission role ${role} berhasil diperbarui.`);res.redirect('/roles')}catch(e){await conn.rollback();throw e}finally{conn.release()}}));
 
@@ -2307,7 +2369,8 @@ app.post('/backup/full',auth,ar(async(req,res)=>{
 }));
 app.post('/backup/verify/:id',auth,requirePermission('backup.manage'),ar(async(req,res)=>{
   if(!requireCsrf(req,res)) return;
-  const [[b]]=await pool.query("SELECT * FROM backup_runs WHERE id=? AND status='SUCCESS'",[req.params.id]);
+  const id=toFiniteId(req.params.id); if(!id) return res.sendStatus(404);
+  const [[b]]=await pool.query("SELECT * FROM backup_runs WHERE id=? AND status='SUCCESS'",[id]);
   if(!b)return res.sendStatus(404);
   try{
     const v=await verifyFullBackup(b.file_path);
@@ -2320,15 +2383,60 @@ app.post('/backup/verify/:id',auth,requirePermission('backup.manage'),ar(async(r
 }));
 
 app.get('/backup/download/:id',auth,ar(async(req,res)=>{
-  const [[b]]=await pool.query('SELECT * FROM backup_runs WHERE id=? AND status=\'SUCCESS\'',[req.params.id]);
+  const id=toFiniteId(req.params.id); if(!id) return res.sendStatus(404);
+  const [[b]]=await pool.query('SELECT * FROM backup_runs WHERE id=? AND status=\'SUCCESS\'',[id]);
   if(!b)return res.sendStatus(404); const f=path.resolve(b.file_path); const rel=path.relative(backupDir,f); if(rel.startsWith('..'+path.sep)||path.isAbsolute(rel)||!fs.existsSync(f))return res.sendStatus(404); res.download(f,b.filename);
 }));
 
 app.get('/activity',auth,requirePermission('activity.view'),ar(async(req,res)=>{const [rows]=await pool.query('SELECT a.*,u.name user_name FROM activity_log a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.created_at DESC LIMIT 200');res.render('activity',{title:'Aktivitas Sistem',rows})}));
 
-// Modular Executive Command Center & Governance Router
+// Modular Executive Command Center & Governance Router (Both /executive and /admin)
 const createExecutiveRouter = require('./routes/executive');
-app.use('/executive', createExecutiveRouter({ pool, log, clean, requireCsrf, defaultAppSettings, XLSX }));
+const executiveRouter = createExecutiveRouter({ pool, log, clean, requireCsrf, defaultAppSettings, XLSX });
+app.use('/executive', executiveRouter);
+app.use('/admin', executiveRouter);
+
+// Public Menu & Jadwal Distribusi for Parents & Community (Read-only, Zero PII)
+app.get(['/menu-hari-ini', '/jadwal-menu'], ar(async (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const selectedDate = /^\d{4}-\d{2}-\d{2}$/.test(clean(req.query.date)) ? clean(req.query.date) : today;
+  const selectedKpmId = req.query.kpm_id ? (Number(clean(req.query.kpm_id)) || '') : '';
+  const selectedType = ['SCHOOL', 'POSYANDU'].includes(clean(req.query.type)) ? clean(req.query.type) : '';
+
+  const [menus] = await pool.query('SELECT * FROM menu_daily WHERE menu_date=? ORDER BY kpm_type, menu_name', [selectedDate]);
+  
+  let kpms = [];
+  try {
+    const [kRows] = await pool.query('SELECT id, code, name, type, address FROM kpm WHERE COALESCE(active, 1) = 1 ORDER BY type, name');
+    kpms = kRows || [];
+  } catch {}
+
+  let clusters = [];
+  try {
+    const [cRows] = await pool.query(`
+      SELECT c.cluster_no, c.route_name, c.departure_time, c.vehicle,
+             k.id AS kpm_id, k.name AS kpm_name, k.type AS kpm_type, ck.handover_time, ck.pickup_time
+      FROM distribution_clusters c
+      JOIN distribution_schedules ds ON ds.id = c.schedule_id
+      JOIN distribution_cluster_kpm ck ON ck.cluster_id = c.id
+      JOIN kpm k ON k.id = ck.kpm_id
+      WHERE ds.distribution_date = ? AND COALESCE(c.is_active, 1) = 1
+      ORDER BY c.cluster_no, ck.sort_order
+    `, [selectedDate]);
+    clusters = cRows || [];
+  } catch {}
+  const [[settings]] = await pool.query('SELECT * FROM app_settings WHERE id=1');
+  res.render('public-menu', {
+    selectedDate,
+    selectedKpmId,
+    selectedType,
+    kpms: kpms || [],
+    menus: menus || [],
+    deliveries: clusters || [],
+    clusters: clusters || [],
+    appSettings: { ...defaultAppSettings, ...(settings || {}) }
+  });
+}));
 
 // Modular KPM Package Submissions Router
 const createKpmPackageRouter = require('./routes/kpm-package');

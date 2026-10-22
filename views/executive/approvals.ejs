@@ -21,6 +21,22 @@
     </div>
   </div>
 
+  <!-- Executive Navigation Tabs -->
+  <div class="chip-row" style="margin-bottom: 16px;">
+    <a href="/executive" class="filter-chip">
+      <i data-lucide="crown" style="width:14px; height:14px;"></i> Pusat Komando
+    </a>
+    <a href="/executive/approvals" class="filter-chip active">
+      <i data-lucide="check-check" style="width:14px; height:14px;"></i> Persetujuan Perubahan
+    </a>
+    <a href="/executive/lock-control" class="filter-chip">
+      <i data-lucide="lock" style="width:14px; height:14px;"></i> Penguncian Buku Harian
+    </a>
+    <a href="/executive/history" class="filter-chip">
+      <i data-lucide="history" style="width:14px; height:14px;"></i> Riwayat &amp; Audit
+    </a>
+  </div>
+
   <!-- Status Filter Tabs -->
   <div class="chip-row">
     <a href="/executive/approvals?status=ALL" class="filter-chip <%= statusFilter==='ALL' || !statusFilter ? 'active' : '' %>">
@@ -166,8 +182,132 @@
   <% } else { %>
     <div class="card empty-state">
       <i data-lucide="inbox" style="width:36px; height:36px; color:#94a3b8;"></i>
-      <strong style="font-size:16px;">Tidak ada pengajuan ditemukan</strong>
-      <span>Tidak ada data pengajuan perubahan dengan filter status '<%= statusFilter %>'.</span>
+      <strong style="font-size:16px;">Tidak ada pengajuan data PM ditemukan</strong>
+      <span>Tidak ada data pengajuan perubahan PM dengan filter status '<%= statusFilter %>'.</span>
+    </div>
+  <% } %>
+
+  <!-- KPM Profile & Identity Submissions from Portal -->
+  <% if(typeof profileSubmissions !== 'undefined' && profileSubmissions && profileSubmissions.length > 0){ %>
+    <div style="margin-top:32px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+        <h3 style="font-size:16px; color:#0b2d61; margin:0; display:flex; align-items:center; gap:8px;">
+          <i data-lucide="building-2" style="width:18px;height:18px;color:#007a5e;"></i>
+          <span>Pengajuan Perbaikan Profil &amp; Identitas KPM dari Portal (<%= profileSubmissions.length %>)</span>
+        </h3>
+      </div>
+      <div style="display:grid; gap:16px;">
+        <% profileSubmissions.forEach(ps => { %>
+          <div class="card" style="border:1px solid #e2e8f0; border-radius:12px; padding:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
+              <div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-weight:800; font-size:15px; color:#0b2d61;">Profil KPM #<%= ps.id %></span>
+                  <span class="badge">PORTAL KPM</span>
+                  <% if(ps.status === 'DIAJUKAN' || ps.status === 'DITINJAU'){ %>
+                    <span class="status-pill warning" style="font-size:11px;">MENUNGGU KEPUTUSAN PIMPINAN</span>
+                  <% } else if(ps.status === 'DISETUJUI' || ps.status === 'DITERAPKAN'){ %>
+                    <span class="status-pill success" style="font-size:11px;">DISETUJUI &amp; DITERAPKAN</span>
+                  <% } else { %>
+                    <span class="status-pill" style="background:#fee2e2; color:#b91c1c; font-size:11px;">DITOLAK OLEH PIMPINAN</span>
+                  <% } %>
+                </div>
+                <h3 style="margin:6px 0 2px; font-size:16px;">
+                  <%= ps.kpm_name %> <small style="color:#64748b; font-size:12px;">(<%= ps.kpm_code %> - <%= ps.kpm_type %>)</small>
+                </h3>
+                <p style="margin:0; font-size:12px; color:#64748b;">
+                  Diajukan pada: <%= new Date(ps.submitted_at || ps.created_at).toLocaleString('id-ID') %>
+                </p>
+              </div>
+
+              <% if(ps.reviewer_name){ %>
+                <div style="text-align:right; font-size:12px; color:#64748b;">
+                  Diverifikasi oleh: <strong><%= ps.reviewer_name %></strong>
+                </div>
+              <% } %>
+            </div>
+
+            <!-- Diff Preview Table -->
+            <div style="margin:14px 0;">
+              <div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:8px;">
+                PERBANDINGAN DATA PROFIL (SEBELUM → SESUDAH):
+              </div>
+              <div class="table-wrap">
+                <table class="table" style="font-size:12px;">
+                  <thead>
+                    <tr>
+                      <th style="width:180px;">Atribut Data</th>
+                      <th>Data Lama (Sebelum)</th>
+                      <th>Usulan Baru (Sesudah)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% 
+                      const fields = [
+                        ['name', 'Nama KPM / Sekolah / Posyandu'],
+                        ['address', 'Alamat Lengkap'],
+                        ['npsn', 'NPSN'],
+                        ['head_name', 'Nama Kepala / Pimpinan'],
+                        ['head_phone', 'Nomor Kontak Pimpinan'],
+                        ['pic_name', 'Nama PIC Operasional'],
+                        ['pic_phone', 'Nomor Kontak PIC'],
+                        ['cadre_name', 'Nama Kader'],
+                        ['cadre_phone', 'Nomor Kontak Kader'],
+                        ['latitude', 'Garis Lintang (Latitude)'],
+                        ['longitude', 'Garis Bujur (Longitude)']
+                      ];
+                      fields.forEach(([fKey, fLabel]) => {
+                        const oldVal = ps.beforeObj?.[fKey] ?? '-';
+                        const newVal = ps.afterObj?.[fKey] ?? '-';
+                        const isDiff = String(oldVal) !== String(newVal);
+                    %>
+                      <% if(isDiff || (newVal !== '-' && newVal !== '')){ %>
+                        <tr style="<%= isDiff ? 'background:#fffdfa;' : '' %>">
+                          <td><strong><%= fLabel %></strong></td>
+                          <td style="color:#94a3b8;"><%= oldVal || '-' %></td>
+                          <td style="color:#007a5e; font-weight:<%= isDiff ? '700' : 'normal' %>;">
+                            <%= newVal || '-' %>
+                            <% if(isDiff){ %><span class="badge green" style="margin-left:6px;font-size:9.5px">Berubah</span><% } %>
+                          </td>
+                        </tr>
+                      <% } %>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <% if(ps.review_note){ %>
+              <div style="margin-top:10px; padding:10px 14px; background:#f1f5f9; border-left:4px solid #0b2d61; border-radius:4px; font-size:12px;">
+                <strong>Catatan Resmi Pimpinan:</strong> <%= ps.review_note %>
+              </div>
+            <% } %>
+
+            <!-- Action buttons for DIAJUKAN or DITINJAU -->
+            <% if(ps.status === 'DIAJUKAN' || ps.status === 'DITINJAU'){ %>
+              <div style="border-top:1px dashed #cbd5e1; padding-top:14px; margin-top:14px; background:#f8fafc; padding:14px; border-radius:8px;">
+                <form method="post" action="/executive/approvals/profile/<%= ps.id %>/decide" style="display:grid; gap:10px;">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <div>
+                    <label style="font-size:12px; font-weight:700; color:#1e293b; display:block; margin-bottom:4px;">
+                      Catatan Keputusan Pimpinan:
+                    </label>
+                    <input type="text" name="review_note" class="input" placeholder="Masukkan alasan jika menolak, atau catatan verifikasi profil..." style="width:100%; font-size:12px;">
+                  </div>
+                  <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="submit" name="decision" value="DITOLAK" class="btn" style="background:#dc2626; color:#fff; border:0; padding:8px 16px;" onclick="return confirm('Tolak perbaikan profil KPM ini?')">
+                      <i data-lucide="x" style="width:14px; height:14px;"></i> Tolak Perbaikan
+                    </button>
+                    <button type="submit" name="decision" value="DISETUJUI" class="btn primary-btn" style="background:#059669; border:0; padding:8px 18px;" onclick="return confirm('Setujui dan terapkan data profil baru ke Master KPM?')">
+                      <i data-lucide="check-check" style="width:14px; height:14px;"></i> Setujui &amp; Terapkan Profil
+                    </button>
+                  </div>
+                </form>
+              </div>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
     </div>
   <% } %>
 </div>

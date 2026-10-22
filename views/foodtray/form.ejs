@@ -1,0 +1,41 @@
+<%- include('../partials/header') %>
+<section class="panel form-panel">
+  <div class="panel-head">
+    <div>
+      <span class="panel-kicker">LABEL FOODTRAY</span>
+      <h2>Edit Panduan &amp; Teks Label Foodtray</h2>
+      <p class="muted">Sesuaikan teks nama SPPG, peringatan, dan panduan operasional pada label foodtray.</p>
+    </div>
+    <a class="outline-btn" href="/foodtray"><i data-lucide="arrow-left"></i>Kembali</a>
+  </div>
+  <form method="post" action="/foodtray/edit">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="form-grid">
+      <div class="field full">
+        <label>Nama SPPG pada Label *</label>
+        <input class="input" type="text" name="sppg_name" required value="<%= template.sppg_name || 'SPPG SUBANG PUSAKAJAYA KEBONDANAS' %>" placeholder="Contoh: SPPG SUBANG PUSAKAJAYA KEBONDANAS">
+      </div>
+      <div class="field">
+        <label>Baris Sub-Judul Label</label>
+        <input class="input" type="text" name="title_line" value="<%= template.title_line || 'MAKANAN BERGIZI GRATIS' %>" placeholder="Contoh: MAKANAN BERGIZI GRATIS">
+      </div>
+      <div class="field">
+        <label>Teks Peringatan / Footer Label</label>
+        <input class="input" type="text" name="footer_line" value="<%= template.footer_line || 'Dilarang membawa pulang makanan MBG' %>" placeholder="Contoh: Dilarang membawa pulang makanan MBG">
+      </div>
+      <div class="field full">
+        <label>Deskripsi Template</label>
+        <textarea class="textarea" name="description" rows="3" placeholder="Keterangan singkat mengenai template label foodtray..."><%= template.description || '' %></textarea>
+      </div>
+      <div class="field full">
+        <label>Panduan Operasional Label Foodtray</label>
+        <textarea class="textarea" name="guide_text" rows="4" placeholder="Panduan bagi petugas penyiapan, pemorsian, dan penempelan label foodtray..."><%= template.guide_text || 'Cetak label sesuai porsi harian. Pastikan informasi gizi dan tanggal tertera jelas pada stiker label foodtray.' %></textarea>
+      </div>
+    </div>
+    <div class="form-actions" style="margin-top:20px; display:flex; gap:12px;">
+      <button class="primary-btn" type="submit"><i data-lucide="save"></i>Simpan Perubahan</button>
+      <a class="outline-btn" href="/foodtray">Batal</a>
+    </div>
+  </form>
+</section>
+<%- include('../partials/footer') %>

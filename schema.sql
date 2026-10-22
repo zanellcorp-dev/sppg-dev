@@ -170,16 +170,37 @@ INDEX idx_task_event_team(work_date,team,created_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS operational_issues (
-id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,work_date DATE NOT NULL,team VARCHAR(30) NOT NULL,cluster_id BIGINT UNSIGNED NULL,cluster_kpm_id BIGINT UNSIGNED NULL,category VARCHAR(40) NOT NULL,impact VARCHAR(40) NOT NULL DEFAULT 'NO_IMPACT',priority VARCHAR(20) NOT NULL DEFAULT 'INFORMASI',description TEXT NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'BARU',pic_user_id INT UNSIGNED NULL,resolution_note TEXT NULL,created_by INT UNSIGNED NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,INDEX idx_issue_date(work_date,team,status,created_at)) ENGINE=InnoDB;
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  work_date DATE NOT NULL,
+  team VARCHAR(30) NOT NULL,
+  cluster_id BIGINT UNSIGNED NULL,
+  cluster_kpm_id BIGINT UNSIGNED NULL,
+  category VARCHAR(40) NOT NULL,
+  impact VARCHAR(40) NOT NULL DEFAULT 'TIDAK_BERDAMPAK',
+  priority VARCHAR(20) NOT NULL DEFAULT 'INFORMASI',
+  description TEXT NOT NULL,
+  status VARCHAR(30) NOT NULL DEFAULT 'BARU',
+  pic_user_id INT UNSIGNED NULL,
+  resolution_note TEXT NULL,
+  last_activity_at DATETIME NULL,
+  created_by INT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_issue_date(work_date,team,status,created_at)
+) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS operational_feedback (
-id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,work_date DATE NOT NULL,team VARCHAR(30) NOT NULL,cluster_id BIGINT UNSIGNED NULL,cluster_kpm_id BIGINT UNSIGNED NULL,category VARCHAR(40) NOT NULL,description TEXT NOT NULL,created_by INT UNSIGNED NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX idx_feedback_date(work_date,team,created_at)) ENGINE=InnoDB;
-
--- BASELINE operational lifecycle extensions
-CREATE TABLE IF NOT EXISTS operational_issues (
-id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,work_date DATE NOT NULL,team VARCHAR(30) NOT NULL,cluster_id BIGINT UNSIGNED NULL,cluster_kpm_id BIGINT UNSIGNED NULL,category VARCHAR(40) NOT NULL,impact VARCHAR(40) NOT NULL DEFAULT 'TIDAK_BERDAMPAK',priority VARCHAR(20) NOT NULL DEFAULT 'INFORMASI',description TEXT NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'BARU',pic_user_id INT UNSIGNED NULL,resolution_note TEXT NULL,last_activity_at DATETIME NULL,created_by INT UNSIGNED NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,INDEX idx_issue_date(work_date,team,status,created_at)) ENGINE=InnoDB;
-CREATE TABLE IF NOT EXISTS operational_feedback (
-id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,work_date DATE NOT NULL,team VARCHAR(30) NOT NULL,cluster_id BIGINT UNSIGNED NULL,cluster_kpm_id BIGINT UNSIGNED NULL,category VARCHAR(40) NOT NULL,description TEXT NOT NULL,created_by INT UNSIGNED NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX idx_feedback_date(work_date,team,created_at)) ENGINE=InnoDB;
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  work_date DATE NOT NULL,
+  team VARCHAR(30) NOT NULL,
+  cluster_id BIGINT UNSIGNED NULL,
+  cluster_kpm_id BIGINT UNSIGNED NULL,
+  category VARCHAR(40) NOT NULL,
+  description TEXT NOT NULL,
+  created_by INT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_feedback_date(work_date,team,created_at)
+) ENGINE=InnoDB;
 
 
 -- DATA KPM PM: source/submission layer, isolated from operational Master KPM/PM until explicit review + apply.
