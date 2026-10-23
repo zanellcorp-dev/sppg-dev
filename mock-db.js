@@ -218,26 +218,26 @@ function createMockPool(opts = {}) {
       { id: 5, kpm_id: 1, full_name: 'Slamet Riyadi', nik: '3213012010830005', nisn: null, category: 'TENAGA_KEPENDIDIKAN', gender: 'L', class_group: 'Tenaga Administrasi', active: 1, approval_status: 'AKTIF', created_at: new Date('2024-01-10') },
 
       // KPM 2: Posyandu Melati 01 (Balita, Bumil, Busui)
-      { id: 6, kpm_id: 2, full_name: 'Kenzo Alfarizi', nik: '3213012201230004', nisn: null, category: 'BALITA', gender: 'L', class_group: '6-23 Bulan (Baduta)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-06-01'), updated_at: new Date('2026-10-16T11:00:00') },
-      { id: 7, kpm_id: 2, full_name: 'Aisyah Putri Azzahra', nik: '3213015503230007', nisn: null, category: 'BALITA', gender: 'P', class_group: '0-5 Bulan (Bayi)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-08-01'), updated_at: new Date('2026-08-01') },
-      { id: 8, kpm_id: 2, full_name: 'Rafka Aditya Ramadhan', nik: '3213011808220008', nisn: null, category: 'BALITA', gender: 'L', class_group: '24-59 Bulan (Balita)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-12') },
-      { id: 9, kpm_id: 2, full_name: 'Muhammad Rayyan', nik: '3213010511220009', nisn: null, category: 'BALITA', gender: 'L', class_group: '6-23 Bulan (Baduta)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-12') },
-      { id: 10, kpm_id: 2, full_name: 'Siti Zulaikha', nik: '3213016202230010', nisn: null, category: 'BALITA', gender: 'P', class_group: '24-59 Bulan (Balita)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-12') },
-      { id: 11, kpm_id: 2, full_name: 'Ibu Ratna Dewi', nik: '3213014506980005', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 2 (13–27 Minggu)', phone: '082199887766', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-07-10'), updated_at: new Date('2026-10-18T10:30:00') },
-      { id: 12, kpm_id: 2, full_name: 'Ibu Siti Maryam', nik: '3213015208960012', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 3 (28–40 Minggu)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
-      { id: 13, kpm_id: 2, full_name: 'Ibu Dewi Lestari', nik: '3213016511990013', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 1 (1–12 Minggu)', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
-      { id: 14, kpm_id: 2, full_name: 'Ibu Nur Halimah', nik: '3213014304950014', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 7–12 Bulan', active: 0, approval_status: 'NONAKTIF_DISETUJUI', deactivation_reason: 'Sudah tidak lagi menerima manfaat karena anak telah genap usia 2 tahun (lulus masa menyusui)', deactivated_at: new Date('2026-10-19T09:00:00'), created_at: new Date('2026-05-15'), updated_at: new Date('2026-10-19T09:00:00') },
-      { id: 15, kpm_id: 2, full_name: 'Ibu Fitri Handayani', nik: '3213015907940015', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 7–12 Bulan', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
-      { id: 16, kpm_id: 2, full_name: 'Ibu Maya Anggraeni', nik: '3213016709970016', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 13–24 Bulan', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 6, kpm_id: 2, full_name: 'Kenzo Alfarizi', nik: '3213012201230004', nisn: null, category: 'BALITA', gender: 'L', class_group: '6-23 Bulan (Baduta)', mother_name: 'Ibu Ratna Dewi', address: 'Dusun Sukamaju RT 02/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-06-01'), updated_at: new Date('2026-10-16T11:00:00') },
+      { id: 7, kpm_id: 2, full_name: 'Aisyah Putri Azzahra', nik: '3213015503230007', nisn: null, category: 'BALITA', gender: 'P', class_group: '0-5 Bulan (Bayi)', mother_name: 'Ibu Siti Maryam', address: 'Dusun Sukamaju RT 02/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-08-01'), updated_at: new Date('2026-08-01') },
+      { id: 8, kpm_id: 2, full_name: 'Rafka Aditya Ramadhan', nik: '3213011808220008', nisn: null, category: 'BALITA', gender: 'L', class_group: '24-59 Bulan (Balita)', mother_name: 'Ibu Dewi Lestari', address: 'Dusun Sukamaju RT 03/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-12') },
+      { id: 9, kpm_id: 2, full_name: 'Muhammad Rayyan', nik: '3213010511220009', nisn: null, category: 'BALITA', gender: 'L', class_group: '6-23 Bulan (Baduta)', mother_name: 'Ibu Fitri Handayani', address: 'Dusun Sukamaju RT 01/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-12') },
+      { id: 10, kpm_id: 2, full_name: 'Siti Zulaikha', nik: '3213016202230010', nisn: null, category: 'BALITA', gender: 'P', class_group: '24-59 Bulan (Balita)', mother_name: 'Ibu Maya Anggraeni', address: 'Dusun Sukamaju RT 04/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-12') },
+      { id: 11, kpm_id: 2, full_name: 'Ibu Ratna Dewi', nik: '3213014506980005', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 2 (13–27 Minggu)', phone: '082199887766', address: 'Dusun Sukamaju RT 02/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-07-10'), updated_at: new Date('2026-10-18T10:30:00') },
+      { id: 12, kpm_id: 2, full_name: 'Ibu Siti Maryam', nik: '3213015208960012', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 3 (28–40 Minggu)', address: 'Dusun Sukamaju RT 02/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 13, kpm_id: 2, full_name: 'Ibu Dewi Lestari', nik: '3213016511990013', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 1 (1–12 Minggu)', address: 'Dusun Sukamaju RT 03/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 14, kpm_id: 2, full_name: 'Ibu Nur Halimah', nik: '3213014304950014', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 7–12 Bulan', address: 'Dusun Sukamaju RT 01/01, Pusakajaya', active: 0, approval_status: 'NONAKTIF_DISETUJUI', deactivation_reason: 'Sudah tidak lagi menerima manfaat karena anak telah genap usia 2 tahun (lulus masa menyusui)', deactivated_at: new Date('2026-10-19T09:00:00'), created_at: new Date('2026-05-15'), updated_at: new Date('2026-10-19T09:00:00') },
+      { id: 15, kpm_id: 2, full_name: 'Ibu Fitri Handayani', nik: '3213015907940015', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 7–12 Bulan', address: 'Dusun Sukamaju RT 01/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 16, kpm_id: 2, full_name: 'Ibu Maya Anggraeni', nik: '3213016709970016', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 13–24 Bulan', address: 'Dusun Sukamaju RT 04/01, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
       // Contoh PM nonaktif di Melati 01: satu menunggu verifikasi BGN, satu sudah disetujui BGN
-      { id: 17, kpm_id: 2, full_name: 'Arka Danendra Pratama', nik: '3213011402190017', nisn: null, category: 'BALITA', gender: 'L', class_group: 'Posyandu Melati 01', active: 0, approval_status: 'NONAKTIF_DISETUJUI', deactivation_reason: 'Melewati Batas Usia Balita (> 5 Tahun)', deactivated_at: new Date('2026-02-01'), created_at: new Date('2026-01-12') },
-      { id: 18, kpm_id: 2, full_name: 'Ibu Maya Safitri', nik: '3213016805950018', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 3', active: 0, approval_status: 'MENUNGGU_VERIFIKASI_BGN', deactivation_reason: 'Pindah Domisili ke Luar Wilayah', deactivated_at: new Date('2026-02-10'), created_at: new Date('2026-01-15') },
+      { id: 17, kpm_id: 2, full_name: 'Arka Danendra Pratama', nik: '3213011402190017', nisn: null, category: 'BALITA', gender: 'L', class_group: 'Posyandu Melati 01', mother_name: 'Ibu Dewi', address: 'Dusun Sukamaju RT 02/01, Pusakajaya', active: 0, approval_status: 'NONAKTIF_DISETUJUI', deactivation_reason: 'Melewati Batas Usia Balita (> 5 Tahun)', deactivated_at: new Date('2026-02-01'), created_at: new Date('2026-01-12') },
+      { id: 18, kpm_id: 2, full_name: 'Ibu Maya Safitri', nik: '3213016805950018', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 3', address: 'Dusun Sukamaju RT 05/01, Pusakajaya', active: 0, approval_status: 'MENUNGGU_VERIFIKASI_BGN', deactivation_reason: 'Pindah Domisili ke Luar Wilayah', deactivated_at: new Date('2026-02-10'), created_at: new Date('2026-01-15') },
 
       // KPM 3: Posyandu Melati 02 (Ruang Privat Terpisah)
-      { id: 19, kpm_id: 3, full_name: 'Bilal Al Habsyi', nik: '3213012903230019', nisn: null, category: 'BALITA', gender: 'L', class_group: 'Posyandu Melati 02', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
-      { id: 20, kpm_id: 3, full_name: 'Syifa Nuraini', nik: '3213015407230020', nisn: null, category: 'BALITA', gender: 'P', class_group: 'Posyandu Melati 02', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
-      { id: 21, kpm_id: 3, full_name: 'Ibu Rina Kurnia', nik: '3213014101960021', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 2', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
-      { id: 22, kpm_id: 3, full_name: 'Ibu Indah Puspita', nik: '3213016309930022', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 2 Bulan', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') }
+      { id: 19, kpm_id: 3, full_name: 'Bilal Al Habsyi', nik: '3213012903230019', nisn: null, category: 'BALITA', gender: 'L', class_group: 'Posyandu Melati 02', mother_name: 'Ibu Fatimah', address: 'Dusun Sukamaju RT 05/02, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 20, kpm_id: 3, full_name: 'Syifa Nuraini', nik: '3213015407230020', nisn: null, category: 'BALITA', gender: 'P', class_group: 'Posyandu Melati 02', mother_name: 'Ibu Hasanah', address: 'Dusun Sukamaju RT 05/02, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 21, kpm_id: 3, full_name: 'Ibu Rina Kurnia', nik: '3213014101960021', nisn: null, category: 'BUMIL', gender: 'P', class_group: 'Trimester 2', address: 'Dusun Sukamaju RT 05/02, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') },
+      { id: 22, kpm_id: 3, full_name: 'Ibu Indah Puspita', nik: '3213016309930022', nisn: null, category: 'BUSUI', gender: 'P', class_group: 'Bayi 2 Bulan', address: 'Dusun Sukamaju RT 05/02, Pusakajaya', active: 1, approval_status: 'AKTIF', created_at: new Date('2026-01-15') }
     ],
     pm_change_history: [
       // PM 11: Ibu Ratna Dewi (BUMIL) - 3 Perubahan di Oktober 2026, 1 di September 2026, 0 di Agustus 2026 (Stabil)
@@ -1002,7 +1002,7 @@ function createMockPool(opts = {}) {
         const kpmId = Number(params[1]);
         const found = tables.pm.filter(p => p.id === id && p.kpm_id === kpmId).map(p => {
           const k = tables.kpm.find(x => x.id === p.kpm_id) || {};
-          return { ...p, kpm_name: k.name, kpm_type: k.type };
+          return { ...p, kpm_name: k.name, kpm_type: k.type, type: k.type, education_level: k.education_level };
         });
         return [found, []];
       }
@@ -1010,7 +1010,7 @@ function createMockPool(opts = {}) {
         const id = Number(params[0]);
         const found = tables.pm.filter(p => p.id === id).map(p => {
           const k = tables.kpm.find(x => x.id === p.kpm_id) || {};
-          return { ...p, kpm_name: k.name, kpm_type: k.type };
+          return { ...p, kpm_name: k.name, kpm_type: k.type, type: k.type, education_level: k.education_level };
         });
         return [found, []];
       }
@@ -1046,11 +1046,19 @@ function createMockPool(opts = {}) {
         }
 
         if (lowerSql.includes('full_name=?') || lowerSql.includes('full_name = ?')) {
-          p.full_name = params[0];
-          p.nik = params[1] || p.nik;
-          p.gender = params[2] || p.gender;
-          p.class_group = params[3] || p.class_group;
+          p.full_name = params[0] || p.full_name;
+          p.nik = params[1] !== undefined ? params[1] : p.nik;
+          p.nisn = params[2] !== undefined ? params[2] : p.nisn;
+          p.identity_number = params[3] !== undefined ? params[3] : p.identity_number;
           p.category = params[4] || p.category;
+          p.gender = params[5] || p.gender;
+          p.class_group = params[6] !== undefined ? params[6] : p.class_group;
+          p.birth_date = params[7] !== undefined ? params[7] : p.birth_date;
+          p.phone = params[8] !== undefined ? params[8] : p.phone;
+          if (lowerSql.includes('mother_name=?') || lowerSql.includes('mother_name = ?')) {
+            p.mother_name = params[9] !== undefined ? params[9] : p.mother_name;
+            p.address = params[10] !== undefined ? params[10] : p.address;
+          }
         }
 
         p.updated_at = new Date();
@@ -1065,11 +1073,16 @@ function createMockPool(opts = {}) {
       const full_name = params[1];
       const nik = params[2] || null;
       const nisn = params[3] || null;
-      const gender = params[4] || null;
-      const class_group = params[5] || null;
-      const category = params[6] || 'BALITA';
+      const identity_number = params[4] || null;
+      const category = params[5] || 'BALITA';
+      const gender = params[6] || null;
+      const class_group = params[7] || null;
+      const birth_date = params[8] || null;
+      const phone = params[9] || null;
+      const mother_name = params[10] || null;
+      const address = params[11] || null;
       const active = 1;
-      const approval_status = params[7] || 'AKTIF';
+      const approval_status = 'AKTIF';
 
       const newPm = {
         id: newId,
@@ -1077,8 +1090,13 @@ function createMockPool(opts = {}) {
         full_name,
         nik,
         nisn,
+        identity_number,
         gender,
         class_group,
+        birth_date,
+        phone,
+        mother_name,
+        address,
         category,
         active,
         approval_status,

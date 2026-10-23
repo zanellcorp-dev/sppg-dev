@@ -84,6 +84,18 @@
         <input class="input" name="phone" value="<%= pm?.phone || '' %>" placeholder="08xxxxxxxxxx">
       </div>
 
+      <div class="field" id="fieldMotherName" style="<%= (currentCat === 'BALITA') ? '' : 'display:none;' %>">
+        <label>Nama Ibu / Orang Tua (Opsional)</label>
+        <input class="input" name="mother_name" value="<%= pm?.mother_name || '' %>" placeholder="Nama ibu atau wali balita">
+        <div class="help">Khusus kategori Balita untuk pencatatan buku KIA dan kontak pendamping.</div>
+      </div>
+
+      <div class="field full">
+        <label>Alamat Lengkap (Opsional)</label>
+        <input class="input" name="address" value="<%= pm?.address || '' %>" placeholder="Alamat domisili / tempat tinggal (RT/RW, Dusun/Kelurahan, dsb.)">
+        <div class="help">Alamat tempat tinggal penerima manfaat untuk kemudahan verifikasi dan pendistribusian.</div>
+      </div>
+
       <% if(pm){ %>
         <div class="field">
           <label>Tanggal Efektif Perubahan <span style="color:#d92d20">*</span></label>
@@ -116,6 +128,7 @@
   var groupLabel = document.getElementById('classGroupLabel');
   var groupHelp = document.getElementById('classGroupHelp');
   var birthInput = document.getElementById('pmBirthDate');
+  var fieldMotherName = document.getElementById('fieldMotherName');
 
   var posyanduSubGroups = {
     BALITA: [
@@ -142,6 +155,7 @@
     var cat = catSelect.value;
 
     if(cat === 'BALITA'){
+      if(fieldMotherName) fieldMotherName.style.display = '';
       if(groupLabel) groupLabel.textContent = 'Tahapan Usia Balita *';
       if(groupHelp) groupHelp.textContent = 'Porsi Kecil · Menentukan tekstur makanan lumat / lembik / padat balita.';
       if(genderSelect){
@@ -149,6 +163,7 @@
         if(genderHelp) genderHelp.textContent = 'Balita Laki-laki atau Perempuan';
       }
     } else if(cat === 'BUMIL'){
+      if(fieldMotherName) fieldMotherName.style.display = 'none';
       if(groupLabel) groupLabel.textContent = 'Usia Kehamilan / Trimester *';
       if(groupHelp) groupHelp.textContent = 'Porsi Besar · Menentukan kecukupan gizi ibu hamil.';
       if(genderSelect){
@@ -156,12 +171,15 @@
         if(genderHelp) genderHelp.textContent = 'Ibu Hamil otomatis Perempuan (P)';
       }
     } else if(cat === 'BUSUI'){
+      if(fieldMotherName) fieldMotherName.style.display = 'none';
       if(groupLabel) groupLabel.textContent = 'Usia Bayi yang Disusui *';
       if(groupHelp) groupHelp.textContent = 'Porsi Besar · Menentukan pemenuhan kalori masa laktasi.';
       if(genderSelect){
         genderSelect.value = 'P';
         if(genderHelp) genderHelp.textContent = 'Ibu Menyusui otomatis Perempuan (P)';
       }
+    } else {
+      if(fieldMotherName) fieldMotherName.style.display = 'none';
     }
 
     var list = posyanduSubGroups[cat] || [];

@@ -692,6 +692,13 @@
           if (noCell) noCell.textContent = visibleCount;
         } else {
           row.style.display = 'none';
+          var detailId = row.getAttribute('data-pm-id') || (row.querySelector('[data-pm-id]') ? row.querySelector('[data-pm-id]').getAttribute('data-pm-id') : null);
+          if (detailId) {
+            var dRow = document.getElementById('pmDetailRow_' + detailId);
+            if (dRow) dRow.style.display = 'none';
+            var dBtn = row.querySelector('.pm-btn-detail');
+            if (dBtn) dBtn.classList.remove('is-active');
+          }
         }
       });
 

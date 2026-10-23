@@ -514,6 +514,8 @@ async function migrate(){
   await ensureColumn('pm','deactivated_at','DATETIME NULL');
   await ensureColumn('pm','deactivation_reason','TEXT NULL');
   await ensureColumn('pm','approval_status',"VARCHAR(30) NOT NULL DEFAULT 'AKTIF'");
+  await ensureColumn('pm','mother_name','VARCHAR(180) NULL');
+  await ensureColumn('pm','address','TEXT NULL');
   try{
     await pool.query("UPDATE pm SET class_group='6-23 Bulan (Baduta)' WHERE category='BALITA' AND (class_group LIKE 'Posyandu%' OR class_group IS NULL OR class_group='')");
     await pool.query("UPDATE pm SET class_group='Trimester 2 (13–27 Minggu)' WHERE category='BUMIL' AND (class_group='Trimester 2' OR class_group LIKE 'Posyandu%' OR class_group IS NULL OR class_group='')");
@@ -1374,7 +1376,7 @@ app.get('/portal/kpm/:token',ar(async(req,res)=>{
   await pool.query('UPDATE kpm_portal_tokens SET last_used_at=NOW() WHERE id=?',[access.id]);
   const safeQuery=async(sql,args=[],fallback)=>{try{const [rows]=await pool.query(sql,args);return rows}catch(e){console.error('[KPM PORTAL QUERY]',e.sqlMessage||e.message);return fallback;}};
   const settingsRows=await safeQuery('SELECT * FROM app_settings WHERE id=1',[],[{}]);
-  const pm=await safeQuery("SELECT id,full_name,nik,nisn,gender,class_group,category,active,approval_status,deactivated_at,deactivation_reason,created_at,updated_at FROM pm WHERE kpm_id=? ORDER BY FIELD(category,'PENDIDIK','TENAGA_KEPENDIDIKAN','PESERTA_DIDIK','BALITA','BUMIL','BUSUI'),class_group,full_name",[access.kpm_id],[]);
+  const pm=await safeQuery("SELECT id,full_name,nik,nisn,gender,class_group,category,active,approval_status,deactivated_at,deactivation_reason,mother_name,address,created_at,updated_at FROM pm WHERE kpm_id=? ORDER BY FIELD(category,'PENDIDIK','TENAGA_KEPENDIDIKAN','PESERTA_DIDIK','BALITA','BUMIL','BUSUI'),class_group,full_name",[access.kpm_id],[]);
   const subs=await safeQuery('SELECT id,effective_from,status,created_at,reviewed_at,review_note FROM kpm_pm_submissions WHERE kpm_id=? ORDER BY created_at DESC,id DESC LIMIT 10',[access.kpm_id],[]);
   const dailyRows=await safeQuery('SELECT * FROM kpm_daily_data WHERE kpm_id=? ORDER BY effective_from DESC LIMIT 1',[access.kpm_id],[]);
   const statementRows=await safeQuery('SELECT id,original_name,mime_type,file_size,uploaded_at FROM kpm_portal_statements WHERE kpm_id=? AND is_current=1 ORDER BY id DESC LIMIT 1',[access.kpm_id],[]);
@@ -1400,7 +1402,7 @@ app.get('/portal/kpm/preview/:id([0-9]+)',auth,requirePermission('kpm.view'),ar(
   if(!access)return res.sendStatus(404);
   const safeQuery=async(sql,args=[],fallback)=>{try{const [rows]=await pool.query(sql,args);return rows}catch(e){console.error('[KPM PREVIEW QUERY]',e.sqlMessage||e.message);return fallback;}};
   const settingsRows=await safeQuery('SELECT * FROM app_settings WHERE id=1',[],[{}]);
-  const pm=await safeQuery("SELECT id,full_name,nik,nisn,gender,class_group,category,active,approval_status,deactivated_at,deactivation_reason,created_at,updated_at FROM pm WHERE kpm_id=? ORDER BY FIELD(category,'PENDIDIK','TENAGA_KEPENDIDIKAN','PESERTA_DIDIK','BALITA','BUMIL','BUSUI'),class_group,full_name",[kpmId],[]);
+  const pm=await safeQuery("SELECT id,full_name,nik,nisn,gender,class_group,category,active,approval_status,deactivated_at,deactivation_reason,mother_name,address,created_at,updated_at FROM pm WHERE kpm_id=? ORDER BY FIELD(category,'PENDIDIK','TENAGA_KEPENDIDIKAN','PESERTA_DIDIK','BALITA','BUMIL','BUSUI'),class_group,full_name",[kpmId],[]);
   const subs=await safeQuery('SELECT id,effective_from,status,created_at,reviewed_at,review_note FROM kpm_pm_submissions WHERE kpm_id=? ORDER BY created_at DESC,id DESC LIMIT 10',[kpmId],[]);
   const dailyRows=await safeQuery('SELECT * FROM kpm_daily_data WHERE kpm_id=? ORDER BY effective_from DESC LIMIT 1',[kpmId],[]);
   const statementRows=await safeQuery('SELECT id,original_name,mime_type,file_size,uploaded_at FROM kpm_portal_statements WHERE kpm_id=? AND is_current=1 ORDER BY id DESC LIMIT 1',[kpmId],[]);
@@ -1460,8 +1462,8 @@ function validatePm(b,kpm){
   return {errors,class_group:cls};
 }
 app.get('/kpm/:id/pm/new',auth,ar(async(req,res)=>{const [[kpm]]=await pool.query('SELECT * FROM kpm WHERE id=?',[req.params.id]);if(!kpm)return res.sendStatus(404);res.render('pm/form',{title:'Tambah Penerima Manfaat',kpm,pm:null,rules:rulesFor(kpm.education_level,kpm.type),pmCategories:cats})}));
-app.post('/kpm/:id/pm',auth,requirePermission('kpm.manage'),ar(async(req,res)=>{const b=req.body;const [[kpm]]=await pool.query('SELECT * FROM kpm WHERE id=?',[req.params.id]);if(!kpm)return res.sendStatus(404);const v=validatePm(b,kpm);if(v.errors.length){flash(req,'error',v.errors[0]);return res.redirect('/kpm/'+req.params.id+'/pm/new')}let cls=v.class_group;if(['SPS','PAUD','TK','RA','SMP','MTs','SMA','SMK','MA'].includes(kpm.education_level)&&b.category==='PESERTA_DIDIK')cls='Peserta Didik';const [r]=await pool.query(`INSERT INTO pm(kpm_id,full_name,nik,nisn,identity_number,category,gender,class_group,birth_date,phone) VALUES(?,?,?,?,?,?,?,?,?,?)`,[kpm.id,clean(b.full_name),clean(b.nik)||null,clean(b.nisn)||null,clean(b.identity_number)||null,b.category,b.gender||null,cls,b.birth_date||null,clean(b.phone)||null]);await log(req,'Tambah','PM',r.insertId,b.full_name);flash(req,'success','Penerima Manfaat berhasil ditambahkan.');res.redirect('/kpm/'+kpm.id)}));
-app.get('/pm/:id/edit',auth,ar(async(req,res)=>{const [[pm]]=await pool.query('SELECT p.*,k.name kpm_name,k.education_level,k.type FROM pm p JOIN kpm k ON k.id=p.kpm_id WHERE p.id=?',[req.params.id]);if(!pm)return res.sendStatus(404);res.render('pm/form',{title:'Edit Penerima Manfaat',kpm:{id:pm.kpm_id,name:pm.kpm_name,education_level:pm.education_level,type:pm.type},pm,rules:rulesFor(pm.education_level,pm.type),pmCategories:cats,redirect:clean(req.query.redirect)||''})}));
+app.post('/kpm/:id/pm',auth,requirePermission('kpm.manage'),ar(async(req,res)=>{const b=req.body;const [[kpm]]=await pool.query('SELECT * FROM kpm WHERE id=?',[req.params.id]);if(!kpm)return res.sendStatus(404);const v=validatePm(b,kpm);if(v.errors.length){flash(req,'error',v.errors[0]);return res.redirect('/kpm/'+req.params.id+'/pm/new')}let cls=v.class_group;if(['SPS','PAUD','TK','RA','SMP','MTs','SMA','SMK','MA'].includes(kpm.education_level)&&b.category==='PESERTA_DIDIK')cls='Peserta Didik';const [r]=await pool.query(`INSERT INTO pm(kpm_id,full_name,nik,nisn,identity_number,category,gender,class_group,birth_date,phone,mother_name,address) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`,[kpm.id,clean(b.full_name),clean(b.nik)||null,clean(b.nisn)||null,clean(b.identity_number)||null,b.category,b.gender||null,cls,b.birth_date||null,clean(b.phone)||null,clean(b.mother_name)||null,clean(b.address)||null]);await log(req,'Tambah','PM',r.insertId,b.full_name);flash(req,'success','Penerima Manfaat berhasil ditambahkan.');res.redirect('/kpm/'+kpm.id)}));
+app.get('/pm/:id/edit',auth,ar(async(req,res)=>{const [[pm]]=await pool.query('SELECT p.*,k.name kpm_name,k.education_level,k.type FROM pm p JOIN kpm k ON k.id=p.kpm_id WHERE p.id=?',[req.params.id]);if(!pm)return res.sendStatus(404);const kpmType=pm.type||pm.kpm_type;res.render('pm/form',{title:'Edit Penerima Manfaat',kpm:{id:pm.kpm_id,name:pm.kpm_name,education_level:pm.education_level,type:kpmType},pm,rules:rulesFor(pm.education_level,kpmType),pmCategories:cats,redirect:clean(req.query.redirect)||''})}));
 app.post('/pm/:id/status',auth,requirePermission('kpm.manage'),ar(async(req,res)=>{
   const active=String(req.body.active)==='1'?1:0;
   const [[old]]=await pool.query('SELECT p.*,k.id kpm_id FROM pm p JOIN kpm k ON k.id=p.kpm_id WHERE p.id=?',[req.params.id]);
@@ -1564,7 +1566,8 @@ app.get('/portal/kpm/:token/pm/:id([0-9]+)/history',ar(async(req,res)=>{
     pm:{
       id:pm.id,kpm_id:pm.kpm_id,kpm_name:pm.kpm_name,kpm_type:pm.kpm_type,
       full_name:pm.full_name,nik:pm.nik,nisn:pm.nisn,category:pm.category,gender:pm.gender,
-      class_group:pm.class_group,birth_date:pm.birth_date,phone:pm.phone,active:pm.active,
+      class_group:pm.class_group,birth_date:pm.birth_date,phone:pm.phone,
+      mother_name:pm.mother_name,address:pm.address,active:pm.active,
       approval_status:pm.approval_status||(pm.active?'AKTIF':'NONAKTIF_DISETUJUI'),
       deactivated_at:pm.deactivated_at,deactivation_reason:pm.deactivation_reason,
       created_at:pm.created_at,updated_at:pm.updated_at
@@ -1589,7 +1592,8 @@ app.get('/portal/kpm/preview/:kpmId([0-9]+)/pm/:id([0-9]+)/history',auth,require
     pm:{
       id:pm.id,kpm_id:pm.kpm_id,kpm_name:pm.kpm_name,kpm_type:pm.kpm_type,
       full_name:pm.full_name,nik:pm.nik,nisn:pm.nisn,category:pm.category,gender:pm.gender,
-      class_group:pm.class_group,birth_date:pm.birth_date,phone:pm.phone,active:pm.active,
+      class_group:pm.class_group,birth_date:pm.birth_date,phone:pm.phone,
+      mother_name:pm.mother_name,address:pm.address,active:pm.active,
       approval_status:pm.approval_status||(pm.active?'AKTIF':'NONAKTIF_DISETUJUI'),
       deactivated_at:pm.deactivated_at,deactivation_reason:pm.deactivation_reason,
       created_at:pm.created_at,updated_at:pm.updated_at
@@ -1604,7 +1608,7 @@ app.get('/api/kpm/:id([0-9]+)/pm-group',auth,requirePermission('kpm.view'),ar(as
   if(!kpmId)return res.status(400).json({error:'KPM tidak valid'});
   const [[kpm]]=await pool.query('SELECT id,name,code,type,education_level FROM kpm WHERE id=?',[kpmId]);
   if(!kpm)return res.status(404).json({error:'KPM tidak ditemukan'});
-  const [rows]=await pool.query('SELECT id,kpm_id,full_name,nik,nisn,identity_number,category,gender,class_group,birth_date,phone,active,approval_status FROM pm WHERE kpm_id=? AND active=1 ORDER BY FIELD(category,"BALITA","BUMIL","BUSUI","PESERTA_DIDIK","PENDIDIK","TENAGA_KEPENDIDIKAN"),class_group,full_name',[kpmId]);
+  const [rows]=await pool.query('SELECT id,kpm_id,full_name,nik,nisn,identity_number,category,gender,class_group,birth_date,phone,mother_name,address,active,approval_status FROM pm WHERE kpm_id=? AND active=1 ORDER BY FIELD(category,"BALITA","BUMIL","BUSUI","PESERTA_DIDIK","PENDIDIK","TENAGA_KEPENDIDIKAN"),class_group,full_name',[kpmId]);
   res.json({success:true,kpm,data:rows});
 }));
 
@@ -1622,7 +1626,8 @@ app.get('/api/pm/:id([0-9]+)/history',ar(async(req,res)=>{
     pm:{
       id:pm.id,kpm_id:pm.kpm_id,kpm_name:pm.kpm_name,kpm_type:pm.kpm_type,
       full_name:pm.full_name,nik:pm.nik,nisn:pm.nisn,category:pm.category,gender:pm.gender,
-      class_group:pm.class_group,birth_date:pm.birth_date,phone:pm.phone,active:pm.active,
+      class_group:pm.class_group,birth_date:pm.birth_date,phone:pm.phone,
+      mother_name:pm.mother_name,address:pm.address,active:pm.active,
       approval_status:pm.approval_status||(pm.active?'AKTIF':'NONAKTIF_DISETUJUI'),
       deactivated_at:pm.deactivated_at,deactivation_reason:pm.deactivation_reason,
       created_at:pm.created_at,updated_at:pm.updated_at
@@ -1647,8 +1652,8 @@ const handleUpdatePm = async (req,res)=>{
   if(b.custom_note && clean(b.custom_note)){
     changeReason = changeReason + ' — ' + clean(b.custom_note);
   }
-  await pool.query(`UPDATE pm SET full_name=?,nik=?,nisn=?,identity_number=?,category=?,gender=?,class_group=?,birth_date=?,phone=?,updated_at=NOW() WHERE id=?`,[clean(b.full_name),clean(b.nik)||null,clean(b.nisn)||null,clean(b.identity_number)||null,b.category,b.gender||null,cls,b.birth_date||null,clean(b.phone)||null,id]);
-  const after={full_name:clean(b.full_name),nik:clean(b.nik)||null,nisn:clean(b.nisn)||null,category:b.category,gender:b.gender||null,class_group:cls,birth_date:b.birth_date||null,phone:clean(b.phone)||null,active:old.active};
+  await pool.query(`UPDATE pm SET full_name=?,nik=?,nisn=?,identity_number=?,category=?,gender=?,class_group=?,birth_date=?,phone=?,mother_name=?,address=?,updated_at=NOW() WHERE id=?`,[clean(b.full_name),clean(b.nik)||null,clean(b.nisn)||null,clean(b.identity_number)||null,b.category,b.gender||null,cls,b.birth_date||null,clean(b.phone)||null,clean(b.mother_name)||null,clean(b.address)||null,id]);
+  const after={full_name:clean(b.full_name),nik:clean(b.nik)||null,nisn:clean(b.nisn)||null,category:b.category,gender:b.gender||null,class_group:cls,birth_date:b.birth_date||null,phone:clean(b.phone)||null,mother_name:clean(b.mother_name)||null,address:clean(b.address)||null,active:old.active};
   try{
     await pool.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)',[id,effectiveFrom,'UPDATE',JSON.stringify(old),JSON.stringify(after),changeReason,req.session.user.id]);
   }catch(e){console.error('[PM CHANGE HIST ERROR]',e.message);}
@@ -1883,7 +1888,7 @@ app.get('/documents/:id([0-9]+)/edit',auth,requirePermission('documents.manage')
 app.post('/documents',auth,requirePermission('documents.manage'),upload.single('file'),ar(async(req,res)=>{
   try{
     if(!requireCsrf(req,res)){await removeUploaded(req.file);return}
-    const docType=clean(req.body.doc_type),title=clean(req.body.title),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
+    const docType=clean(req.body.doc_type),title=clean(req.body.title)||(req.file?req.file.originalname:'Dokumen Tanpa Judul'),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
     if(!['JUKNIS','SURAT_EDARAN','SOP'].includes(docType)||!title)throw new Error('Jenis dokumen dan judul wajib diisi.');
     if(!req.file||!(await verifyUploadedFile(req.file))){await removeUploaded(req.file);throw new Error('File dokumen wajib diunggah (format PDF/JPG/PNG/DOCX).')}
     const [r]=await pool.query('INSERT INTO bgn_documents(doc_type,title,document_number,document_date,description,file_path,file_name,original_name,active) VALUES(?,?,?,?,?,?,?,?,1)',[docType,title,docNum,docDate,desc,req.file.filename,req.file.originalname,req.file.originalname]);
@@ -1896,7 +1901,7 @@ const handleUpdateDocument=async(req,res)=>{
   try{
     if(!requireCsrf(req,res)){await removeUploaded(req.file);return}
     const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[old]]=await pool.query('SELECT * FROM bgn_documents WHERE id=?',[id]);if(!old)return res.sendStatus(404);
-    const docType=clean(req.body.doc_type),title=clean(req.body.title),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
+    const docType=clean(req.body.doc_type),title=clean(req.body.title)||(req.file?req.file.originalname:(old?old.title:'Dokumen Tanpa Judul')),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
     if(!['JUKNIS','SURAT_EDARAN','SOP'].includes(docType)||!title)throw new Error('Jenis dokumen dan judul wajib diisi.');
     let fp=old.file_path,fn=old.file_name,on=old.original_name||old.file_name;
     if(req.file){if(!(await verifyUploadedFile(req.file))){await removeUploaded(req.file);throw new Error('File pengganti tidak valid.')}fp=req.file.filename;fn=req.file.originalname;on=req.file.originalname;}

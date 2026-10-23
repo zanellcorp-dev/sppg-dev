@@ -111,12 +111,13 @@
           else if(isAct) statusCategory = 'ACTIVE';
         %>
           <tr class="pm-row <%= !isAct ? 'is-inactive' : '' %> <%= isPending ? 'is-pending' : '' %>" 
+              data-pm-id="<%= x.id %>"
               data-cat="<%= x.category %>" 
               data-subcat="<%= (x.class_group || '').toLowerCase() %>"
               data-gender="<%= x.gender || '' %>"
               data-active="<%= isAct ? '1' : '0' %>"
               data-status="<%= statusCategory %>"
-              data-search="<%= [x.full_name, x.nik, x.nisn, x.category, x.class_group].filter(Boolean).join(' ').toLowerCase() %>">
+              data-search="<%= [x.full_name, x.nik, x.nisn, x.category, x.class_group, x.mother_name, x.address].filter(Boolean).join(' ').toLowerCase() %>">
             <td style="text-align:center;font-weight:700;color:#6b7e94" class="pm-row-index"><%= i + 1 %></td>
             <td>
               <div class="pm-name-cell">
@@ -263,6 +264,49 @@
                   <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                   <span>Riwayat</span>
                 </button>
+
+                <!-- 4. Tombol Detail (Expand Sub-Row Alamat & Nama Ibu) -->
+                <button type="button" class="pm-btn pm-btn-detail" 
+                        data-action="toggle-detail"
+                        data-pm-id="<%= x.id %>"
+                        onclick="window.togglePmDetailRow('<%= x.id %>', this, event)"
+                        title="Tampilkan Detail Alamat & Keterangan">
+                  <span>Detail</span>
+                  <svg class="pm-detail-chevron" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr class="pm-detail-row" id="pmDetailRow_<%= x.id %>" style="display:none;" data-pm-id="<%= x.id %>">
+            <td colspan="8" class="pm-detail-cell">
+              <div class="pm-detail-content">
+                <div class="pm-detail-grid">
+                  <% if(x.category === 'BALITA'){ %>
+                    <div class="pm-detail-item">
+                      <span class="pm-detail-label">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Nama Ibu / Orang Tua:
+                      </span>
+                      <strong class="pm-detail-value"><%= x.mother_name || '-' %></strong>
+                    </div>
+                  <% } %>
+                  <div class="pm-detail-item pm-detail-address">
+                    <span class="pm-detail-label">
+                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                      Alamat Lengkap:
+                    </span>
+                    <span class="pm-detail-value"><%= x.address || '-' %></span>
+                  </div>
+                  <% if(x.phone){ %>
+                    <div class="pm-detail-item">
+                      <span class="pm-detail-label">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        No. HP:
+                      </span>
+                      <span class="pm-detail-value"><%= x.phone %></span>
+                    </div>
+                  <% } %>
+                </div>
               </div>
             </td>
           </tr>
@@ -292,7 +336,7 @@
         <h3 id="deactModalTitle">Hapus / Nonaktifkan Penerima Manfaat</h3>
         <p id="deactModalSubtitle">Data tersimpan aman di riwayat arsip dan tidak terhapus permanen.</p>
       </div>
-      <button type="button" class="pm-modal-close" onclick="closeDeactivateModal()" aria-label="Tutup">&times;</button>
+      <button type="button" class="pm-modal-close" data-close-modal="true" data-action="close" onclick="closeDeactivateModal()" aria-label="Tutup">&times;</button>
     </div>
 
     <form id="pmDeactivateForm" method="post" action="">
@@ -354,7 +398,7 @@
       </div>
 
       <div class="pm-modal-foot">
-        <button type="button" class="pm-modal-btn secondary" onclick="closeDeactivateModal()">Batal</button>
+        <button type="button" class="pm-modal-btn secondary" data-close-modal="true" data-action="close" onclick="closeDeactivateModal()">Batal</button>
         <button type="submit" class="pm-modal-btn danger">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
           <span id="deactSubmitBtnText"><%= previewMode ? 'Nonaktifkan & Simpan ke Riwayat' : 'Kirim Permohonan ke Kepala BGN' %></span>
@@ -377,7 +421,7 @@
         <h3>Otorisasi Kepala BGN · Sahkan Penonaktifan</h3>
         <p>Menyetujui permohonan penonaktifan PM dari kader KPM.</p>
       </div>
-      <button type="button" class="pm-modal-close" onclick="closeBgnApproveModal()" aria-label="Tutup">&times;</button>
+      <button type="button" class="pm-modal-close" data-close-modal="true" data-action="close" onclick="closeBgnApproveModal()" aria-label="Tutup">&times;</button>
     </div>
     <form id="bgnApproveForm" method="post" action="">
       <input type="hidden" name="decision" value="APPROVE_DEACTIVATE">
@@ -392,7 +436,7 @@
         </p>
       </div>
       <div class="pm-modal-foot">
-        <button type="button" class="pm-modal-btn secondary" onclick="closeBgnApproveModal()">Batal</button>
+        <button type="button" class="pm-modal-btn secondary" data-close-modal="true" data-action="close" onclick="closeBgnApproveModal()">Batal</button>
         <button type="submit" class="pm-modal-btn success">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           <span>Sahkan & Setujui Penonaktifan</span>
@@ -415,7 +459,7 @@
         <h3>Otorisasi Kepala BGN · Batalkan Permohonan Hapus</h3>
         <p>Membatalkan permohonan hapus sehingga PM tetap berstatus Aktif.</p>
       </div>
-      <button type="button" class="pm-modal-close" onclick="closeBgnRejectModal()" aria-label="Tutup">&times;</button>
+      <button type="button" class="pm-modal-close" data-close-modal="true" data-action="close" onclick="closeBgnRejectModal()" aria-label="Tutup">&times;</button>
     </div>
     <form id="bgnRejectForm" method="post" action="">
       <input type="hidden" name="decision" value="REJECT_DEACTIVATE">
@@ -430,7 +474,7 @@
         </p>
       </div>
       <div class="pm-modal-foot">
-        <button type="button" class="pm-modal-btn secondary" onclick="closeBgnRejectModal()">Tutup</button>
+        <button type="button" class="pm-modal-btn secondary" data-close-modal="true" data-action="close" onclick="closeBgnRejectModal()">Tutup</button>
         <button type="submit" class="pm-modal-btn danger">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           <span>Batalkan Permohonan (Tetap Aktif)</span>
@@ -453,7 +497,7 @@
         <h3>Otorisasi Kepala BGN · Pulihkan Data Penerima Manfaat</h3>
         <p>Memulihkan status penerima manfaat dari arsip kembali menjadi Aktif.</p>
       </div>
-      <button type="button" class="pm-modal-close" onclick="closeReactivateModal()" aria-label="Tutup">&times;</button>
+      <button type="button" class="pm-modal-close" data-close-modal="true" data-action="close" onclick="closeReactivateModal()" aria-label="Tutup">&times;</button>
     </div>
 
     <form id="pmReactivateForm" method="post" action="">
@@ -475,7 +519,7 @@
       </div>
 
       <div class="pm-modal-foot">
-        <button type="button" class="pm-modal-btn secondary" onclick="closeReactivateModal()">Batal</button>
+        <button type="button" class="pm-modal-btn secondary" data-close-modal="true" data-action="close" onclick="closeReactivateModal()">Batal</button>
         <button type="submit" class="pm-modal-btn success">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
           <span>Pulihkan ke Aktif</span>
@@ -650,6 +694,20 @@
 .pm-btn-reactivate:hover{background:#dcfce7;color:#166534}
 .pm-btn-history{background:#f8fafc;color:#334155;border-color:#cbd5e1}
 .pm-btn-history:hover{background:#e2e8f0;color:#0f172a}
+.pm-btn-detail{background:#f0fdfa;color:#0f766e;border-color:#ccfbf1}
+.pm-btn-detail:hover{background:#ccfbf1;color:#115e59}
+.pm-btn-detail.is-active{background:#0d9488;color:#ffffff;border-color:#0f766e}
+.pm-detail-chevron{transition:transform .2s ease;margin-left:2px}
+.pm-btn-detail.is-active .pm-detail-chevron{transform:rotate(180deg)}
+.pm-detail-row{background:#f8fafc}
+.pm-detail-cell{padding:10px 16px 14px 56px !important;border-bottom:1px solid #e2e8f0;background:#f8fafc}
+.pm-detail-content{background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,.03)}
+.pm-detail-grid{display:flex;flex-wrap:wrap;align-items:center;gap:16px 24px}
+.pm-detail-item{display:inline-flex;align-items:center;gap:7px;font-size:12.5px}
+.pm-detail-label{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:#64748b}
+.pm-detail-label svg{color:#0d9488}
+.pm-detail-value{color:#1e293b;font-weight:600}
+.pm-detail-address{flex:1;min-width:240px}
 .pm-action-locked{display:inline-flex;align-items:center;gap:4px;padding:5px 7px;border-radius:6px;background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;font-size:10.5px;font-weight:600}
 
 /* Modal Backdrops & Cards */
@@ -951,6 +1009,9 @@
                         (currentStatus === 'INACTIVE' && rowStatus === 'INACTIVE');
       var matchQuery = !currentQuery || (rowSearch.indexOf(currentQuery) !== -1);
 
+      var pmId = row.getAttribute('data-pm-id') || (row.querySelector('[data-pm-id]') ? row.querySelector('[data-pm-id]').getAttribute('data-pm-id') : null);
+      var detailRow = pmId ? document.getElementById('pmDetailRow_' + pmId) : null;
+
       if(matchCat && matchSubCat && matchStatus && matchQuery){
         row.style.display = '';
         visibleCount++;
@@ -958,6 +1019,11 @@
         if(idxCell) idxCell.textContent = visibleCount;
       } else {
         row.style.display = 'none';
+        if(detailRow){
+          detailRow.style.display = 'none';
+          var dBtn = row.querySelector('.pm-btn-detail');
+          if(dBtn) dBtn.classList.remove('is-active');
+        }
       }
     });
 
@@ -1199,7 +1265,9 @@
     var status = btn.getAttribute('data-pm-status') || '';
     var subgroup = btn.getAttribute('data-pm-subgroup') || '';
 
-    if(action === 'history'){
+    if(action === 'toggle-detail'){
+      window.togglePmDetailRow(id, btn, event);
+    } else if(action === 'history'){
       openHistoryModal(id, name, nik, cat, isAct, status, subgroup);
     } else if(action === 'deactivate'){
       openDeactivateModal(id, name, nik, cat, isAdmin);
@@ -1209,6 +1277,27 @@
       openBgnApproveModal(id, name, reason);
     } else if(action === 'bgn-reject'){
       openBgnRejectModal(id, name, reason);
+    }
+  };
+
+  window.togglePmDetailRow = function(pmId, btn, evt){
+    if(evt){
+      if(typeof evt.preventDefault === 'function') evt.preventDefault();
+      if(typeof evt.stopPropagation === 'function') evt.stopPropagation();
+    }
+    var detailRow = document.getElementById('pmDetailRow_' + pmId);
+    if(!detailRow) return;
+    var isExpanded = detailRow.style.display !== 'none';
+    if(isExpanded){
+      detailRow.style.display = 'none';
+      if(btn){
+        btn.classList.remove('is-active');
+      }
+    } else {
+      detailRow.style.display = '';
+      if(btn){
+        btn.classList.add('is-active');
+      }
     }
   };
 
@@ -1586,15 +1675,19 @@
   };
 
   window.closeHistoryModal = function(){
-    if(histModal) {
-      histModal.style.display = 'none';
-      histModal.classList.remove('active', 'open', 'show');
-      histModal.setAttribute('aria-hidden', 'true');
-    }
-    document.querySelectorAll('#pmHistoryModal, .pm-modal-backdrop[id*="history"], .pm-modal-backdrop[id*="History"]').forEach(function(m){
-      m.style.display = 'none';
-      m.classList.remove('active', 'open', 'show');
-      m.setAttribute('aria-hidden', 'true');
+    const selectors = [
+      '#pmHistoryModal',
+      '#historyModal',
+      '.kpm-group-modal',
+      '.pm-modal-backdrop',
+      '[id*="history"]',
+      '[id*="History"]',
+      '[class*="history-modal"]'
+    ];
+    document.querySelectorAll(selectors.join(',')).forEach(function(el){
+      el.style.display = 'none';
+      el.classList.remove('active', 'open', 'show');
+      el.setAttribute('aria-hidden', 'true');
     });
     try { document.body.style.overflow = ''; } catch(e){}
   };
@@ -1607,6 +1700,7 @@
       closeBgnRejectModal();
       closeReactivateModal();
       closeHistoryModal();
+      try { document.body.style.overflow = ''; } catch(err){}
     }
   });
 
@@ -1614,6 +1708,7 @@
     if(modal){
       modal.addEventListener('click', function(e){
         if(e.target === modal){
+          closeHistoryModal();
           modal.style.display = 'none';
           modal.classList.remove('active', 'open', 'show');
           modal.setAttribute('aria-hidden', 'true');
