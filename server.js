@@ -1888,7 +1888,7 @@ app.get('/documents/:id([0-9]+)/edit',auth,requirePermission('documents.manage')
 app.post('/documents',auth,requirePermission('documents.manage'),upload.single('file'),ar(async(req,res)=>{
   try{
     if(!requireCsrf(req,res)){await removeUploaded(req.file);return}
-    const docType=clean(req.body.doc_type),title=clean(req.body.title)||(req.file?req.file.originalname:'Dokumen Tanpa Judul'),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
+    const docType=clean(req.body.doc_type),title=clean(req.body.title)||(req.file?req.file.originalname:'Dokumen SPPG'),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
     if(!['JUKNIS','SURAT_EDARAN','SOP'].includes(docType)||!title)throw new Error('Jenis dokumen dan judul wajib diisi.');
     if(!req.file||!(await verifyUploadedFile(req.file))){await removeUploaded(req.file);throw new Error('File dokumen wajib diunggah (format PDF/JPG/PNG/DOCX).')}
     const [r]=await pool.query('INSERT INTO bgn_documents(doc_type,title,document_number,document_date,description,file_path,file_name,original_name,active) VALUES(?,?,?,?,?,?,?,?,1)',[docType,title,docNum,docDate,desc,req.file.filename,req.file.originalname,req.file.originalname]);
@@ -1901,7 +1901,7 @@ const handleUpdateDocument=async(req,res)=>{
   try{
     if(!requireCsrf(req,res)){await removeUploaded(req.file);return}
     const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[old]]=await pool.query('SELECT * FROM bgn_documents WHERE id=?',[id]);if(!old)return res.sendStatus(404);
-    const docType=clean(req.body.doc_type),title=clean(req.body.title)||(req.file?req.file.originalname:(old?old.title:'Dokumen Tanpa Judul')),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
+    const docType=clean(req.body.doc_type),title=clean(req.body.title)||(req.file?req.file.originalname:(old?old.title:'Dokumen SPPG')),docNum=clean(req.body.document_number)||null,docDate=clean(req.body.document_date)||null,desc=clean(req.body.description)||null;
     if(!['JUKNIS','SURAT_EDARAN','SOP'].includes(docType)||!title)throw new Error('Jenis dokumen dan judul wajib diisi.');
     let fp=old.file_path,fn=old.file_name,on=old.original_name||old.file_name;
     if(req.file){if(!(await verifyUploadedFile(req.file))){await removeUploaded(req.file);throw new Error('File pengganti tidak valid.')}fp=req.file.filename;fn=req.file.originalname;on=req.file.originalname;}

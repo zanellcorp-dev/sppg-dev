@@ -15,6 +15,20 @@
     }
   }
 
+  // Universal modal closer available immediately before and after DOM ready
+  window.closeHistoryModal = function() {
+    var targets = document.querySelectorAll(
+      '#pmHistoryModal, #historyModal, [id*="history"], [id*="History"], ' +
+      '.kpm-group-modal, .pm-modal-backdrop, .modal-backdrop, [class*="history-modal"], [role="dialog"]'
+    );
+    targets.forEach(function(el) {
+      el.style.display = 'none';
+      el.classList.remove('active', 'open', 'show');
+      el.setAttribute('aria-hidden', 'true');
+    });
+    document.body.style.overflow = '';
+  };
+
   // Automatic CSRF header injection for mutating fetch requests (safeguarded against non-writable fetch getter)
   (function setupCsrfFetchInterceptor() {
     try {
@@ -206,54 +220,41 @@
 
     // Capture-phase listener guarantees instant opening, tab-switching, and closing
     function handleGlobalInteractions(e) {
-      // 1. PRIORITAS UTAMA: Delegasi Klik Penutup Modal (Close Button / Tutup / X / data-action="close")
-      var closeBtn = e.target.closest('.pm-modal-close, .modal-close, .btn-close, .kpm-group-close, [data-close-modal], [data-action="close"], button[aria-label="Tutup"], button[aria-label="Close"], [onclick*="closeHistoryModal"], [onclick*="close"]');
-      if (!closeBtn) {
-        var btnCandidate = e.target.closest('button, .btn, [role="button"], a');
-        if (btnCandidate) {
-          var btnText = (btnCandidate.textContent || '').trim().toLowerCase();
-          if (btnText === 'tutup' || btnText === 'batal' || btnText === 'close' || btnText === 'cancel' || btnText === '×' || btnText === 'x') {
-            closeBtn = btnCandidate;
-          }
-        }
-      }
+      // 1. PRIORITAS UTAMA: Delegasi Klik Penutup Modal (Close Button / Tutup / Batal / X / data-action="close" / onclick*="close")
+      var closeCandidate = e.target.closest('button, a, span, .btn, [role="button"], .pm-modal-close, .modal-close, .btn-close, .kpm-group-close, [data-close-modal], [data-action="close"], [onclick*="close"]');
+      if (closeCandidate) {
+        var text = (closeCandidate.textContent || '').trim().toLowerCase();
+        var onclickStr = (closeCandidate.getAttribute('onclick') || '').toLowerCase();
+        var isKpmClose = closeCandidate.classList.contains('kpm-group-close');
+        var isPmClose = closeCandidate.classList.contains('pm-modal-close');
+        var isModalClose = closeCandidate.classList.contains('modal-close') || closeCandidate.classList.contains('btn-close');
+        var isCloseText = (text === 'tutup' || text === 'batal' || text === 'close' || text === 'cancel' || text === '×' || text === 'x');
+        var isCloseAction = (closeCandidate.getAttribute('data-action') === 'close' || closeCandidate.getAttribute('data-close-modal') === 'true');
+        var isCloseOnclick = onclickStr.includes('close');
+        var isCloseAria = (closeCandidate.getAttribute('aria-label') === 'Tutup' || closeCandidate.getAttribute('aria-label') === 'Close');
 
-      if (closeBtn) {
-        var btnTextLower = (closeBtn.textContent || '').trim().toLowerCase();
-        var actAttr = closeBtn.getAttribute('data-action') || '';
-        var isKpmClose = closeBtn.classList.contains('kpm-group-close');
-        var isIconX = (btnTextLower === '×' || btnTextLower === 'x' || closeBtn.classList.contains('pm-modal-close') || closeBtn.classList.contains('modal-close') || closeBtn.classList.contains('btn-close'));
-
-        // Jika elemen yang diklik bertuliskan "Tutup", memiliki class "kpm-group-close", icon X, atau atribut data-action="close"
-        if (btnTextLower === 'tutup' || isKpmClose || isIconX || actAttr === 'close') {
+        if (isCloseText || isKpmClose || isPmClose || isModalClose || isCloseAction || isCloseOnclick || isCloseAria) {
           if (typeof window.closeHistoryModal === 'function') {
             window.closeHistoryModal();
           }
-        }
-
-        var modal = closeBtn.closest('.pm-modal-backdrop, .modal, [role="dialog"], .modal-backdrop, .kpm-group-modal, .kpm-group-dialog, [id*="history"], [id*="History"]');
-        if (modal) {
-          closeModalEl(modal);
-        } else {
-          if (typeof window.closeHistoryModal === 'function') {
-            window.closeHistoryModal();
+          var modal = closeCandidate.closest('.pm-modal-backdrop, .modal, [role="dialog"], .modal-backdrop, .kpm-group-modal, .kpm-group-dialog, [id*="history"], [id*="History"]');
+          if (modal) {
+            closeModalEl(modal);
           }
+          var remainingVisible = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+          if (!remainingVisible) {
+            try { document.body.style.overflow = ''; } catch (err) {}
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          return;
         }
-
-        var remainingVisible = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
-        if (!remainingVisible) {
-          try { document.body.style.overflow = ''; } catch (err) {}
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-        return;
       }
 
       // 2. Direct click on backdrop (area gelap di luar kotak dialog riwayat / modal)
       var isBackdrop = false;
       if (e.target) {
-        if (e.target.matches('#pmHistoryModal, #historyModal, .pm-modal-backdrop, .modal-backdrop, .kpm-group-modal, [id*="history"], [id*="History"], [class*="history-modal"]') ||
+        if (e.target.matches('#pmHistoryModal, #historyModal, .pm-modal-backdrop, .modal-backdrop, .kpm-group-modal, [id*="history"], [id*="History"], [class*="history-modal"], [role="dialog"]') ||
             (e.target.classList && (e.target.classList.contains('pm-modal-backdrop') || e.target.classList.contains('modal-backdrop') || e.target.classList.contains('kpm-group-modal')))) {
           isBackdrop = true;
         }
@@ -368,16 +369,11 @@
     window.openCategoryChangeModal = window.openCategoryChangeModal || function() { closeModalEl(document.getElementById('modalMutationPicker')); openModalEl('modalCategoryChange'); };
 
     window.closeHistoryModal = function() {
-      const selectors = [
-        '#pmHistoryModal',
-        '#historyModal',
-        '.kpm-group-modal',
-        '.pm-modal-backdrop',
-        '[id*="history"]',
-        '[id*="History"]',
-        '[class*="history-modal"]'
-      ];
-      document.querySelectorAll(selectors.join(',')).forEach(function(el) {
+      var targets = document.querySelectorAll(
+        '#pmHistoryModal, #historyModal, [id*="history"], [id*="History"], ' +
+        '.kpm-group-modal, .pm-modal-backdrop, .modal-backdrop, [class*="history-modal"], [role="dialog"]'
+      );
+      targets.forEach(function(el) {
         el.style.display = 'none';
         el.classList.remove('active', 'open', 'show');
         el.setAttribute('aria-hidden', 'true');

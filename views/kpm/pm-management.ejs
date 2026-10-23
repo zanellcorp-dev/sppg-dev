@@ -542,7 +542,7 @@
         <h3 id="histModalTitle">Riwayat Rekam Jejak & Otorisasi BGN</h3>
         <p>Jejak pendaftaran, pembaruan identitas, permohonan nonaktif, dan otorisasi Kepala BGN.</p>
       </div>
-      <button type="button" class="pm-modal-close" data-close-modal="true" data-action="close" onclick="closeHistoryModal()" aria-label="Tutup">&times;</button>
+      <button type="button" class="pm-modal-close" data-close-modal="true" data-action="close" onclick="closeHistoryModal(); return false;" aria-label="Tutup">&times;</button>
     </div>
 
     <div class="pm-modal-body">
@@ -594,7 +594,7 @@
 
     <!-- Foot Modal -->
     <div class="pm-modal-foot" id="pmHistoryModalFoot">
-      <button type="button" class="pm-modal-btn primary" data-close-modal="true" data-action="close" onclick="closeHistoryModal()">Tutup</button>
+      <button type="button" class="pm-modal-btn primary" data-close-modal="true" data-action="close" onclick="closeHistoryModal(); return false;">Tutup</button>
     </div>
   </div>
 </div>
@@ -1335,7 +1335,7 @@
     if(histModal) histModal.style.display = 'flex';
 
     if(histFoot){
-      histFoot.innerHTML = '<button type="button" class="pm-modal-btn primary" data-close-modal="true" data-action="close" onclick="closeHistoryModal()">Tutup</button>';
+      histFoot.innerHTML = '<button type="button" class="pm-modal-btn primary" data-close-modal="true" data-action="close" onclick="closeHistoryModal(); return false;">Tutup</button>';
     }
 
     var historyUrl = (isPreview || !token) ? 
@@ -1655,7 +1655,7 @@
             footHtml += '<button type="button" class="pm-modal-btn success" onclick="closeHistoryModal();openReactivateModal(' + pmData.id + ', \'' + (pmData.full_name || '').replace(/'/g, "\\'") + '\', \'' + (pmData.nik || '') + '\', \'' + (pmData.deactivation_reason || '').replace(/'/g, "\\'") + '\')">↺ Pulihkan Data ke Aktif</button>';
           }
           footHtml += '</div>';
-          footHtml += '<button type="button" class="pm-modal-btn primary" data-close-modal="true" data-action="close" onclick="closeHistoryModal()">Tutup</button>';
+          footHtml += '<button type="button" class="pm-modal-btn primary" data-close-modal="true" data-action="close" onclick="closeHistoryModal(); return false;">Tutup</button>';
           histFoot.innerHTML = footHtml;
         }
       })
@@ -1675,21 +1675,16 @@
   };
 
   window.closeHistoryModal = function(){
-    const selectors = [
-      '#pmHistoryModal',
-      '#historyModal',
-      '.kpm-group-modal',
-      '.pm-modal-backdrop',
-      '[id*="history"]',
-      '[id*="History"]',
-      '[class*="history-modal"]'
-    ];
-    document.querySelectorAll(selectors.join(',')).forEach(function(el){
+    var targets = document.querySelectorAll(
+      '#pmHistoryModal, #historyModal, [id*="history"], [id*="History"], ' +
+      '.kpm-group-modal, .pm-modal-backdrop, .modal-backdrop, [class*="history-modal"], [role="dialog"]'
+    );
+    targets.forEach(function(el){
       el.style.display = 'none';
       el.classList.remove('active', 'open', 'show');
       el.setAttribute('aria-hidden', 'true');
     });
-    try { document.body.style.overflow = ''; } catch(e){}
+    document.body.style.overflow = '';
   };
 
   // Close modals on Esc key or click backdrop
