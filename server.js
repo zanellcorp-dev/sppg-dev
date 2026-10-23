@@ -6,7 +6,7 @@ const execFile=util.promisify(child_process.execFile);
 const app=express();
 app.set('views',path.join(__dirname,'views'));
 app.set('view engine','ejs');
-const PORT=3000;
+const PORT = Number(process.env.PORT) || 3000;
 const APP_VERSION='1.8.36.4';
 // Persistent storage: keep uploaded files outside the release/application directory.
 // This prevents ZIP deployments from deleting photos/documents.
@@ -151,6 +151,7 @@ app.use(helmet({
   crossOriginOpenerPolicy: false,
   crossOriginResourcePolicy: false,
   crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: 'same-origin' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'", "https:", "data:", "blob:"],
@@ -161,9 +162,11 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "blob:", "https:"],
       objectSrc: ["'none'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdn.jsdelivr.net"],
       connectSrc: ["'self'", "https:", "wss:", "ws:", "https://*.tile.openstreetmap.org", "https://tile.openstreetmap.org"],
-      workerSrc: ["'self'", "blob:"]
+      workerSrc: ["'self'", "blob:"],
+      upgradeInsecureRequests: isProduction ? [] : null
     }
   }
 }));
@@ -198,6 +201,7 @@ let initPromise;
 app.use((req,res,next)=>{if(req.path==='/health'||!initPromise)return next();initPromise.then(()=>next()).catch(()=>res.status(503).send('Aplikasi sedang menyiapkan database. Silakan coba lagi.'));});
 
 // CSRF protection for every state-changing form, including login/logout.
+function csrfTokenFrom(req){ return String((req.body && req.body._csrf) || req.get('x-csrf-token') || ''); }
 function csrfValid(req,token){
   if(!token||!req.session.csrfToken)return false;
   const a=Buffer.from(String(token)),b=Buffer.from(String(req.session.csrfToken));
@@ -205,7 +209,7 @@ function csrfValid(req,token){
 }
 const formatters = require('./helpers/formatters');
 const pmMutations = require('./helpers/pm-mutations');
-const REVIEW_MODE = true; // Set to false before delivery to sibling / production
+const REVIEW_MODE = !isProduction && process.env.REVIEW_MODE !== 'false';
 app.use((req,res,next)=>{
   if (REVIEW_MODE && !req.session.user) {
     req.session.user = { id: 1, username: 'admin', name: 'Administrator', role: 'ADMIN' };
@@ -221,13 +225,13 @@ app.use((req,res,next)=>{
     if(REVIEW_MODE) return next();
     // Multipart bodies are parsed by multer at the route level, so those routes perform the same check after parsing.
     const isMultipart=/^multipart\/form-data/i.test(req.get('content-type')||'');
-    const token=req.body?req.body._csrf:req.get('x-csrf-token');
+    const token=csrfTokenFrom(req);
     if(req.path!=='/login'&&!isMultipart&&!csrfValid(req,token))return res.status(403).send('Permintaan ditolak: token keamanan tidak valid.');
   }
   next();
 });
 const sqlDate=v=>{if(v instanceof Date)return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;return String(v||'').slice(0,10)};
-const requireCsrf=(req,res)=>{if(REVIEW_MODE)return true;const token=req.body?req.body._csrf:req.get('x-csrf-token');if(!csrfValid(req,token)){res.status(403).send('Permintaan ditolak: token keamanan tidak valid.');return false}return true};
+const requireCsrf=(req,res)=>{if(REVIEW_MODE)return true;const token=csrfTokenFrom(req);if(!csrfValid(req,token)){res.status(403).send('Permintaan ditolak: token keamanan tidak valid.');return false}return true};
 
 const toFiniteId=v=>{const n=Number(v);return(Number.isFinite(n)&&n>0)?Math.floor(n):null};
 const flash=(req,type,message)=>{req.session.flash={type,message}};
@@ -308,6 +312,15 @@ async function ensureColumn(table,column,definition){
   const [r]=await pool.query('SELECT COUNT(*) count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? AND column_name=?',[table,column]);
   if(!Number(r[0].count)) await pool.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
 }
+async function ensureUniqueIndex(table,indexName,columns){
+  try{
+    const [r]=await pool.query('SELECT COUNT(*) count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name=? AND index_name=?',[table,indexName]);
+    const cnt=Number(r[0]?.count??r[0]?.c??0);
+    if(!cnt) await pool.query(`ALTER TABLE \`${table}\` ADD UNIQUE KEY \`${indexName}\` (${columns})`);
+  }catch(e){
+    if(!/duplicate key name|already exists/i.test(String(e.message))) throw e;
+  }
+}
 async function migrate(){
   await pool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (version VARCHAR(50) PRIMARY KEY,applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB`);
   await pool.query(`CREATE TABLE IF NOT EXISTS sppg_teams (
@@ -323,7 +336,7 @@ async function migrate(){
     await pool.query('INSERT INTO sppg_teams(team_code,team_name) VALUES(?,?) ON DUPLICATE KEY UPDATE team_name=VALUES(team_name)',[teamCode,teamName]);
   }
   await ensureColumn('users','staff_id','INT UNSIGNED NULL');
-  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_users_staff_id ON users(staff_id)`).catch(async e=>{ if(!/duplicate key name|already exists/i.test(String(e.message))) throw e; });
+  await ensureUniqueIndex('users','uq_users_staff_id','`staff_id`');
   await pool.query(`CREATE TABLE IF NOT EXISTS team_members (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     team_id INT UNSIGNED NOT NULL,
@@ -458,7 +471,7 @@ async function migrate(){
   await ensureColumn('users','username','VARCHAR(100) NULL');
   await pool.query("UPDATE users SET username=SUBSTRING_INDEX(email,'@',1) WHERE (username IS NULL OR username='') AND email IS NOT NULL AND email<>''");
   await pool.query("ALTER TABLE users MODIFY email VARCHAR(190) NULL");
-  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users(username)").catch(async e=>{ if(!/duplicate key name|already exists/i.test(String(e.message))) throw e; });
+  await ensureUniqueIndex('users','uq_users_username','`username`');
   await ensureColumn('activity_log','before_json','LONGTEXT NULL');
   await ensureColumn('activity_log','after_json','LONGTEXT NULL');
   await ensureColumn('activity_log','ip_address','VARCHAR(100) NULL');
@@ -637,7 +650,7 @@ async function migrate(){
       await conn.commit();
     }catch(e){await conn.rollback();throw e}finally{conn.release()}
   }
-  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS uq_menu_daily_date_code ON menu_daily(menu_date,menu_code)").catch(async e=>{ if(!/duplicate key name|already exists/i.test(String(e.message))) throw e; });
+  await ensureUniqueIndex('menu_daily','uq_menu_daily_date_code','`menu_date`, `menu_code`');
   await pool.query(`INSERT IGNORE INTO schema_migrations(version) VALUES('1.8.7-menu-daily')`);
   await pool.query(`CREATE TABLE IF NOT EXISTS documentation_records (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,documentation_date DATE NOT NULL,module ENUM('MENU','PEMORSIAN','DISTRIBUSI','PENCUCIAN') NOT NULL,title VARCHAR(255) NULL,description TEXT NULL,file_path VARCHAR(500) NOT NULL,original_name VARCHAR(255) NOT NULL,mime_type VARCHAR(100) NOT NULL,created_by INT UNSIGNED NULL,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,INDEX idx_doc_date_module(documentation_date,module),CONSTRAINT fk_doc_user FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB`);
   await pool.query(`CREATE TABLE IF NOT EXISTS foodtray_templates (id TINYINT UNSIGNED PRIMARY KEY DEFAULT 1,title VARCHAR(200) NOT NULL DEFAULT 'Template Label Foodtray',description TEXT NULL,template_path VARCHAR(500) NULL,template_name VARCHAR(255) NULL,guide_text TEXT NULL,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB`);
@@ -983,9 +996,9 @@ app.get('/staff/:id([0-9]+)',auth,ar(async(req,res)=>{const id=toFiniteId(req.pa
 app.get('/staff/:id([0-9]+)/edit',auth,requirePermission('staff.manage'),ar(async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const [[staff]]=await pool.query('SELECT * FROM staff WHERE id=?',[id]);if(!staff)return res.sendStatus(404);const [education]=await pool.query('SELECT * FROM staff_education WHERE staff_id=?',[id]);res.render('staff/form',{title:'Edit Staf',staff,positions,docTypes,eduLevels,edu:Object.fromEntries(education.map(x=>[x.level,x])),statuses})}));
 const handleUpdateStaff = async(req,res)=>{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);const b=req.body;const [[old]]=await pool.query('SELECT * FROM staff WHERE id=?',[id]);if(!old)return res.sendStatus(404);const errors=validateStaff(b,true);if(errors.length){flash(req,'error',errors[0]);return res.redirect('/staff/'+id+'/edit')}const [dup]=await pool.query('SELECT id FROM staff WHERE nik=? AND id<>?',[clean(b.nik),id]);if(dup[0]){flash(req,'error','NIK sudah terdaftar pada staf lain.');return res.redirect('/staff/'+id+'/edit')}
   const conn=await pool.getConnection();try{await conn.beginTransaction();await conn.query(`UPDATE staff SET name=?,nik=?,kpj_bpjstk=?,tanggal_masuk_bekerja=?,birth_place=?,birth_date=?,gender=?,ktp_address=?,position=?,marital_status=?,phone=?,email=?,domicile_address=?,status=?,tanggal_keluar=?,alasan_keluar=? WHERE id=?`,[clean(b.name),clean(b.nik),clean(b.kpj_bpjstk)||null,b.tanggal_masuk_bekerja||null,clean(b.birth_place)||null,b.birth_date||null,b.gender||null,clean(b.ktp_address)||null,b.position,b.marital_status||null,clean(b.phone)||null,clean(b.email)||null,clean(b.domicile_address)||null,b.status||'AKTIF',b.tanggal_keluar||null,clean(b.alasan_keluar)||null,id]);await conn.query('DELETE FROM staff_education WHERE staff_id=?',[id]);for(const l of eduLevels)if(clean(b['edu_'+l]))await conn.query('INSERT INTO staff_education(staff_id,level,institution,major,graduation_year) VALUES(?,?,?,?,?)',[id,l,clean(b['edu_'+l]),clean(b['major_'+l])||null,b['year_'+l]||null]);if(old.status!==b.status)await conn.query('INSERT INTO staff_history(staff_id,action_type,old_status,new_status,description) VALUES(?,?,?,?,?)',[id,'PERUBAHAN_STATUS',old.status,b.status,clean(b.alasan_keluar)||'Status diperbarui']);await conn.commit();await log(req,'Edit','STAFF',id,b.name,old,{...b});flash(req,'success','Data staf diperbarui.');res.redirect('/staff/'+id)}catch(e){await conn.rollback();throw e}finally{conn.release()}};
-app.put('/staff/:id',auth,requirePermission('staff.manage'),ar(handleUpdateStaff));
-app.post('/staff/:id',auth,requirePermission('staff.manage'),ar(handleUpdateStaff));
-app.post('/staff/:id/documents',auth,upload.single('file'),ar(async(req,res)=>{try{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);if(!requireCsrf(req,res)){await removeUploaded(req.file);return}if(!req.file||!docTypes.includes(req.body.doc_type)||!(await verifyUploadedFile(req.file))){await removeUploaded(req.file);flash(req,'error','Dokumen tidak valid atau isi file tidak sesuai.');return res.redirect('/staff/'+id)}const [old]=await pool.query('SELECT * FROM staff_documents WHERE staff_id=? AND doc_type=?',[id,req.body.doc_type]);await pool.query(`INSERT INTO staff_documents(staff_id,doc_type,file_path,original_name,mime_type) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE file_path=VALUES(file_path),original_name=VALUES(original_name),mime_type=VALUES(mime_type),uploaded_at=CURRENT_TIMESTAMP`,[id,req.body.doc_type,req.file.filename,req.file.originalname,req.file.mimetype]);if(old[0])await removeUploaded({path:path.join(uploadDir,path.basename(old[0].file_path))});await log(req,'Upload Dokumen','STAFF',id,req.body.doc_type);flash(req,'success','Dokumen berhasil diunggah.');res.redirect('/staff/'+id)}catch(e){await removeUploaded(req.file);throw e}}));
+app.put('/staff/:id([0-9]+)',auth,requirePermission('staff.manage'),ar(handleUpdateStaff));
+app.post('/staff/:id([0-9]+)',auth,requirePermission('staff.manage'),ar(handleUpdateStaff));
+app.post('/staff/:id([0-9]+)/documents',auth,upload.single('file'),ar(async(req,res)=>{try{const id=toFiniteId(req.params.id);if(!id)return res.sendStatus(404);if(!requireCsrf(req,res)){await removeUploaded(req.file);return}if(!req.file||!docTypes.includes(req.body.doc_type)||!(await verifyUploadedFile(req.file))){await removeUploaded(req.file);flash(req,'error','Dokumen tidak valid atau isi file tidak sesuai.');return res.redirect('/staff/'+id)}const [old]=await pool.query('SELECT * FROM staff_documents WHERE staff_id=? AND doc_type=?',[id,req.body.doc_type]);await pool.query(`INSERT INTO staff_documents(staff_id,doc_type,file_path,original_name,mime_type) VALUES(?,?,?,?,?) ON DUPLICATE KEY UPDATE file_path=VALUES(file_path),original_name=VALUES(original_name),mime_type=VALUES(mime_type),uploaded_at=CURRENT_TIMESTAMP`,[id,req.body.doc_type,req.file.filename,req.file.originalname,req.file.mimetype]);if(old[0])await removeUploaded({path:path.join(uploadDir,path.basename(old[0].file_path))});await log(req,'Upload Dokumen','STAFF',id,req.body.doc_type);flash(req,'success','Dokumen berhasil diunggah.');res.redirect('/staff/'+id)}catch(e){await removeUploaded(req.file);throw e}}));
 app.get('/uploads/:filename(*)',auth,ar(async(req,res)=>{const f=await resolveStoredFile(req.params.filename);if(!f)return res.sendStatus(404);res.set('Content-Disposition','inline');res.sendFile(f)}));
 
 function rulesFor(l, type='SATUAN_PENDIDIKAN'){
@@ -2483,7 +2496,17 @@ app.use((err,req,res,next)=>{
   }
   try{
     flash(req,'error',msg);
-    return res.redirect(req.get('Referrer')||'/');
+    const ref = req.get('Referrer') || req.get('Referer');
+    let target = '/';
+    if(ref){
+      try{
+        const u = new URL(ref, `${req.protocol}://${req.get('host')}`);
+        if(u.host === req.get('host')){
+          target = u.pathname + u.search;
+        }
+      }catch(err){}
+    }
+    return res.redirect(target);
   }catch{
     return res.status(500).send(msg);
   }

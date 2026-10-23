@@ -643,10 +643,15 @@
     const note = prompt(promptMsg, isApprove ? 'Disetujui sesuai koordinasi kader' : 'Perbaiki NIK / data yang belum lengkap');
     if (note === null) return;
 
+    const csrfEl = document.querySelector('input[name="_csrf"]') || document.querySelector('meta[name="csrf-token"]');
+    const csrfToken = csrfEl ? (csrfEl.value || csrfEl.getAttribute('content') || '') : '';
+    const headers = { 'Content-Type': 'application/json' };
+    if (csrfToken) headers['x-csrf-token'] = csrfToken;
+
     fetch('/api/kpm-package/submissions/' + subId + '/review', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ decision, note })
+      headers: headers,
+      body: JSON.stringify({ decision, note, _csrf: csrfToken })
     })
     .then(res => res.json())
     .then(res => {

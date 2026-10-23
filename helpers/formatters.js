@@ -5,31 +5,85 @@
 
 'use strict';
 
+var UPPER_TOKENS = new Set([
+  'SD', 'SDN', 'SDIT', 'SMP', 'SMPN', 'SMA', 'SMAN', 'SMK', 'SMKN',
+  'MI', 'MIN', 'MTS', 'MTSN', 'MA', 'MAN', 'PAUD', 'TK', 'TKIT', 'KB',
+  'RA', 'SLB', 'RT', 'RW', 'NIK', 'NISN', 'NPSN', 'SPPG', 'BGN', 'KPM',
+  'SP', 'POS'
+]);
+
+var SPECIAL_TITLES = {
+  's.pd': 'S.Pd.',
+  's.pd.': 'S.Pd.',
+  'm.kom': 'M.Kom.',
+  'm.kom.': 'M.Kom.',
+  's.kom': 'S.Kom.',
+  's.kom.': 'S.Kom.',
+  'm.pd': 'M.Pd.',
+  'm.pd.': 'M.Pd.',
+  's.e': 'S.E.',
+  's.e.': 'S.E.',
+  's.t': 'S.T.',
+  's.t.': 'S.T.',
+  's.sos': 'S.Sos.',
+  's.sos.': 'S.Sos.',
+  'dr.': 'Dr.',
+  'dra.': 'Dra.',
+  'drs.': 'Drs.'
+};
+
+var LOWER_WORDS = new Set(['dan', 'atau', 'di', 'ke', 'dari', 'yang', 'pada', 'untuk', 'dengan', 'bin', 'binti']);
+
 /**
- * Mengubah nama/teks menjadi Title Case dan membersihkan spasi ganda.
- * Contoh: "sd negeri   01 kebondanas" -> "SD Negeri 01 Kebondanas" (atau title case teratur)
+ * Mengubah nama/teks menjadi Title Case, mempertahankan singkatan baku & gelar,
+ * dan memisahkan token berdasarkan spasi, tanda hubung, titik, garis miring, koma, kurung.
  * @param {string|any} str 
  * @returns {string}
  */
 function formatTitleCase(str) {
   if (str === null || str === undefined) return '—';
-  var cleaned = String(str).replace(/\s+/g, ' ').trim();
-  if (!cleaned) return '—';
-  
-  // Kata-kata umum singkatan/partikel yang dapat disesuaikan
-  var lowerWords = new Set(['dan', 'atau', 'di', 'ke', 'dari', 'yang', 'pada', 'untuk', 'dengan', 'bin', 'binti']);
-  var upperWords = new Set(['sd', 'smp', 'sma', 'smk', 'mi', 'mts', 'ma', 'paud', 'tk', 'ra', 'tklb', 'slb', 'sppg', 'bgn', 'kpm', 'nik', 'nisn', 'npsn', 'rt', 'rw', 'sk', 'ktp', 'sop']);
+  var s = String(str).replace(/\s+/g, ' ').trim();
+  if (!s) return '—';
 
-  return cleaned.split(' ').map(function(word, idx) {
-    var lower = word.toLowerCase();
-    if (upperWords.has(lower)) {
-      return lower.toUpperCase();
+  // Lindungi gelar bertitik (seperti S.Pd., M.Kom.) sebelum pembelahan token
+  var placeholders = [];
+  s = s.replace(/\b([A-Za-z]\.[A-Za-z]+(?:\.[A-Za-z]+)*\.?)/gi, function(m) {
+    var k = m.toLowerCase();
+    var cleanK = k.endsWith('.') ? k.slice(0, -1) : k;
+    if (SPECIAL_TITLES[k] || SPECIAL_TITLES[cleanK]) {
+      var idx = placeholders.length;
+      placeholders.push(SPECIAL_TITLES[k] || SPECIAL_TITLES[cleanK]);
+      return '___TIT_' + idx + '___';
     }
-    if (idx > 0 && lowerWords.has(lower)) {
-      return lower;
+    return m;
+  });
+
+  // Pisahkan token berdasarkan spasi, tanda hubung, titik, garis miring, koma, kurung
+  var parts = s.split(/([\s\-\.\/\,\(\)]+)/);
+  var wordCount = 0;
+
+  var res = parts.map(function(part) {
+    if (!part || /^[\s\-\.\/\,\(\)]+$/.test(part)) return part;
+    if (part.startsWith('___TIT_') && part.endsWith('___')) {
+      var idx = parseInt(part.replace('___TIT_', '').replace('___', ''), 10);
+      wordCount++;
+      return placeholders[idx] || part;
     }
-    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-  }).join(' ');
+    var up = part.toUpperCase();
+    if (UPPER_TOKENS.has(up)) {
+      wordCount++;
+      return up;
+    }
+    var low = part.toLowerCase();
+    if (wordCount > 0 && LOWER_WORDS.has(low)) {
+      wordCount++;
+      return low;
+    }
+    wordCount++;
+    return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+  }).join('');
+
+  return res.replace(/\s+/g, ' ').trim();
 }
 
 /**

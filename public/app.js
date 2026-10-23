@@ -1,6 +1,8 @@
 (function() {
   'use strict';
 
+  window.validateFinalPackageSubmit = window.validateFinalPackageSubmit || function() { return true; };
+
   function qs(selector, root) {
     return (root || document).querySelector(selector);
   }
@@ -18,8 +20,7 @@
   // Universal modal closer available immediately before and after DOM ready
   window.closeHistoryModal = function() {
     var targets = document.querySelectorAll(
-      '#pmHistoryModal, #historyModal, [id*="history"], [id*="History"], ' +
-      '.kpm-group-modal, .pm-modal-backdrop, .modal-backdrop, [class*="history-modal"], [role="dialog"]'
+      '#pmHistoryModal, #historyModal, .kpm-group-modal, .pm-modal-backdrop, .modal-backdrop, [class*="history-modal"]'
     );
     targets.forEach(function(el) {
       el.style.display = 'none';
@@ -27,7 +28,7 @@
       el.setAttribute('aria-hidden', 'true');
     });
     // Pulihkan kuncian scroll halaman utama jika semua modal sudah tertutup
-    var remaining = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+    var remaining = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"]), #pmHistoryModal[style*="display: flex"]');
     if (!remaining) {
       try { document.body.style.overflow = ''; } catch(e) {}
     }
@@ -237,7 +238,7 @@
       el.style.display = 'none';
       el.classList.remove('open', 'show', 'active');
       el.setAttribute('aria-hidden', 'true');
-      var openModals = qsa('.pm-modal-backdrop.active, .pm-modal-backdrop[style*="display: flex"], .modal[style*="display: block"], .kpm-group-modal.active, [id*="history"][style*="display: flex"], [id*="History"][style*="display: flex"]');
+      var openModals = qsa('.pm-modal-backdrop.active, .pm-modal-backdrop[style*="display: flex"], .modal[style*="display: block"], .kpm-group-modal.active, #pmHistoryModal[style*="display: flex"]');
       if (!openModals.length) {
         try { document.body.style.overflow = ''; } catch (e) {}
       }
@@ -262,25 +263,28 @@
       // 1. PRIORITAS UTAMA: Delegasi Klik Penutup Modal (Close Button / Tutup / Batal / X / data-action="close" / onclick*="close")
       var closeCandidate = e.target.closest('button, a, span, .btn, [role="button"], .pm-modal-close, .modal-close, .btn-close, .kpm-group-close, [data-close-modal], [data-action="close"], [onclick*="close"]');
       if (closeCandidate) {
+        var modalAncestor = closeCandidate.closest('#pmHistoryModal, #historyModal, .pm-modal-backdrop, .modal, .modal-backdrop, .kpm-group-modal, .kpm-group-dialog');
         var text = (closeCandidate.textContent || '').trim().toLowerCase();
         var onclickStr = (closeCandidate.getAttribute('onclick') || '').toLowerCase();
         var isKpmClose = closeCandidate.classList.contains('kpm-group-close');
         var isPmClose = closeCandidate.classList.contains('pm-modal-close');
         var isModalClose = closeCandidate.classList.contains('modal-close') || closeCandidate.classList.contains('btn-close');
-        var isCloseText = (text === 'tutup' || text === 'batal' || text === 'close' || text === 'cancel' || text === '×' || text === 'x');
+        var isCloseText = Boolean(modalAncestor && (text === 'tutup' || text === 'batal' || text === 'close' || text === 'cancel' || text === '×' || text === 'x'));
         var isCloseAction = (closeCandidate.getAttribute('data-action') === 'close' || closeCandidate.getAttribute('data-close-modal') === 'true');
         var isCloseOnclick = onclickStr.includes('close');
         var isCloseAria = (closeCandidate.getAttribute('aria-label') === 'Tutup' || closeCandidate.getAttribute('aria-label') === 'Close');
 
         if (isCloseText || isKpmClose || isPmClose || isModalClose || isCloseAction || isCloseOnclick || isCloseAria) {
+          if (!modalAncestor && !isCloseAction && !isCloseOnclick && !isKpmClose && !isPmClose && !isModalClose) {
+            return;
+          }
           if (typeof window.closeHistoryModal === 'function') {
             window.closeHistoryModal();
           }
-          var modal = closeCandidate.closest('.pm-modal-backdrop, .modal, [role="dialog"], .modal-backdrop, .kpm-group-modal, .kpm-group-dialog, [id*="history"], [id*="History"]');
-          if (modal) {
-            closeModalEl(modal);
+          if (modalAncestor) {
+            closeModalEl(modalAncestor);
           }
-          var remainingVisible = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+          var remainingVisible = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"]), #pmHistoryModal[style*="display: flex"]');
           if (!remainingVisible) {
             try { document.body.style.overflow = ''; } catch (err) {}
           }
@@ -293,7 +297,7 @@
       // 2. Direct click on backdrop (area gelap di luar kotak dialog riwayat / modal)
       var isBackdrop = false;
       if (e.target) {
-        if (e.target.matches('#pmHistoryModal, #historyModal, .pm-modal-backdrop, .modal-backdrop, .kpm-group-modal, [id*="history"], [id*="History"], [class*="history-modal"], [role="dialog"]') ||
+        if (e.target.matches('#pmHistoryModal, #historyModal, .pm-modal-backdrop, .modal-backdrop, .kpm-group-modal, [class*="history-modal"]') ||
             (e.target.classList && (e.target.classList.contains('pm-modal-backdrop') || e.target.classList.contains('modal-backdrop') || e.target.classList.contains('kpm-group-modal')))) {
           isBackdrop = true;
         }
@@ -303,7 +307,7 @@
           window.closeHistoryModal();
         }
         closeModalEl(e.target);
-        var anyOpen = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+        var anyOpen = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"]), #pmHistoryModal[style*="display: flex"]');
         if (!anyOpen) {
           try { document.body.style.overflow = ''; } catch (err) {}
         }
@@ -385,12 +389,12 @@
         if (typeof window.closeHistoryModal === 'function') {
           window.closeHistoryModal();
         }
-        qsa('.pm-modal-backdrop, .modal, [role="dialog"], .modal-backdrop, .kpm-group-modal, [id*="history"], [id*="History"]').forEach(function(m) {
+        qsa('.pm-modal-backdrop, .modal, .modal-backdrop, .kpm-group-modal').forEach(function(m) {
           if (m.style.display !== 'none') {
             closeModalEl(m);
           }
         });
-        var anyModal = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+        var anyModal = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"]), #pmHistoryModal[style*="display: flex"]');
         if (!anyModal) {
           try { document.body.style.overflow = ''; } catch (err) {}
         }
@@ -409,8 +413,7 @@
 
     window.closeHistoryModal = function() {
       var targets = document.querySelectorAll(
-        '#pmHistoryModal, #historyModal, [id*="history"], [id*="History"], ' +
-        '.kpm-group-modal, .pm-modal-backdrop, .modal-backdrop, [class*="history-modal"], [role="dialog"]'
+        '#pmHistoryModal, #historyModal, .kpm-group-modal, .pm-modal-backdrop, .modal-backdrop, [class*="history-modal"]'
       );
       targets.forEach(function(el) {
         el.style.display = 'none';
@@ -418,7 +421,7 @@
         el.setAttribute('aria-hidden', 'true');
       });
       // Pulihkan kuncian scroll halaman utama jika semua modal sudah tertutup
-      var remaining = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+      var remaining = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"]), #pmHistoryModal[style*="display: flex"]');
       if (!remaining) {
         try { document.body.style.overflow = ''; } catch(e) {}
       }
@@ -426,10 +429,10 @@
 
     ['closeDeactivateModal', 'closeBgnApproveModal', 'closeBgnRejectModal', 'closeReactivateModal'].forEach(function(fnName) {
       window[fnName] = function() {
-        qsa('.pm-modal-backdrop, .modal, [role="dialog"]').forEach(function(m) {
+        qsa('.pm-modal-backdrop, .modal').forEach(function(m) {
           closeModalEl(m);
         });
-        var anyModal = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+        var anyModal = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"]), #pmHistoryModal[style*="display: flex"]');
         if (!anyModal) {
           try { document.body.style.overflow = ''; } catch (err) {}
         }
