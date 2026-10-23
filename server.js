@@ -203,6 +203,8 @@ function csrfValid(req,token){
   const a=Buffer.from(String(token)),b=Buffer.from(String(req.session.csrfToken));
   return a.length===b.length&&crypto.timingSafeEqual(a,b);
 }
+const formatters = require('./helpers/formatters');
+const pmMutations = require('./helpers/pm-mutations');
 const REVIEW_MODE = true; // Set to false before delivery to sibling / production
 app.use((req,res,next)=>{
   if (REVIEW_MODE && !req.session.user) {
@@ -213,6 +215,7 @@ app.use((req,res,next)=>{
   res.locals.user=req.session.user||null;
   res.locals.appSettings=appSettings;
   res.locals.flash=req.session.flash||null;
+  Object.assign(res.locals, formatters);
   delete req.session.flash;
   if(['POST','PUT','PATCH','DELETE'].includes(req.method)){
     if(REVIEW_MODE) return next();
@@ -226,7 +229,7 @@ app.use((req,res,next)=>{
 const sqlDate=v=>{if(v instanceof Date)return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,'0')}-${String(v.getDate()).padStart(2,'0')}`;return String(v||'').slice(0,10)};
 const requireCsrf=(req,res)=>{if(REVIEW_MODE)return true;const token=req.body?req.body._csrf:req.get('x-csrf-token');if(!csrfValid(req,token)){res.status(403).send('Permintaan ditolak: token keamanan tidak valid.');return false}return true};
 
-const toFiniteId=v=>{const n=Number(v);return(Number.isFinite(n)&&n>0)?n:null};
+const toFiniteId=v=>{const n=Number(v);return(Number.isFinite(n)&&n>0)?Math.floor(n):null};
 const flash=(req,type,message)=>{req.session.flash={type,message}};
 const auth=(req,res,next)=>{
   if(REVIEW_MODE&&!req.session.user) req.session.user = { id: 1, username: 'admin', name: 'Administrator', role: 'ADMIN' };
@@ -1256,7 +1259,7 @@ app.post('/data-kpm-pm/:id([0-9]+)/apply',auth,requirePermission('data_kpm_pm.ma
         if (before) {
           await conn.query('INSERT INTO pm_change_history(pm_id,effective_from,action,before_data,after_data,reason,actor_id) VALUES(?,?,?,?,?,?,?)', [r.pm_id, effDate, 'DEACTIVATE', JSON.stringify(before), JSON.stringify({...before, active: 0, approval_status: 'NONAKTIF_DISETUJUI'}), reasonText, req.session.user.id]);
         }
-      } else if (actionType === 'PERUBAHAN_KATEGORI' && r.pm_id) {
+      } else if ((actionType === 'ALIH_KATEGORI' || actionType === 'PERUBAHAN_KATEGORI') && r.pm_id) {
         const [[before]] = await conn.query('SELECT * FROM pm WHERE id=? FOR UPDATE', [r.pm_id]);
         const targetCat = meta.target_category || r.category;
         const newClass = r.class_group || before?.class_group || null;

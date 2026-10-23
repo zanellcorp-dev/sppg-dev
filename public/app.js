@@ -26,7 +26,11 @@
       el.classList.remove('active', 'open', 'show');
       el.setAttribute('aria-hidden', 'true');
     });
-    document.body.style.overflow = '';
+    // Pulihkan kuncian scroll halaman utama jika semua modal sudah tertutup
+    var remaining = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+    if (!remaining) {
+      try { document.body.style.overflow = ''; } catch(e) {}
+    }
   };
 
   // Automatic CSRF header injection for mutating fetch requests (safeguarded against non-writable fetch getter)
@@ -126,10 +130,45 @@
     }
   }
 
-  // Mobile sidebar toggle setup
+  // Mobile sidebar toggle setup and scroll persistence
   function bindSidebar() {
     var sidebar = qs('.sidebar');
+    var navContainer = qs('.sidebar .nav') || sidebar;
     var menu = qs('.mobile-menu');
+
+    // 1. Pulihkan posisi scroll sidebar yang tersimpan atau fokuskan item menu aktif
+    if (navContainer) {
+      try {
+        var savedPos = sessionStorage.getItem('sppg_sidebar_scroll');
+        if (savedPos !== null) {
+          navContainer.scrollTop = parseInt(savedPos, 10);
+        } else {
+          var activeNav = document.querySelector('.sidebar .nav a.active');
+          if (activeNav && typeof activeNav.scrollIntoView === 'function') {
+            activeNav.scrollIntoView({ block: 'nearest' });
+          }
+        }
+      } catch (e) {}
+
+      // 2. Simpan posisi scroll saat pengguna men-scroll sidebar
+      if (!navContainer._boundScroll) {
+        navContainer._boundScroll = true;
+        navContainer.addEventListener('scroll', function() {
+          try { sessionStorage.setItem('sppg_sidebar_scroll', navContainer.scrollTop); } catch (e) {}
+        }, { passive: true });
+      }
+
+      // 3. Simpan posisi scroll saat pengguna mengklik link navigasi sidebar
+      if (sidebar && !sidebar._boundNavClicks) {
+        sidebar._boundNavClicks = true;
+        sidebar.addEventListener('click', function(e) {
+          var a = e.target.closest('.sidebar a');
+          if (a && navContainer) {
+            try { sessionStorage.setItem('sppg_sidebar_scroll', navContainer.scrollTop); } catch (e) {}
+          }
+        }, true);
+      }
+    }
 
     if (menu && sidebar && !menu._boundSidebar) {
       menu._boundSidebar = true;
@@ -378,7 +417,11 @@
         el.classList.remove('active', 'open', 'show');
         el.setAttribute('aria-hidden', 'true');
       });
-      document.body.style.overflow = '';
+      // Pulihkan kuncian scroll halaman utama jika semua modal sudah tertutup
+      var remaining = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+      if (!remaining) {
+        try { document.body.style.overflow = ''; } catch(e) {}
+      }
     };
 
     ['closeDeactivateModal', 'closeBgnApproveModal', 'closeBgnRejectModal', 'closeReactivateModal'].forEach(function(fnName) {

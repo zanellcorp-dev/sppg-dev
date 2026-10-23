@@ -367,7 +367,7 @@
         <div class="pm-form-field">
           <label for="deactReasonSelect">Pilih Alasan Penonaktifan <span style="color:#d92d20">*</span></label>
           <select id="deactReasonSelect" name="reason" class="pm-modal-select" required>
-            <option value="">— Pilih Alasan Resmi —</option>
+            <option value="" disabled selected hidden>-- Pilih Alasan Penonaktifan --</option>
             <% if(isPosyandu){ %>
               <option value="Sudah tidak lagi menerima manfaat (Bukan lagi kategori penerima manfaat)">Sudah tidak lagi menerima manfaat (Bukan lagi kategori penerima manfaat)</option>
               <option value="Sedang keluar kota / sementara tidak mengambil manfaat">Sedang keluar kota / sementara tidak mengambil manfaat</option>
@@ -533,7 +533,7 @@
 <!-- MODAL 5: RIWAYAT REKAM JEJAK TERINTEGRASI BGN -->
 <!-- ============================================================== -->
 <div id="pmHistoryModal" class="pm-modal-backdrop" style="display:none" role="dialog" aria-modal="true" aria-labelledby="histModalTitle">
-  <div class="pm-modal-card pm-modal-card-lg">
+  <div class="pm-modal-card pm-modal-card-lg" style="overflow: hidden; max-height: 90vh; display: flex; flex-direction: column;">
     <div class="pm-modal-head neutral">
       <div class="pm-modal-icon-wrap neutral">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -545,7 +545,7 @@
       <button type="button" class="pm-modal-close" data-close-modal="true" data-action="close" onclick="closeHistoryModal(); return false;" aria-label="Tutup">&times;</button>
     </div>
 
-    <div class="pm-modal-body">
+    <div class="pm-modal-body" style="overflow-y: auto; flex: 1; min-height: 0;">
       <!-- Ringkasan Identitas PM & Status Otorisasi -->
       <div class="pm-history-profile-card">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
@@ -1684,7 +1684,11 @@
       el.classList.remove('active', 'open', 'show');
       el.setAttribute('aria-hidden', 'true');
     });
-    document.body.style.overflow = '';
+    // Pulihkan kuncian scroll halaman utama jika semua modal sudah tertutup
+    var remaining = document.querySelector('.pm-modal-backdrop:not([style*="display: none"]), .modal:not([style*="display: none"]), [role="dialog"]:not([style*="display: none"]), .kpm-group-modal:not([style*="display: none"])');
+    if (!remaining) {
+      try { document.body.style.overflow = ''; } catch(err) {}
+    }
   };
 
   // Close modals on Esc key or click backdrop
